@@ -4,8 +4,8 @@ Fuente: documento maestro v1.0 §18. Una sola iteración por encargo.
 
 | Iteración | Estado | Entregables / aceptación |
 |---|---|---|
-| 0 | Base creada; verificación registrada en ITERATION_0.md | Repo, arquitectura, configuración, Compose, Mock, salud, web y CI local. |
-| 1 | Pendiente | Identity, registro/login piloto, validación Teacher, grupos y autorización por recurso; pruebas de acceso cruzado. |
+| 0 | Completada; histórico en ITERATION_0.md | Repo, arquitectura, configuración, Compose, Mock, salud, web y CI local. |
+| 1 | Completada; registro ITERATION_1.md | Identity, registro/login piloto, validación Teacher, grupos y autorización por recurso; pruebas de acceso cruzado. |
 | 2 | Pendiente | Formalizar IAiProvider/Mock, Groq, extensibilidad Gemini/Ollama, configuración y telemetría; sustitución sin alterar casos de uso. |
 | 3 | Pendiente | Tutoría libre, diagnóstico, chat, práctica y pausa/reanudación; cierre dentro de la aplicación. |
 | 4 | Pendiente | Evidencias, validadores, reportes, compartición; correspondencia con intentos. |
@@ -20,3 +20,5 @@ Recomendaciones de Iteración 1: cerrar decisiones de cookies/CSRF y bootstrap;
 añadir EF Core 10/Npgsql compatibles e Identity con migración inicial reproducible;
 verificar PostgreSQL con Docker activo; probar Student A/B, Teacher X/Y y Admin
 sin privilegio automático sobre chats. No implementar tutorías en ese encargo.
+
+El encargo de Iteración 1 está cerrado. No avanzar a 2 automáticamente. Revisar ADR-012/013 y mantener cookies/CSRF, pertenencia y pruebas reales al implementar proveedores.

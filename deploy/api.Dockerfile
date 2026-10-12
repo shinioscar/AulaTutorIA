@@ -11,6 +11,7 @@ RUN dotnet publish src/AulaTutor.Api/AulaTutor.Api.csproj -c Release --no-restor
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.10
 WORKDIR /app
 COPY --from=build /app .
+RUN mkdir -p /keys && chown app:app /keys && chmod 700 /keys
 USER $APP_UID
-EXPOSE 8080
+EXPOSE 8080 8443
 ENTRYPOINT ["dotnet", "AulaTutor.Api.dll"]

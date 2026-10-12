@@ -1,14 +1,19 @@
-<main>
-  <p class="eyebrow">ITERACIÓN 0 · FUNDACIONES</p>
-  <h1>AulaTutor IA</h1>
-  <p class="intro">Una base para el acompañamiento académico con supervisión docente.</p>
-  <section aria-labelledby="status-title">
-    <h2 id="status-title">Estado del entorno local</h2>
-    <p role="status" aria-live="polite">{{ status() }}</p>
-    @if (provider()) {
-      <p>Proveedor activo: <strong>{{ provider() }}</strong></p>
+<a class="skip-link" href="#content">Saltar al contenido</a>
+<header>
+  <a class="brand" routerLink="/">AulaTutor IA</a>
+  <nav aria-label="Navegación principal">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Inicio</a>
+    @if (auth.user(); as user) {
+      @if (user.roles.length) { <a routerLink="/groups" routerLinkActive="active">Grupos</a> }
+      @if (auth.hasRole('Admin')) { <a routerLink="/admin/users" routerLinkActive="active">Administración</a> }
+      <button type="button" class="secondary" (click)="logout()">Cerrar sesión</button>
+    } @else {
+      <a routerLink="/login" routerLinkActive="active">Entrar</a><a routerLink="/register" routerLinkActive="active">Registro</a>
     }
-    <button type="button" (click)="checkHealth()" [disabled]="loading()">Comprobar conexión</button>
-  </section>
-  <p class="note">Esta versión prepara la estructura técnica. Las tutorías, clases y cuentas se desarrollarán en las siguientes iteraciones.</p>
+  </nav>
+</header>
+<main id="content" tabindex="-1">
+  <p role="status" class="message">{{ message() }}</p>
+  <router-outlet />
 </main>
+<footer>Aprendizaje con supervisión docente · Piloto con datos ficticios</footer>

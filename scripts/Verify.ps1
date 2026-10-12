@@ -1,4 +1,4 @@
-param([switch]$Smoke)
+param([switch]$Smoke, [switch]$Http)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/Initialize-Environment.ps1"
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -13,8 +13,13 @@ try {
     Assert-CommandExit 'dotnet restore'
     dotnet build AulaTutorIA.slnx -c Release --no-restore
     Assert-CommandExit 'dotnet build'
+    dotnet tool restore
+    Assert-CommandExit 'dotnet tool restore'
+    . "$PSScriptRoot/Load-LocalConfiguration.ps1"
     dotnet test AulaTutorIA.slnx -c Release --no-build --no-restore
     Assert-CommandExit 'dotnet test'
+    dotnet ef migrations has-pending-model-changes --project src/AulaTutor.Infrastructure --startup-project src/AulaTutor.Api --no-build --configuration Release
+    Assert-CommandExit 'EF migration/model consistency'
     Push-Location 'src/AulaTutor.Web'
     try {
         npm.cmd ci --no-fund
@@ -29,6 +34,7 @@ try {
     Assert-CommandExit 'Compose config'
     git diff --check
     Assert-CommandExit 'git diff check'
-    if ($Smoke) { & "$PSScriptRoot/Smoke.ps1" }
+    if ($Smoke) { & "$PSScriptRoot/Prepare-Local.ps1"; & "$PSScriptRoot/Smoke.ps1" }
+    if ($Http) { & "$PSScriptRoot/Prepare-Local.ps1"; & "$PSScriptRoot/Http-Identity.ps1" }
     Write-Host 'Verification passed.'
 } finally { Pop-Location }

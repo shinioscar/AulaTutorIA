@@ -1,0 +1,54 @@
+<p class="eyebrow">ORGANIZACIÓN PILOTO</p><h1>{{ auth.hasRole('Admin') ? 'Gestión de grupos' : 'Mis grupos' }}</h1>
+<p>Solo se muestran los grupos a los que tienes acceso.</p>
+<p class="message" role="status">{{ message() }}</p>
+@if (auth.hasRole('Admin')) {
+  <section><h2>Crear grupo académico</h2>
+    <form #createForm="ngForm" (ngSubmit)="create()" class="inline-form">
+      <label for="group-name">Nombre del grupo</label><input id="group-name" name="name" [(ngModel)]="name" required minlength="2" maxlength="100">
+      <button [disabled]="busy() || createForm.invalid">Crear grupo</button>
+    </form>
+  </section>
+}
+<div class="group-grid">
+  @for (group of groups(); track group.id) {
+    <button type="button" class="group-card" (click)="select(group)" [disabled]="busy()">
+      <strong>{{ group.name }}</strong><span>{{ group.students }} estudiantes · {{ group.teachers }} docentes</span>
+      @if (group.isArchived) { <span>Archivado</span> }
+    </button>
+  } @empty { <p class="notice">Todavía no hay grupos disponibles para tu cuenta.</p> }
+</div>
+@if (selected(); as group) {
+  <section><h2>{{ group.name }}</h2>
+    @if (auth.hasRole('Admin')) {
+      <form #renameForm="ngForm" (ngSubmit)="renameGroup()" class="inline-form">
+        <label for="rename">Nombre</label><input id="rename" name="rename" [(ngModel)]="rename" required minlength="2" maxlength="100">
+        <button [disabled]="busy() || renameForm.invalid">Guardar nombre</button>
+        @if (!group.isArchived) { <button type="button" class="secondary" (click)="archive()" [disabled]="busy()">Archivar grupo</button> }
+      </form>
+    }
+    @if (group.canViewMembers) {
+      <h3>Miembros y docentes asignados</h3>
+      <ul class="member-list">
+        @for (member of members(); track member.userId + member.kind) {
+          <li><span>{{ member.displayName }} · {{ member.kind === 'Teacher' ? 'Docente' : 'Estudiante' }}</span>
+            @if (auth.hasRole('Admin')) { <button type="button" class="secondary" (click)="remove(member)" [disabled]="busy()">Retirar a {{ member.displayName }}</button> }
+          </li>
+        } @empty { <li>No hay miembros todavía.</li> }
+      </ul>
+    }
+    @if (auth.hasRole('Admin') && !group.isArchived) {
+      <h3>Asociar persona</h3>
+      <form #memberForm="ngForm" (ngSubmit)="add()">
+        <label for="member">Usuario de la organización</label>
+        <select id="member" name="memberId" [(ngModel)]="memberId" required>
+          <option value="">Seleccionar usuario</option>
+          @for (user of users(); track user.id) { @if (user.isActive) { <option [value]="user.id">{{ user.displayName }} — {{ user.email }}</option> } }
+        </select>
+        <div class="actions"><button type="button" class="secondary" (click)="loadUsers(userPage - 1)" [disabled]="busy() || userPage <= 1">Usuarios anteriores</button><span>Página {{ userPage }}</span><button type="button" class="secondary" (click)="loadUsers(userPage + 1)" [disabled]="busy() || users().length < 50">Más usuarios</button></div>
+        <label for="kind">Relación con el grupo</label><select id="kind" name="kind" [(ngModel)]="kind"><option value="Student">Estudiante</option><option value="Teacher">Docente aprobado</option></select>
+        <button [disabled]="busy() || memberForm.invalid">Asociar al grupo</button>
+      </form>
+    }
+    <p class="note">La membresía no permite consultar tutorías autónomas privadas.</p>
+  </section>
+}

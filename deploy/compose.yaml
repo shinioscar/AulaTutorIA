@@ -25,13 +25,22 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
+      ASPNETCORE_HTTPS_PORTS: "8443"
+      Kestrel__Certificates__Default__Path: /https/localhost.pem
+      Kestrel__Certificates__Default__KeyPath: /https/localhost.key
+      DataProtection__KeyPath: /keys
       Ai__Provider: ${AI_PROVIDER:-Mock}
-      ConnectionStrings__AulaTutor: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-aulatutor};Username=${POSTGRES_USER:-aulatutor};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD}"
+      ConnectionStrings__AulaTutor: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-aulatutor};Username=${POSTGRES_USER:-aulatutor};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD};GSS Encryption Mode=Disable"
     ports:
       - "127.0.0.1:${API_PORT:-5080}:8080"
+      - "127.0.0.1:${API_HTTPS_PORT:-7080}:8443"
+    volumes:
+      - ../.cache/certs:/https:ro
+      - data_protection:/keys
     depends_on:
       postgres:
         condition: service_healthy
 
 volumes:
   postgres_data:
+  data_protection:

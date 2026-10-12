@@ -1,4 +1,6 @@
 # Dominio
 
-Capa reservada para modelos y reglas independientes de Angular, ASP.NET, EF Core
-y proveedores IA. No se implementan entidades ni estados de negocio en Iteración 0.
+Capa de modelos independientes de Angular, ASP.NET, EF Core y proveedores IA.
+Iteración 1: Organization, AcademicGroup, GroupMembership, roles y aprobación
+docente. AppUser y todo el almacenamiento Identity permanecen en Infrastructure.
+Las reglas de acceso puras viven en Application/Identity y se prueban sin BD.

@@ -1,42 +1,18 @@
 import { Component, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-
-interface ApiHealth {
-  status: string;
-  application: string;
-  iteration: number;
-  aiProvider: string;
-  aiModel: string;
-}
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from './auth/auth.service';
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  templateUrl: './app.html',
+  selector: 'app-root', standalone: true,
+  imports: [RouterLink, RouterLinkActive, RouterOutlet], templateUrl: './app.html',
 })
 export class App {
-  private readonly http = inject(HttpClient);
-  readonly status = signal('Comprobando conexión…');
-  readonly provider = signal<string | null>(null);
-  readonly loading = signal(false);
-
-  constructor() {
-    this.checkHealth();
-  }
-
-  checkHealth(): void {
-    this.loading.set(true);
-    this.http.get<ApiHealth>('/api/health').subscribe({
-      next: (health) => {
-        this.status.set(health.status === 'ok' ? 'API disponible' : 'API sin disponibilidad');
-        this.provider.set(health.aiProvider);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.status.set('No se pudo conectar con la API. Comprueba que esté iniciada.');
-        this.provider.set(null);
-        this.loading.set(false);
-      },
-    });
+  readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  readonly message = signal('');
+  constructor() { void this.auth.load().catch(() => this.message.set('No se pudo conectar. Comprueba el servicio y actualiza la página.')); }
+  async logout(): Promise<void> {
+    try { await this.auth.logout(); await this.router.navigateByUrl('/login'); }
+    catch { this.message.set('No se pudo cerrar la sesión. Comprueba la conexión e inténtalo nuevamente.'); }
   }
 }

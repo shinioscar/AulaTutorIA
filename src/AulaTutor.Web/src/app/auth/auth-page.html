@@ -1,0 +1,26 @@
+<section class="form-card" aria-labelledby="auth-title">
+  <p class="eyebrow">IDENTIDAD · PILOTO</p>
+  <h1 id="auth-title">{{ register ? 'Crear una cuenta' : 'Iniciar sesión' }}</h1>
+  <p>{{ register ? 'Regístrate como estudiante o solicita acceso docente.' : 'Accede a tu cuenta de AulaTutor IA.' }}</p>
+  <form #form="ngForm" (ngSubmit)="submit()">
+    @if (register) {
+      <label for="displayName">Nombre visible</label>
+      <input id="displayName" name="displayName" [(ngModel)]="displayName" required minlength="2" maxlength="100" autocomplete="name">
+    }
+    <label for="email">Correo electrónico</label>
+    <input id="email" name="email" [(ngModel)]="email" type="email" email required maxlength="254" autocomplete="username">
+    <label for="password">Contraseña</label>
+    <input id="password" name="password" [(ngModel)]="password" type="password" required [minlength]="register ? 12 : 1" maxlength="128" [autocomplete]="register ? 'new-password' : 'current-password'" [attr.aria-describedby]="register ? 'password-help' : null">
+    @if (register) {
+      <p id="password-help" class="note">Mínimo 12 caracteres, con mayúscula, minúscula, número y símbolo.</p>
+      <label for="role">Tipo de cuenta</label>
+      <select id="role" name="role" [(ngModel)]="requestedRole">
+        <option value="Student">Estudiante</option><option value="Teacher">Solicitud docente</option>
+      </select>
+      <p class="note">Solicitar acceso docente no otorga permisos hasta su aprobación.</p>
+    }
+    <button type="submit" [disabled]="busy() || form.invalid">{{ busy() ? 'Procesando…' : (register ? 'Enviar registro' : 'Entrar') }}</button>
+  </form>
+  <p class="message" role="status" aria-live="polite">{{ message() }}</p>
+  <a [routerLink]="register ? '/login' : '/register'">{{ register ? 'Ya tengo cuenta' : 'Crear cuenta o solicitar acceso docente' }}</a>
+</section>

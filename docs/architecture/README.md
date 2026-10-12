@@ -10,26 +10,28 @@ Web (Angular) → HTTP /api → Api → Application → Domain
                    PostgreSQL / adaptadores IA (futuros)
 ```
 
-- Domain: sin paquetes ni modelos de negocio todavía.
-- Application: referencia Domain; contrato conceptual `IAiProvider` y DTO mínimos.
-- Infrastructure: referencia Application; Mock y registro/validación de configuración.
-- Api: composition root, Minimal API de salud, ProblemDetails, JSON logs y OpenAPI.
-- Web: Angular standalone, sin SSR, router, formularios ni SDK IA; una pantalla de
-  estado y proxy `/api/**` para mantener el mismo origen del navegador en local.
+- Domain: organización, grupo, membresía, roles y aprobación docente, sin frameworks.
+- Application: IAiProvider conservado; DTO, interfaces de identidad/grupos y reglas
+  de autorización puras, independientes de EF/Identity.
+- Infrastructure: Identity/EF Core/Npgsql, servicios por recurso, bootstrap y Mock.
+- Api: composición, Minimal APIs, filtro CSRF/DTO, logs JSON y OpenAPI con cookie/CSRF.
+- Web: Angular standalone con router y formularios; sesión en cookies, navegación
+  por permisos y proxy HTTPS de mismo origen. Sin SSR ni SDK IA.
 
-PostgreSQL 18 queda preparado por Compose. La API aún no utiliza la cadena de
-conexión; no hay DbContext, entidades, migraciones, Identity ni datos precargados.
-EF Core/Npgsql se incorporarán al implementar persistencia en Iteración 1.
+PostgreSQL 18 tiene migración InitialIdentity: Identity, organización, grupos y
+membresías. Se siembran roles/organización, sin usuarios predeterminados. Mantenimiento
+explícito (--migrate / --bootstrap-admin), sin migrar en el inicio normal.
 No se instala Redis, SignalR, colas, bibliotecas UI ni clientes externos de IA.
 
 `GET /api/health` devuelve status, application, iteration, aiProvider y aiModel.
 Solo confirma vida de la API y disponibilidad del Mock; **no** confirma conexión
 a PostgreSQL ni representa readiness del MVP. `GET /openapi/v1.json` existe
-solo en Development. No hay endpoints de generación IA o de negocio.
+solo en Development. Los endpoints de negocio actuales se limitan a identidad
+y grupos; no hay generación IA, tutorías, clases ni evaluaciones.
 
-HTTP se limita a localhost en los comandos de desarrollo y puertos Compose.
-Fuera de desarrollo se activa redirección HTTPS/HSTS; la configuración TLS/proxy
-de despliegue real queda pendiente. Compose es exclusivamente de desarrollo.
+HTTPS local para cookies Secure, con certificados excluidos en .cache. HTTP 5080
+conserva salud y OpenAPI de desarrollo. Fuera de desarrollo se activa HTTPS/HSTS;
+la configuración TLS/proxy de producción queda pendiente. Compose es de desarrollo.
 
 Adaptadores futuros vivirán en `Infrastructure/Ai/`; selección, capacidades,
 enrutamiento, cuotas y telemetría quedan para Iteración 2. No hay fallback.
