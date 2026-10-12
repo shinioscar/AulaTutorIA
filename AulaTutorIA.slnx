@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AulaTutor.Api/AulaTutor.Api.csproj" />
+    <Project Path="src/AulaTutor.Application/AulaTutor.Application.csproj" />
+    <Project Path="src/AulaTutor.Domain/AulaTutor.Domain.csproj" />
+    <Project Path="src/AulaTutor.Infrastructure/AulaTutor.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AulaTutor.IntegrationTests/AulaTutor.IntegrationTests.csproj" />
+    <Project Path="tests/AulaTutor.UnitTests/AulaTutor.UnitTests.csproj" />
+  </Folder>
+</Solution>

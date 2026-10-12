@@ -1,0 +1,6 @@
+@AulaTutor_Api_HostAddress = http://127.0.0.1:5080
+GET {{AulaTutor_Api_HostAddress}}/api/health
+Accept: application/json
+###
+GET {{AulaTutor_Api_HostAddress}}/openapi/v1.json
+Accept: application/json

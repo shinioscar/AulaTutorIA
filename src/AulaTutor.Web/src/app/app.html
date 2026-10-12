@@ -1,0 +1,14 @@
+<main>
+  <p class="eyebrow">ITERACIÓN 0 · FUNDACIONES</p>
+  <h1>AulaTutor IA</h1>
+  <p class="intro">Una base para el acompañamiento académico con supervisión docente.</p>
+  <section aria-labelledby="status-title">
+    <h2 id="status-title">Estado del entorno local</h2>
+    <p role="status" aria-live="polite">{{ status() }}</p>
+    @if (provider()) {
+      <p>Proveedor activo: <strong>{{ provider() }}</strong></p>
+    }
+    <button type="button" (click)="checkHealth()" [disabled]="loading()">Comprobar conexión</button>
+  </section>
+  <p class="note">Esta versión prepara la estructura técnica. Las tutorías, clases y cuentas se desarrollarán en las siguientes iteraciones.</p>
+</main>

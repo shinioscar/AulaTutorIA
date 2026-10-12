@@ -1,0 +1,30 @@
+# Local secrets and configuration
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+*.pem
+*.pfx
+*.key
+
+# Build output and workspace-local caches
+.cache/
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.angular/
+artifacts/
+TestResults/
+coverage/
+*.log
+
+# Editor and OS files
+.vs/
+.idea/
+**/.vscode/
+*.user
+*.suo
+Thumbs.db
+.DS_Store

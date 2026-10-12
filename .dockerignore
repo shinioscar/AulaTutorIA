@@ -1,0 +1,12 @@
+.git
+.cache
+.env
+.env.*
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/.angular
+artifacts
+tests
+docs

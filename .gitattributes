@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.md whitespace=-blank-at-eol
+# Preserve the original requirements document byte-for-byte.
+AulaTutor_IA_Documento_Maestro_v1.0.md -text
