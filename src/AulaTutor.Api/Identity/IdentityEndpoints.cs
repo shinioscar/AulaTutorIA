@@ -39,8 +39,8 @@ public static class IdentityEndpoints
             .RequireAuthorization().WithSummary("Perfil propio o administración; oculta recursos ajenos con 404.");
 
         var admin = api.MapGroup("/admin").RequireAuthorization(policy => policy.RequireRole(RoleNames.Admin));
-        admin.MapGet("/users", async (int? page, IIdentityService identity) => TypedResults.Ok(await identity.ListUsersAsync(page ?? 1)))
-            .WithSummary("Lista paginada de usuarios de la organización piloto, solo Admin.");
+        admin.MapGet("/users", async (int? page, string? email, IIdentityService identity) => TypedResults.Ok(await identity.ListUsersAsync(page ?? 1, email)))
+            .WithSummary("Lista paginada, filtro parcial por correo sin distinguir mayúsculas; solo Admin del piloto.");
         admin.MapPost("/users/{id:guid}/teacher-decision", async (Guid id, TeacherDecisionRequest request, IIdentityService identity) =>
         { await identity.DecideTeacherAsync(id, request.Approve); return Results.NoContent(); })
             .WithSummary("Aprueba o rechaza una solicitud docente; revoca sesiones previas.");

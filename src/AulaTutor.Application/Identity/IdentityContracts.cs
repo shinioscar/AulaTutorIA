@@ -5,7 +5,7 @@ namespace AulaTutor.Application.Identity;
 
 public sealed record RegisterRequest(
     [Required, EmailAddress, StringLength(254)] string Email,
-    [Required, StringLength(128, MinimumLength = 12)] string Password,
+    [Required, StringLength(128, MinimumLength = 5)] string Password,
     [Required, StringLength(100, MinimumLength = 2)] string DisplayName,
     [Required, RegularExpression("^(Student|Teacher)$")] string RequestedRole);
 public sealed record LoginRequest(
@@ -58,7 +58,7 @@ public interface IIdentityService
     Task LogoutAsync();
     Task<UserView> MeAsync();
     Task<UserView> GetUserAsync(Guid id);
-    Task<PageResult<UserView>> ListUsersAsync(int page);
+    Task<PageResult<UserView>> ListUsersAsync(int page, string? email = null);
     Task DecideTeacherAsync(Guid id, bool approve);
     Task ChangeRolesAsync(Guid id, string[] roles);
     Task ChangeStatusAsync(Guid id, bool isActive);

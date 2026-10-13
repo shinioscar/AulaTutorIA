@@ -64,11 +64,18 @@ public sealed class IdentityService(UserManager<AppUser> users, SignInManager<Ap
         return await ViewAsync(await FindAsync(id));
     }
 
-    public async Task<PageResult<UserView>> ListUsersAsync(int page)
+    public async Task<PageResult<UserView>> ListUsersAsync(int page, string? email = null)
     {
         await RequireAdminAsync();
         if (page < 1 || page > 10000) throw new AppException(400, "Página no válida.");
-        var pageUsers = await db.Users.Where(x => x.OrganizationId == PilotOrganization.Id)
+        if (email?.Length > 254) throw new AppException(400, "Búsqueda demasiado larga.");
+        var query = db.Users.Where(x => x.OrganizationId == PilotOrganization.Id);
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var normalized = users.NormalizeEmail(email.Trim())!;
+            query = query.Where(x => x.NormalizedEmail != null && x.NormalizedEmail.Contains(normalized));
+        }
+        var pageUsers = await query
             .OrderBy(x => x.Id).Skip((page - 1) * 50).Take(50).ToArrayAsync();
         var result = new List<UserView>();
         foreach (var user in pageUsers) result.Add(await ViewAsync(user));

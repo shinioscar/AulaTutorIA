@@ -18,6 +18,7 @@ internal static class TestHost
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment(environment)
             .UseSetting("ConnectionStrings:AulaTutor", connection ?? "Host=localhost;Database=not_used;Username=fictitious;Password=fictitious")
             .UseSetting("DataProtection:KeyPath", Path.Combine(Root, ".cache", "test-keys"))
+            .UseSetting("Ai:Provider", "Mock")
             .UseSetting("Logging:LogLevel:Default", "Warning"));
     public static HttpClient Client(WebApplicationFactory<Program> factory) => factory.CreateClient(new WebApplicationFactoryClientOptions
     { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });

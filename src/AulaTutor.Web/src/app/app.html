@@ -5,7 +5,7 @@
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Inicio</a>
     @if (auth.user(); as user) {
       @if (user.roles.length) { <a routerLink="/groups" routerLinkActive="active">Grupos</a> }
-      @if (auth.hasRole('Admin')) { <a routerLink="/admin/users" routerLinkActive="active">Administración</a> }
+      @if (auth.hasRole('Admin')) { <a routerLink="/admin/users" routerLinkActive="active">Administración</a><a routerLink="/admin/ai" routerLinkActive="active">Diagnóstico IA</a> }
       <button type="button" class="secondary" (click)="logout()">Cerrar sesión</button>
     } @else {
       <a routerLink="/login" routerLinkActive="active">Entrar</a><a routerLink="/register" routerLinkActive="active">Registro</a>

@@ -1,0 +1,36 @@
+<p class="eyebrow">ADMINISTRACIÓN · IA</p>
+<h1>Diagnóstico de IA</h1>
+<p>Consulta el proveedor activo y comprueba su conexión con una solicitud breve de prueba.</p>
+<p class="message" role="status">{{ message() }}</p>
+@if (configuration(); as config) {
+  <section aria-labelledby="provider-title">
+    <h2 id="provider-title">{{ config.provider }} · {{ config.model }}</h2>
+    <p>{{ config.configurationValid ? 'Configuración básica válida' : 'Configuración incompleta' }}. La consulta no comprueba disponibilidad ni consume cuota.</p>
+    <ul>
+      <li>JSON: {{ config.capabilities.json ? 'Disponible' : 'No disponible' }}</li>
+      <li>JSON Schema: {{ config.capabilities.jsonSchema ? 'Subconjunto validado' : 'No disponible' }}</li>
+      <li>JSON Schema estricto del proveedor: {{ config.capabilities.strictJsonSchema ? 'Disponible' : 'No garantizado' }}</li>
+      <li>Streaming: reservado para una iteración posterior.</li>
+    </ul>
+    <p class="note">Tiempo máximo: {{ config.timeoutSeconds }} s · Solicitudes simultáneas: {{ config.maxConcurrency }} · Reintentos: {{ config.maxRetries }}.</p>
+    <p>{{ config.provider === 'Mock' ? 'Mock funciona sin red ni credenciales.' : 'La prueba enviará texto fijo al proveedor activo y puede consumir cuota. No envía datos de estudiantes.' }}</p>
+    <div class="actions">
+      <button type="button" (click)="test()" [disabled]="busy() || !config.configurationValid">{{ busy() ? 'Procesando…' : 'Ejecutar prueba breve' }}</button>
+      <button type="button" class="secondary" (click)="load()" [disabled]="busy()">Actualizar configuración</button>
+    </div>
+  </section>
+}
+@if (result(); as result) {
+  <section aria-live="polite" aria-labelledby="result-title">
+    <h2 id="result-title">{{ result.success ? 'Prueba completada' : 'La prueba no se completó' }}</h2>
+    <p>{{ result.provider }} · {{ result.model }} · {{ result.durationMs }} ms</p>
+    @if (result.success) {
+      <p class="notice ai-response">{{ result.text }}</p>
+      @if (result.usage; as usage) { <p>Tokens de entrada: {{ usage.inputTokens }} · Salida: {{ usage.outputTokens }}{{ usage.isEstimated ? ' (estimados)' : ' (reportados)' }}</p> }
+      @else { <p>El proveedor no reportó consumo de tokens.</p> }
+    } @else {
+      <p class="message">{{ result.error }}</p>
+      @if (result.retryAfterSeconds !== null) { <p>Espera al menos {{ result.retryAfterSeconds }} segundos antes de reintentar.</p> }
+    }
+  </section>
+}

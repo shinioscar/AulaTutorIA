@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using AulaTutor.Api.Identity;
+using AulaTutor.Api.Ai;
 using AulaTutor.Application.Ai;
 using AulaTutor.Application.Identity;
 using AulaTutor.Infrastructure;
@@ -33,6 +34,9 @@ if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("ai-diagnostic", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.Identity?.Name ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 3, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -72,8 +76,9 @@ app.MapGet("/api/health", async (IAiProvider provider, CancellationToken ct) =>
 {
     var health = await provider.CheckHealthAsync(ct);
     return TypedResults.Ok(new ApiHealthResponse("ok", "AulaTutor IA", 1, health.ProviderId, health.ModelId));
-}).WithName("GetHealth").WithSummary("Estado básico de la API y Mock; no comprueba PostgreSQL.").AllowAnonymous();
+}).WithName("GetHealth").WithSummary("Estado básico de la API y configuración IA; sin llamadas al proveedor ni comprobación PostgreSQL.").AllowAnonymous();
 app.MapIdentityEndpoints();
+app.MapAiEndpoints();
 app.Run();
 
 public sealed record ApiHealthResponse(string Status, string Application, int Iteration, string AiProvider, string AiModel);

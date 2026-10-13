@@ -16,7 +16,8 @@ public sealed class AdminBootstrap(AulaTutorDbContext db, UserManager<AppUser> u
     public async Task<bool> CreateAsync(string email, string password, string displayName)
     {
         if (!new EmailAddressAttribute().IsValid(email) || email.Length > 254 ||
-            string.IsNullOrWhiteSpace(displayName) || displayName.Trim().Length is < 2 or > 100 || password.Length is < 12 or > 128)
+            string.IsNullOrWhiteSpace(displayName) || displayName.Trim().Length is < 2 or > 100 ||
+            string.IsNullOrWhiteSpace(password) || password.Length is < 5 or > 128)
             throw new InvalidOperationException("Bootstrap requiere email, nombre y contraseña válidos mediante configuración privada.");
         await using var tx = await db.Database.BeginTransactionAsync();
         await LockAsync(db);

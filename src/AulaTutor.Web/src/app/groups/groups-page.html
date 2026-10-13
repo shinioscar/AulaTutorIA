@@ -38,12 +38,20 @@
     }
     @if (auth.hasRole('Admin') && !group.isArchived) {
       <h3>Asociar persona</h3>
+      <form (ngSubmit)="searchUsers()" class="inline-form">
+        <label for="member-email-search">Buscar estudiante o docente por correo</label>
+        <input id="member-email-search" type="search" name="emailSearch" [(ngModel)]="emailSearch" maxlength="254" placeholder="Correo completo o parte del correo" [disabled]="busy()">
+        <button [disabled]="busy()">Buscar por correo</button>
+        <p class="note">Busca en toda la organización. Deja el campo vacío para mostrar todos los usuarios.</p>
+      </form>
+      @if (!users().length) { <p role="status">No se encontraron usuarios.</p> }
       <form #memberForm="ngForm" (ngSubmit)="add()">
         <label for="member">Usuario de la organización</label>
         <select id="member" name="memberId" [(ngModel)]="memberId" required>
           <option value="">Seleccionar usuario</option>
           @for (user of users(); track user.id) { @if (user.isActive) { <option [value]="user.id">{{ user.displayName }} — {{ user.email }}</option> } }
         </select>
+        @if (selectedUser; as user) { <p class="note">Correo seleccionado: {{ user.email }}</p> }
         <div class="actions"><button type="button" class="secondary" (click)="loadUsers(userPage - 1)" [disabled]="busy() || userPage <= 1">Usuarios anteriores</button><span>Página {{ userPage }}</span><button type="button" class="secondary" (click)="loadUsers(userPage + 1)" [disabled]="busy() || users().length < 50">Más usuarios</button></div>
         <label for="kind">Relación con el grupo</label><select id="kind" name="kind" [(ngModel)]="kind"><option value="Student">Estudiante</option><option value="Teacher">Docente aprobado</option></select>
         <button [disabled]="busy() || memberForm.invalid">Asociar al grupo</button>

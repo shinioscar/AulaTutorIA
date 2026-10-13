@@ -18,7 +18,7 @@ public sealed class IdentityTests : IAsyncLifetime
     private string databaseName = "";
     private string maintenanceConnection = "";
     private WebApplicationFactory<Program> factory = null!;
-    private readonly string password = "Aa1!" + Guid.NewGuid().ToString("N");
+    private readonly string password = new(Guid.NewGuid().ToString("N").Where(char.IsLetter).Take(5).Concat("aaaaa").Take(5).ToArray());
     private const string AdminEmail = "admin@example.invalid";
 
     public async Task InitializeAsync()
@@ -52,6 +52,68 @@ public sealed class IdentityTests : IAsyncLifetime
         var client = TestHost.Client(factory);
         await CsrfAsync(client);
         return client;
+    }
+
+    [Fact]
+    public async Task FiveCharacterPasswordsWorkForAllRolesAndFourAreRejected()
+    {
+        using var admin = await AdminAsync(); // Bootstrap also uses five lowercase characters.
+        foreach (var role in new[] { "Student", "Teacher" })
+        {
+            using var client = await AnonymousAsync();
+            var email = $"{Guid.NewGuid():N}@example.invalid";
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, password[..4], "Ficticio", role))).StatusCode);
+            Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, password, "Ficticio", role))).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password))).StatusCode);
+        }
+        await using var scope = factory.Services.CreateAsyncScope();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => scope.ServiceProvider.GetRequiredService<AdminBootstrap>().CreateAsync(AdminEmail, password[..4], "Admin ficticio"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => scope.ServiceProvider.GetRequiredService<AdminBootstrap>().CreateAsync(AdminEmail, "     ", "Admin ficticio"));
+    }
+
+    [Fact]
+    public async Task EmailSearchFiltersBeforePaginationAndRemainsAdminOnly()
+    {
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>();
+            for (var i = 0; i < 55; i++) db.Users.Add(new AppUser { Id = Guid.NewGuid(), UserName = $"search-{i}@example.invalid", Email = $"search-{i}@example.invalid", NormalizedEmail = $"SEARCH-{i}@EXAMPLE.INVALID", DisplayName = "Ficticio" });
+            db.Users.Add(new AppUser { Id = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"), UserName = "last-person@example.invalid", Email = "last-person@example.invalid", NormalizedEmail = "LAST-PERSON@EXAMPLE.INVALID", DisplayName = "Último ficticio" });
+            await db.SaveChangesAsync();
+        }
+        using var admin = await AdminAsync();
+        Assert.DoesNotContain((await admin.GetFromJsonAsync<PageResult<UserView>>("/api/admin/users"))!.Items, x => x.Email == "last-person@example.invalid");
+        var filtered = await admin.GetFromJsonAsync<PageResult<UserView>>("/api/admin/users?email=%20LAST-PERSON%20");
+        Assert.Equal("last-person@example.invalid", Assert.Single(filtered!.Items).Email);
+        Assert.Empty((await admin.GetFromJsonAsync<PageResult<UserView>>("/api/admin/users?email=LAST-PERSON&page=2"))!.Items);
+        Assert.Empty((await admin.GetFromJsonAsync<PageResult<UserView>>("/api/admin/users?email=%25"))!.Items);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/admin/users?email=" + new string('a',255))).StatusCode);
+        var (student, _) = await RegisterAsync(); using var _s = student;
+        Assert.Equal(HttpStatusCode.Forbidden, (await student.GetAsync("/api/admin/users?email=last-person")).StatusCode);
+    }
+
+    [Fact]
+    public async Task AiDiagnosticsRequireAdminAndCsrfAndDoNotExposeSecrets()
+    {
+        using var anonymous = TestHost.Client(factory);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/admin/ai/")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/admin/ai/test", new {})).StatusCode);
+        var (student, _) = await RegisterAsync(); using var _s = student;
+        Assert.Equal(HttpStatusCode.Forbidden, (await student.PostAsJsonAsync("/api/admin/ai/test", new {})).StatusCode);
+        var (teacher, _) = await RegisterAsync("Teacher"); using var _t = teacher;
+        Assert.Equal(HttpStatusCode.Forbidden, (await teacher.GetAsync("/api/admin/ai/")).StatusCode);
+        using var admin = await AdminAsync();
+        var config = await admin.GetFromJsonAsync<AulaTutor.Application.Ai.AiDiagnosticConfiguration>("/api/admin/ai/");
+        Assert.Equal("Mock", config!.Provider);
+        Assert.False(config.Capabilities.StreamingImplemented);
+        admin.DefaultRequestHeaders.Remove("X-XSRF-TOKEN");
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/admin/ai/test", new {})).StatusCode);
+        await CsrfAsync(admin);
+        var result = await (await admin.PostAsJsonAsync("/api/admin/ai/test",new {})).Content.ReadFromJsonAsync<AulaTutor.Application.Ai.AiDiagnosticResult>();
+        Assert.True(result!.Success); Assert.Null(result.Usage);
+        Assert.DoesNotContain(password, System.Text.Json.JsonSerializer.Serialize(result));
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsJsonAsync("/api/admin/ai/test",new {})).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await admin.PostAsJsonAsync("/api/admin/ai/test",new {})).StatusCode);
     }
     private static async Task CsrfAsync(HttpClient client)
     {

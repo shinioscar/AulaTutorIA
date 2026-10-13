@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $env:BootstrapAdmin__Email = Read-Host 'Email del administrador inicial'
 $env:BootstrapAdmin__DisplayName = Read-Host 'Nombre del administrador inicial'
-$adminPassword = Read-Host 'Contraseña (mínimo 12 caracteres, mayúscula, minúscula, número y símbolo)' -AsSecureString
+$adminPassword = Read-Host 'Contraseña (mínimo 5 caracteres; recomendamos longitud y variedad)' -AsSecureString
 try {
     $env:BootstrapAdmin__Password = [System.Net.NetworkCredential]::new('', $adminPassword).Password
     dotnet run --project "$projectRoot/src/AulaTutor.Api" --no-launch-profile -- --bootstrap-admin

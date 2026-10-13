@@ -10,6 +10,7 @@ $apiProcess = $null
 $createdDatabase = $false
 $success = $false
 $originalConnection = $env:ConnectionStrings__AulaTutor
+$originalProvider = $env:Ai__Provider
 $apiDll = Join-Path $projectRoot 'src/AulaTutor.Api/bin/Release/net10.0/AulaTutor.Api.dll'
 $apiRoot = 'https://localhost:7080'
 $qaPassword = 'Aa1!' + [Guid]::NewGuid().ToString('N')
@@ -42,6 +43,7 @@ function Register([string]$email, [string]$role, [string]$name) {
     @{ Session=$session; User=((Invoke-Api $session GET '/api/me').Content | ConvertFrom-Json) }
 }
 try {
+    $env:Ai__Provider = 'Mock'
     foreach ($port in 5080,7080) { if (Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue) { throw "Port $port is occupied; stop only the project API before running HTTP validation." } }
     docker compose --env-file "$projectRoot/.env" -f "$projectRoot/deploy/compose.yaml" exec -T postgres psql -U $localValues['POSTGRES_USER'] -d postgres -c "CREATE DATABASE `"$databaseName`";"
     if ($LASTEXITCODE -ne 0) { throw 'Could not create isolated HTTP test database.' }
@@ -70,9 +72,23 @@ try {
     $admin = New-ApiSession
     Login $admin 'admin@example.invalid'
     Assert-Status (Invoke-Api $admin GET '/api/admin/users') 200 'Admin authorized'
+    Assert-Status (Invoke-Api $anonymous GET '/api/admin/ai/') 401 'Anonymous AI configuration denied'
+    Assert-Status (Invoke-Api $anonymous POST '/api/admin/ai/test' @{}) 401 'Anonymous AI test denied'
+    $aiConfiguration = Invoke-Api $admin GET '/api/admin/ai/'
+    Assert-Status $aiConfiguration 200 'Admin AI configuration'
+    if (($aiConfiguration.Content | ConvertFrom-Json).provider -ne 'Mock') { throw 'HTTP QA requires Mock.' }
+    Assert-Status (Invoke-Api $admin POST '/api/admin/ai/test' @{} -WithoutCsrf) 400 'AI CSRF enforced'
+    $aiResult = Invoke-Api $admin POST '/api/admin/ai/test' @{}
+    Assert-Status $aiResult 200 'Explicit Mock diagnostic'
+    if (-not ($aiResult.Content | ConvertFrom-Json).success) { throw 'Mock diagnostic failed.' }
     $student = Register 'student-a@example.invalid' 'Student' 'Estudiante A'
     $other = Register 'student-b@example.invalid' 'Student' 'Estudiante B'
     $teacher = Register 'teacher@example.invalid' 'Teacher' 'Docente pendiente'
+    Assert-Status (Invoke-Api $student.Session POST '/api/admin/ai/test' @{}) 403 'Student AI quota access denied'
+    Assert-Status (Invoke-Api $teacher.Session GET '/api/admin/ai/') 403 'Teacher AI configuration denied'
+    $search = Invoke-Api $admin GET '/api/admin/users?email=STUDENT-A'
+    Assert-Status $search 200 'Email search'
+    if (($search.Content | ConvertFrom-Json).items[0].email -ne 'student-a@example.invalid') { throw 'Email search did not match.' }
     Assert-Status (Invoke-Api $teacher.Session GET '/api/groups/') 403 'Pending teacher denied'
     Assert-Status (Invoke-Api $student.Session GET "/api/users/$($other.User.id)") 404 'Cross-student profile hidden'
     Assert-Status (Invoke-Api $admin POST "/api/admin/users/$($teacher.User.id)/teacher-decision" @{approve=$true}) 204 'Teacher approval'
@@ -104,5 +120,6 @@ try {
         }
     }
     $env:ConnectionStrings__AulaTutor = $originalConnection
+    $env:Ai__Provider = $originalProvider
     Remove-Item Env:BootstrapAdmin__Email,Env:BootstrapAdmin__Password,Env:BootstrapAdmin__DisplayName -ErrorAction SilentlyContinue
 }

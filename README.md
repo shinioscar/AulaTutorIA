@@ -1,9 +1,11 @@
 # AulaTutor IA
 
-Iteración 1: identidad, roles, validación docente y grupos. Fuente de verdad:
-`AulaTutor_IA_Documento_Maestro_v1.0.md`, intacto. La base de Iteración 0 conserva
+Iteración 2: proveedores IA intercambiables y diagnóstico administrativo, junto
+con identidad, roles, validación docente y grupos. Fuente de verdad:
+`AulaTutor_IA_Documento_Maestro_v 1.0.md`, intacto. La base de Iteración 0 conserva
 Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. No hay tutorías,
-clases, evaluaciones ni proveedores IA reales implementados.
+clases ni evaluaciones. Groq, Gemini y Ollama tienen adaptadores REST; Mock sigue
+predeterminado. No se ejecutaron llamadas reales a proveedores externos.
 
 ## Herramientas
 
@@ -17,11 +19,11 @@ versionados; dotnet-ef local en dotnet-tools.json. Sin instalaciones globales.
 En PowerShell desde `F:\AulaTutorIA`:
 
 ```powershell
-. ./scripts/Initialize-Environment.ps1
+. ./scripts/Initialize-Environment.ps 1
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 # Elegir POSTGRES_PASSWORD privado en .env si aún es un placeholder.
-./scripts/Prepare-Local.ps1
-. ./scripts/Load-LocalConfiguration.ps1
+./scripts/Prepare-Local.ps 1
+. ./scripts/Load-LocalConfiguration.ps 1
 
 docker compose --env-file .env -f deploy/compose.yaml up -d postgres
 dotnet restore AulaTutorIA.slnx --locked-mode
@@ -30,8 +32,8 @@ dotnet run --project src/AulaTutor.Api --no-launch-profile -- --migrate
 ```
 
 PostgreSQL está en localhost:15432, con 5432 dentro de su contenedor. .env lo lee
-Compose; Load-LocalConfiguration.ps1 carga explícitamente conexión, certificados
-y claves de protección para comandos .NET. No imprime secretos. .cache y .env se
+Compose; Load-LocalConfiguration.ps 1 carga explícitamente conexión, certificados
+y claves de protección/configuración IA para comandos .NET. No imprime secretos. .cache y .env se
 excluyen de Git. No copiar contraseñas en appsettings o Angular.
 
 Prepare-Local exporta el certificado HTTPS de desarrollo a .cache/certs. Usa
@@ -43,7 +45,7 @@ fuera de las verificaciones locales con certificado de desarrollo.
 ## Administrador inicial (explícito)
 
 ```powershell
-./scripts/Bootstrap-Admin.ps1
+./scripts/Bootstrap-Admin.ps 1
 ```
 
 Solicita email, nombre y contraseña de forma interactiva, sin contraseña en
@@ -59,15 +61,15 @@ BootstrapAdmin__DisplayName y BootstrapAdmin__Password para operación controlad
 API local (terminal 1, raíz):
 
 ```powershell
-. ./scripts/Initialize-Environment.ps1
-. ./scripts/Load-LocalConfiguration.ps1
+. ./scripts/Initialize-Environment.ps 1
+. ./scripts/Load-LocalConfiguration.ps 1
 dotnet run --project src/AulaTutor.Api --launch-profile https
 ```
 
 Web (terminal 2, raíz):
 
 ```powershell
-. ./scripts/Initialize-Environment.ps1
+. ./scripts/Initialize-Environment.ps 1
 Set-Location src/AulaTutor.Web
 npm.cmd ci
 npm.cmd start
@@ -75,8 +77,8 @@ npm.cmd start
 
 Abrir https://localhost:4200. Proxy HTTPS /api al mismo origen del navegador.
 API HTTPS https://localhost:7080; salud heredada http://127.0.0.1:5080/api/health.
-OpenAPI solo Development en /openapi/v1.json. La salud muestra Mock e iteración 1;
-no afirma conexión a PostgreSQL.
+OpenAPI solo Development en /openapi/v 1.json. Salud conserva iteration=1 por
+compatibilidad y muestra el proveedor configurado, sin llamadas IA ni readiness DB.
 
 Alternativa API en Docker (no ejecutar a la vez la API local):
 
@@ -101,6 +103,12 @@ conserva volúmenes; no usar -v para una parada habitual. Para la web, Ctrl+C.
   Teacher ve grupos asignados y listado mínimo de miembros; Student solo sus
   grupos, sin listado de compañeros ni perfiles ajenos. Archivo conserva datos.
 - Organización piloto única, preparada en el modelo sin interfaces multitenant.
+- Contraseña nueva de 5–128 caracteres, sin composición obligatoria; longitud,
+  mayúsculas, minúsculas, números y símbolos son recomendaciones (ADR-015).
+- Selector administrativo de miembros con búsqueda parcial por correo en toda
+  la organización; paginación conserva filtro. No limita la búsqueda a 50 cuentas.
+- Diagnóstico IA solo Admin: configuración sin secretos, capacidades y prueba
+  explícita breve con respuesta/duración/uso reportado/errores seguros.
 - Tutorías autónomas futuras privadas por defecto, sin acceso implícito por grupo,
   organización o rol administrativo. No existen todavía endpoints de tutoría.
 
@@ -111,16 +119,48 @@ Errores genéricos para cuentas inexistentes, bloqueadas o desactivadas; registr
 válido duplicado mantiene respuesta 202. DTO validados y permisos en backend.
 
 Contratos completos: docs/architecture/IDENTITY_HTTP.md y OpenAPI con cookie,
-cabecera CSRF y códigos de respuesta. Decisiones: ADR-012/ADR-013.
+cabecera CSRF y códigos de respuesta. Decisiones: ADR-012 a ADR-015.
+
+## Configurar IA
+
+En `.env` privado definir AI_PROVIDER=Mock, Groq, Gemini u Ollama. Para Groq:
+GROQ_API_KEY y GROQ_MODEL; para Gemini: GEMINI_API_KEY y GEMINI_MODEL; para Ollama:
+OLLAMA_MODEL y OLLAMA_BASE_URL. No incluir claves en comandos versionados, Angular
+o appsettings. `.env.example` contiene solo nombres y valores locales sin claves.
+Alternativa directa backend: Ai__Provider, Ai__Groq__ApiKey/Model,
+Ai__Gemini__ApiKey/Model, Ai__Ollama__Model/BaseUrl.
+
+Ejemplos de modelos documentados: Groq openai/gpt-oss-20b; Gemini gemini-3.8-flash;
+Ollama gpt-oss:20b si YA está instalado. Ninguno se descarga automáticamente ni se
+selecciona por defecto. Catálogo/capacidades y fuentes oficiales en ADR-014. Los
+modelos Gemini 2.5 tienen acceso restringido a cuentas previas; modelos desconocidos
+no declaran JSON Schema. OpenAI queda pendiente, sin SDK ni clave requerida.
+
+Ollama local: http://localhost:11434 para API Windows; para API Docker usar
+http://host.docker.internal:11434 (configurar expresamente si `.env` fija localhost).
+Solo se aceptan hosts locales permitidos, sin URLs arbitrarias desde la web.
+Groq/Gemini usan hosts oficiales fijos y no siguen redirecciones.
+
+AI_TIMEOUT_SECONDS=30, AI_MAX_CONCURRENCY=2, AI_MAX_RETRIES=0 y
+AI_MAX_RETRY_DELAY_SECONDS=5 son valores iniciales. Un proveedor seleccionado sin
+configuración válida falla al iniciar, sin fallback. Tener claves sin seleccionar
+un proveedor conserva Mock. Reiniciar la API para aplicar cambios; el loader
+respeta variables ya definidas, por lo que usar terminal nueva al cambiar `.env`.
+
+Prueba real opcional: configurar explícitamente proveedor/modelo/clave en backend,
+iniciar API, entrar como Admin y abrir «Diagnóstico IA». Consultar configuración
+no consume cuota; «Ejecutar prueba breve» envía texto fijo (máximo 128 tokens), sin
+datos académicos. Puede consumir cuota y está limitada a 3 intentos/minuto. Ningún
+script de verificación hace llamadas reales: todos fuerzan Mock o servidor simulado.
 
 ## Verificación reproducible
 
 ```powershell
 # PostgreSQL del proyecto activo; API/web detenidas (puertos 5080, 7080, 4200 libres).
-./scripts/Verify.ps1 -Smoke -Http
+./scripts/Verify.ps 1 -Smoke -Http
 ```
 
-Restaura locks, compila, ejecuta 11 pruebas unitarias y 13 de integración, verifica
+Restaura locks, compila, ejecuta 46 pruebas unitarias y 22 de integración, verifica
 consistencia de migración, npm ci/TypeScript/Angular, Compose, Git y dos recorridos
 reales: smoke de fundaciones y HTTP de identidad sobre HTTPS/PostgreSQL.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
@@ -128,15 +168,16 @@ omite pruebas sin PostgreSQL. Requiere credenciales locales con CREATE DATABASE.
 HTTP usa cuentas @example.invalid y contraseña aleatoria, sin sembrar usuarios en
 la BD principal. `.env` y certificados deben estar preparados para estos scripts.
 
-La revisión visual funcional cubrió escritorio 1440×1000 y móvil 390×844/320 de
-ancho. Capturas: docs/iterations/evidence-1/. Resultados: docs/iterations/ITERATION_1.md.
+La revisión visual funcional usa escritorio 1440×1000 y móvil 390×844/320 de ancho.
+Capturas e informes históricos en docs/iterations/evidence-1 e ITERATION_1.md;
+diagnóstico y nuevos ajustes en evidence-2 e ITERATION_2.md.
 En Windows detener la API antes de compilar para evitar bloqueo de DLL.
 
 ## Continuar el proyecto
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de
-iteraciones. Solo se autoriza hasta Iteración 1. Próximo encargo: Iteración 2,
-formalizar contrato IA/Mock, Groq y configuración/telemetría según el maestro.
+iteraciones. Solo se autoriza hasta Iteración 2. La Iteración 3 requiere un nuevo
+encargo: tutoría privada, ciclo de sesión y orquestación sobre el contrato IA.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
 políticas de retención/compartición. Antes de producción: TLS confiable, mismo

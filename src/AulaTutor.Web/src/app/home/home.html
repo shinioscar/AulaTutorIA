@@ -1,4 +1,4 @@
-<p class="eyebrow">ITERACIÓN 1 · IDENTIDAD Y GRUPOS</p>
+<p class="eyebrow">AULATUTOR IA · PILOTO</p>
 <h1>Acompañamiento académico</h1>
 <p class="intro">Un espacio de aprendizaje con supervisión docente y acceso según tu relación académica.</p>
 @if (auth.user(); as user) {
@@ -19,4 +19,4 @@
   @if (provider()) { <p>Proveedor activo: <strong>{{ provider() }}</strong></p> }
   <button type="button" (click)="checkHealth()" [disabled]="loading()">Comprobar conexión</button>
 </section>
-<p class="note">Esta iteración habilita cuentas, permisos y grupos. Las tutorías y clases se desarrollarán después.</p>
+<p class="note">Cuentas, permisos y grupos disponibles. Las tutorías y clases se desarrollarán después.</p>

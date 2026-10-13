@@ -7,6 +7,7 @@ public sealed class MockAiProvider : IAiProvider
 {
     public string ProviderId => "Mock";
     public const string ModelId = "mock-foundation-v1";
+    public AiCapabilities Capabilities => new(false, false, false, false);
 
     public Task<AiChatResult> GenerateAsync(AiChatRequest request, CancellationToken ct)
     {

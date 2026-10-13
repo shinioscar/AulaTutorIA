@@ -11,6 +11,8 @@ export class GroupsPage {
   readonly users = signal<UserView[]>([]); readonly selected = signal<GroupView | null>(null);
   readonly message = signal(''); readonly busy = signal(false);
   name = ''; memberId = ''; kind = 'Student'; rename = ''; userPage = 1;
+  emailSearch = ''; private appliedEmailSearch = '';
+  get selectedUser(): UserView | undefined { return this.users().find(user => user.id === this.memberId); }
   constructor() { void this.load(); }
   async load(): Promise<void> {
     try { this.groups.set(await firstValueFrom(this.http.get<GroupView[]>('/api/groups/'))); }
@@ -25,9 +27,13 @@ export class GroupsPage {
   }
   async loadUsers(page: number): Promise<void> {
     await this.action(async () => {
-      const data = await firstValueFrom(this.http.get<{items:UserView[]}>(`/api/admin/users?page=${page}`));
-      this.users.set(data.items); this.userPage = page;
+      const data = await firstValueFrom(this.http.get<{items:UserView[]}>('/api/admin/users', {params:{page, email:this.appliedEmailSearch}}));
+      this.users.set(data.items); this.userPage = page; this.memberId = '';
     });
+  }
+  async searchUsers(): Promise<void> {
+    this.appliedEmailSearch = this.emailSearch.trim();
+    await this.loadUsers(1);
   }
   async create(): Promise<void> {
     await this.action(async () => { await firstValueFrom(this.http.post('/api/groups/', { name: this.name })); this.name = ''; await this.load(); });

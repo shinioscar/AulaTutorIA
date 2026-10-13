@@ -20,8 +20,12 @@ public static class IdentityRegistration
         services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
         {
             options.User.RequireUniqueEmail = true;
-            options.Password.RequiredLength = 12;
-            options.Password.RequiredUniqueChars = 4;
+            options.Password.RequiredLength = 5;
+            options.Password.RequiredUniqueChars = 1;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireDigit = false;
+            options.Password.RequireNonAlphanumeric = false;
             options.Lockout.MaxFailedAccessAttempts = 5;
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         }).AddEntityFrameworkStores<AulaTutorDbContext>().AddDefaultTokenProviders();

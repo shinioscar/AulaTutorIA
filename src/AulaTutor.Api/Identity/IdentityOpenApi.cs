@@ -49,6 +49,8 @@ public static class IdentityOpenApi
                     operation.Responses.TryAdd("401", new OpenApiResponse { Description = "Credenciales no aceptadas, sin enumerar cuentas." });
                 if (context.Description.RelativePath is "api/auth/register")
                 { operation.Responses.Remove("200"); operation.Responses.TryAdd("202", new OpenApiResponse { Description = "Solicitud recibida, respuesta uniforme." }); }
+                else if (context.Description.RelativePath == "api/admin/ai/test")
+                { operation.Responses.TryAdd("429", new OpenApiResponse { Description = "Máximo 3 pruebas por administrador por minuto." }); }
                 else if (!(context.Description.HttpMethod == "POST" && context.Description.RelativePath?.TrimEnd('/') == "api/groups"))
                 { operation.Responses.Remove("200"); operation.Responses.TryAdd("204", new OpenApiResponse { Description = "Operación completada." }); }
             }

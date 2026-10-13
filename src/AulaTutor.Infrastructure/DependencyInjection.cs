@@ -2,6 +2,7 @@ using AulaTutor.Application.Ai;
 using AulaTutor.Infrastructure.Ai;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace AulaTutor.Infrastructure;
 
@@ -12,10 +13,25 @@ public static class DependencyInjection
     {
         services.AddOptions<AiProviderOptions>()
             .Bind(configuration.GetSection(AiProviderOptions.SectionName))
-            .Validate(options => options.Provider == "Mock",
-                "Iteration 0 supports Ai:Provider=Mock only; external adapters are not implemented.")
+            .Validate(options => options.IsValid(), "Configuración IA inválida: revisa proveedor, modelo, credencial y límites privados.")
             .ValidateOnStart();
-        services.AddSingleton<IAiProvider, MockAiProvider>();
+        services.AddHttpClient("Ai", client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false })
+            .RemoveAllLoggers();
+        services.AddSingleton<AiHttpTransport>();
+        services.AddSingleton<IAiProvider>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<AiProviderOptions>>();
+            return options.Value.Provider switch
+            {
+                "Mock" => new MockAiProvider(),
+                "Groq" => ActivatorUtilities.CreateInstance<GroqAiProvider>(provider),
+                "Gemini" => ActivatorUtilities.CreateInstance<GeminiAiProvider>(provider),
+                "Ollama" => ActivatorUtilities.CreateInstance<OllamaAiProvider>(provider),
+                _ => throw new InvalidOperationException("Proveedor IA no habilitado.")
+            };
+        });
+        services.AddScoped<IAiDiagnostics, AiDiagnostics>();
         return services;
     }
 }

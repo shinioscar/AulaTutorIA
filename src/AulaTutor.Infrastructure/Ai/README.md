@@ -1,11 +1,15 @@
 # Proveedores IA
 
-`IAiProvider` y los DTO se encuentran en Application; Infrastructure contiene el
-único adaptador disponible, `MockAiProvider`. Su registro es singleton porque es
-inmutable y no conserva estado de usuarios. La configuración se valida al iniciar:
-cualquier proveedor distinto de `Mock` produce un error, sin fallback silencioso.
+`IAiProvider` y los DTO están en Application. Infrastructure implementa Mock,
+Groq, Gemini y Ollama por REST oficial, sin SDK. Selección/configuración al inicio,
+sin fallback ni descubrimiento remoto; Mock sigue predeterminado y sin red.
 
-En Iteración 2 se formalizará el contrato y se añadirán Groq y puntos de extensión
-para Gemini/Ollama/OpenAI, sin referencias a sus SDK desde Domain/Application.
-No hay claves, clientes HTTP, llamadas externas, cuotas ni enrutamiento por caso
-de uso en esta iteración. El Mock no declara soporte para JSON Schema.
+Adaptadores singleton sin contexto de usuario; AiHttpTransport limita concurrencia
+por proceso, timeout total, tamaño y reintentos. AiDiagnostics scoped verifica
+Admin actual, usa prompt fijo y registra metadatos sin entrada/salida/secretos.
+Salud y consulta de configuración nunca llaman a un proveedor. OpenAI reservado.
+
+Contrato, catálogo por modelo, subconjunto JSON Schema, errores y fuentes:
+docs/decisions/ADR-014-proveedores-ia.md. Variables/operación: README de raíz.
+Tests de adaptadores usan HTTP controlado y credenciales ficticias; no cuotas reales.
+El Mock conserva sus pruebas/limitaciones originales, incluido JSON no soportado.
