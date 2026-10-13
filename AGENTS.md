@@ -2,14 +2,15 @@
 
 ## Fuente y alcance autorizado
 
-- Trabajar solo en F:\AulaTutorIA. Documento maestro v 1.0 en raíz: leer completo,
+- Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **exclusivamente Iteración 2**, proveedores IA y diagnóstico
-  Admin, con ajustes explícitos de contraseña y búsqueda de miembros por correo.
-  Iteraciones 0, 1 y 2 completadas; no avanzar a 3 sin nuevo encargo del usuario.
-- Registros: docs/iterations/ITERATION_0.md, ITERATION_1.md, ITERATION_2.md; ADR en docs/.
+- Último encargo: **exclusivamente Iteración 3**, tutorías privadas/motor inicial,
+  con Groq activo local y Mock en pruebas. No ejecutar cuota real sin autorización.
+  Iteraciones 0–3 completadas; no avanzar a 4 sin nuevo encargo del usuario.
+- Registros: docs/iterations/ITERATION_0.md a ITERATION_3.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
-- No implementar tutorías, clases, motor pedagógico, evaluación ni reportes en 2.
+- No implementar clases, asignaciones, notas, reportes docentes, compartición,
+  validadores oficiales ni ejecución SQL en 3. Resumen descriptivo local sí incluido.
   Mock, salud y estructura de proveedores permanecen funcionales.
 
 ## Arquitectura y convenciones
@@ -17,14 +18,14 @@
 - Monolito modular: Domain sin frameworks; Application referencia Domain y expone
   DTO/interfaces/reglas de acceso; Infrastructure implementa Identity, EF/Npgsql,
   bootstrap, servicios y Mock; Api compone/autoriza/valida; Angular usa HTTP relativo.
-- SDK .NET 10.0.302 / net 10.0; EF Core e Identity 10.0.10, Npgsql EF 10.0.3.
+- SDK .NET 10.0.302 / net10.0; EF Core e Identity 10.0.10, Npgsql EF 10.0.3.
   dotnet-ef 10.0.10 local en dotnet-tools.json. NuGet locks y package-lock versionados.
 - Angular standalone 21.2.25 con router/forms, TS estricto, signals y HttpClient.
   Texto/documentación español; tipos/código inglés, nombres de archivos kebab-case.
 - C# PascalCase, namespaces AulaTutor.*; endpoints finos, lógica en servicios.
   DTO distintos de entidades de persistencia. UTF-8/LF, PowerShell CRLF.
 - No nuevos paquetes sin necesidad de la iteración; sin SDK IA, Swagger UI, Redis,
-  microservicios, colas o runner E 2E prematuros.
+  microservicios, colas o runner E2E prematuros.
 - IAiProvider/DTO en Application/Ai; Mock y adaptadores HTTP en Infrastructure/Ai.
   Mock conserva texto sin red/estado/uso ficticio; configuración explícita válida
   habilita Groq/Gemini/Ollama, nunca fallback silencioso. No SDK ni paquetes nuevos.
@@ -36,6 +37,8 @@
 - ADR-015: contraseñas nuevas de 5–128 caracteres para todos los roles; no exigir
   mayúscula/minúscula/dígito/símbolo ni más de 1 carácter distinto. Longitud/variedad
   recomendadas. No cambiar hashes/cuentas existentes; bloqueo y CSRF conservados.
+  Riesgo pendiente: mínimo de 5 no apropiado para piloto con usuarios reales; no cambiar
+  política sin nueva autorización, como pide el encargo de 3.
 - GET /api/admin/users?email= filtra correo parcial normalizado ANTES de paginar,
   máximo 254 caracteres y 50 resultados/página. Admin activo de organización piloto;
   selector de grupo conserva filtro al paginar y reinicia selección al buscar.
@@ -55,7 +58,7 @@
   grupos asignados y roster mínimo. Student: solo grupos propios, sin roster.
   Perfil /api/users/{id}: propio o Admin, sin permiso implícito docente. 404 oculta
   recursos ajenos, 401 sin sesión, 403 sin rol, 409 conflicto, 400 CSRF/datos.
-- Las futuras conversaciones privadas solo pertenecen al estudiante por defecto.
+- Las conversaciones privadas solo pertenecen al estudiante propietario.
   Ser Admin/Teacher o compartir organización/grupo NO concede acceso a tutorías.
 - Una organización piloto fija; FKs compuestas de membresías evitan cruces entre
   organizaciones. No crear multitenancy completo. Archivar grupos no elimina datos.
@@ -93,20 +96,69 @@
   prompt/respuesta/keys. Rechazar respuesta que reproduzca clave configurada.
 - No llamadas reales durante Verify/QA: Mock o HTTP loopback simulado. Prueba real
   opcional solo acción explícita Admin con proveedor configurado. No se ejecutó en 2.
+- El usuario informó diagnóstico real Groq antes de 3: openai/gpt-oss-20b,
+  555 ms/97 tokens entrada/77 salida. No atribuirlo al agente ni a tutoría real.
+  Conservar AI_PROVIDER=Groq local y .env privado; NO hacer más llamadas reales
+  sin autorización explícita. CI/TestHost/HTTP/browser QA fuerzan Mock y vacían
+  keys externas del proceso temporal. .env nunca se sobreescribe para pruebas.
+
+## Tutorías privadas (ADR-016/017)
+
+- Domain: TutoringSession/Message/Turn, enums operativos. Application:
+  TutoringOrchestrator, política tutoring-v1, DTO/ITutoringService. Infrastructure:
+  persistencia, autorización, idempotencia y lease; API fina; Angular Student.
+- Solo propietario Student activo de organización piloto. Teacher/Admin/Student
+  ajeno: 404 aunque compartan grupo. Crear/listar sin Student: 403. Actor viene de
+  Identity, nunca studentId enviado. Sin excepción admin ni compartición.
+- Migración aditiva PrivateTutoring después de InitialIdentity. FKs restrictivas,
+  propietario/organización y únicos en creación/turno/rol/secuencia. No EnsureCreated.
+- Created→Active→Paused→Active o Completed terminal. Crear/leer/refrescar/reanudar
+  NO genera IA. Start/Message/Hint/Simplify son turnos explícitos. Pausa/cierre
+  requieren resolver/cancelar generación vigente; cierre funciona con falla IA.
+- GUID requestId idempotente ligado a acción/texto; revisión de servidor. Lock
+  corto de fila propia antes/después de generación, sin transacción prolongada.
+  Replays completados no llaman IA; pendientes: 202, otra clave/revisión vieja 409.
+- Lease de timeout+30 s, token cercado: descartar resultado tardío tras cancelar,
+  recuperar o vencer. Cancelación HTTP/timeout conservan intento como fallo;
+  lease vencido visible Interrupted. Retry explícito del mismo requestId/acción/texto,
+  máximo 3 ejecuciones y RetryNotBefore. No reintentar al GET ni automáticamente.
+- Revalidar Student/activo en BD antes de persistir respuesta: revocación descarta
+  resultado. GET usa snapshot corto RepeatableRead. Cancel de MISMA clave admite
+  revisión anterior por carrera con HTTPabort, sin cancelar otro turno.
+- Orquestador sin secretos/herramientas/SQL. SystemPolicy solo servidor; metadatos
+  e historial son datos user no confiables. Ventana hasta 11 mensajes en total/12k caracteres;
+  conserva todo el historial en DB. Foco/activity sugeridos NO validan dominio.
+- JSON Schema cuando hay capacidad, texto para Mock. Modelo/proveedor se fijan al
+  crear; cambio de configuración: 409 antes de llamada, sin fallback. tutor texto de 6000,
+  entrada de 2000, tema 160/objetivo 500/foco 200, 100 mensajes y 100 sesiones/alumno.
+  Rate limit de 6 envíos/min/cuenta/proceso; presupuesto/auditoría completa siguen para 8.
+- Mock conserva comportamiento/8 pruebas previas; añade guiones SQL explícitamente
+  simulados de diagnóstico/repaso/ejercicio/pista/simplificación. No comprensión LLM.
+- Resumen descriptivo local al cierre: fechas/tema/objetivo/ayudas/turnos, sin IA,
+  sin calificar ni reportar a Teacher. No módulo de evidencias/reportes de 4.
+- Angular renderiza párrafos/código/listas por interpolación segura. No innerHTML,
+  HTML arbitrario, enlaces activos ni renderizador remoto. Sin local/sessionStorage
+  para conversación/credenciales. Poll GET cada 2 s mientras genera; salir aborta POST.
+- Retención provisional: SOLO ficticios en DB local hasta limpieza explícita,
+  sin autoexpiración/borrado/compartición. Antes de reales aprobar políticas de
+  retención, consentimiento, proveedor y solicitudes de eliminación.
 
 ## Operación y pruebas
 
-- Inicializar herramientas: . ./scripts/Initialize-Environment.ps 1.
-  Exportar certificado: ./scripts/Prepare-Local.ps 1 (solo .cache/certs).
-  Configurar entorno privado: . ./scripts/Load-LocalConfiguration.ps 1.
+- Inicializar herramientas: . ./scripts/Initialize-Environment.ps1.
+  Exportar certificado: ./scripts/Prepare-Local.ps1 (solo .cache/certs).
+  Configurar entorno privado: . ./scripts/Load-LocalConfiguration.ps1.
 - .env lo lee Compose; .NET lo carga únicamente mediante el script local explícito.
   No imprimir connection strings, cookies, contraseñas, .env ni archivos de QA privados.
 - PostgreSQL localhost:15432 (interno 5432) en proyecto Compose aulatutor-ia.
   API/web pueden seguir activos al entregar: inspeccionar puertos/procesos y detener
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
-- CI local completo: ./scripts/Verify.ps 1 -Smoke -Http. Restore locked, build, 68
-  pruebas (46 unitarias/22 integración; conserva las 24 originales), consistencia
-  EF, npm ci/check/build, Compose config, diff, smoke Mock y HTTP identidad/diagnóstico.
+- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 91
+  pruebas (55 unitarias/36 integración; conserva 68 previas), consistencia EF,
+  npm ci/check/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
+  Última ejecución: 91 pruebas y 48 comprobaciones HTTP aprobadas; revisión visual
+  desktop/móvil registrada en QA_3.md. PrivateTutoring aplicada en BD local;
+  entorno de QA eliminado y API local restaurada con Groq sin llamadas reales.
 - Integración exige AULATUTOR_TEST_CONNECTION (el loader lo asigna si falta) y
   PostgreSQL real con CREATE DATABASE. Bases aulatutor_test_<GUID> / aulatutor_http_<GUID>
   aisladas y eliminadas con validación de nombre. Nunca usar EnsureCreated/InMemory
@@ -115,16 +167,16 @@
   contraseña ficticia aleatoria/PID/base temporal. Limpiar proceso/base/archivo al
   terminar; no mantener el administrador de QA en la BD principal.
 - Pruebas con @example.invalid, claves aleatorias ficticias. Capturas versionadas
-  en docs/iterations/evidence-1 y evidence-2, sin secretos. Caches/logs ignorados.
+  en docs/iterations/evidence-1/2/3, sin secretos. Caches/logs ignorados.
 - /api/health conserva iteration=1 por contrato heredado; liveness/configuración IA,
-  sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1/2.
+  sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1/2/3.
   Los endpoints nuevos deben exigir autorización; nunca diagnóstico IA público.
 - Git main, sin remoto. Commit solo al pasar verificaciones; no push sin autorización.
 
 ## Pendientes y continuidad
 
-- Iteración 3: tutoría privada, orquestación/ciclo de sesión sobre contrato IA,
-  conservación de identidad/pertenencia. No continuar automáticamente.
+- Iteración 4: evidencias/validadores/reportes/compartición, preservar tutoría
+  privada y no otorgar acceso implícito al docente. No continuar automáticamente.
 - Pendientes documentados: confirmación email, recuperación/MFA, invitaciones,
   auditoría integral (8), retención/compartición (4), frontera Approved/Published (5).
 - Antes de producción/datos reales: aprobación/políticas institucionales, TLS/proxy

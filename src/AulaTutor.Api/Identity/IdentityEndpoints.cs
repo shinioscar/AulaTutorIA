@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using AulaTutor.Application.Identity;
+using AulaTutor.Application.Tutoring;
 using AulaTutor.Domain.Identity;
 using Microsoft.AspNetCore.Antiforgery;
 
@@ -91,7 +92,7 @@ public sealed class IdentityValidationFilter(IAntiforgery antiforgery) : IEndpoi
         }
         foreach (var argument in context.Arguments)
         {
-            if (argument is not (RegisterRequest or LoginRequest or RolesRequest or GroupRequest or MembershipRequest)) continue;
+            if (argument is not (RegisterRequest or LoginRequest or RolesRequest or GroupRequest or MembershipRequest or CreateTutoringRequest or TutoringTurnRequest or TutoringTransitionRequest)) continue;
             var errors = new List<ValidationResult>();
             if (!Validator.TryValidateObject(argument, new ValidationContext(argument), errors, true))
                 return Results.Problem(statusCode: 400, title: "Revisa el formato y los límites de los campos.");

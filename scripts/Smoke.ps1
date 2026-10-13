@@ -8,6 +8,8 @@ $apiProcess = $null
 $webProcess = $null
 $previousEnvironment = $env:ASPNETCORE_ENVIRONMENT
 $previousProvider = $env:Ai__Provider
+$previousGroqKey = $env:Ai__Groq__ApiKey
+$previousGeminiKey = $env:Ai__Gemini__ApiKey
 
 function Wait-Endpoint([string]$url, $process) {
     for ($attempt = 0; $attempt -lt 60; $attempt++) {
@@ -25,6 +27,8 @@ try {
     }
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     $env:Ai__Provider = 'Mock'
+    $env:Ai__Groq__ApiKey = $null
+    $env:Ai__Gemini__ApiKey = $null
     $apiDll = Join-Path $projectRoot 'src/AulaTutor.Api/bin/Release/net10.0/AulaTutor.Api.dll'
     $apiProcess = Start-Process -FilePath (Get-Command dotnet).Source -ArgumentList @($apiDll, '--urls', 'http://127.0.0.1:5080;https://localhost:7080') -WorkingDirectory "$projectRoot/src/AulaTutor.Api" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$artifactDir/api.log" -RedirectStandardError "$artifactDir/api-error.log"
     $healthResponse = Wait-Endpoint 'http://127.0.0.1:5080/api/health' $apiProcess
@@ -50,4 +54,6 @@ try {
     }
     $env:ASPNETCORE_ENVIRONMENT = $previousEnvironment
     $env:Ai__Provider = $previousProvider
+    $env:Ai__Groq__ApiKey = $previousGroqKey
+    $env:Ai__Gemini__ApiKey = $previousGeminiKey
 }

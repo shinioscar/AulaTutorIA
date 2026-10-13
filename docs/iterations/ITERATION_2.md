@@ -56,7 +56,7 @@ y privacidad se conservan salvo el cambio explícito de contraseña (ADR-015).
 
 | Comprobación | Resultado |
 |---|---|
-| ./scripts/Verify.ps 1 -Smoke -Http | Pasó: restore locked, build, herramientas, tests, EF, npm ci/check/build, Compose, diff, smoke y HTTP |
+| ./scripts/Verify.ps1 -Smoke -Http | Pasó: restore locked, build, herramientas, tests, EF, npm ci/check/build, Compose, diff, smoke y HTTP |
 | Compilación .NET Release |0 errores, 0 advertencias |
 | Unitarias |46/46, 0 omitidas;11 previas conservadas |
 | Integración |22/22, 0 omitidas;13 previas conservadas |

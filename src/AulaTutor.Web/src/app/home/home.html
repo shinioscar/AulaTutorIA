@@ -4,6 +4,7 @@
 @if (auth.user(); as user) {
   <section aria-labelledby="session-title">
     <h2 id="session-title">Hola, {{ user.displayName }}</h2>
+    @if(auth.hasRole('Student')){<p><a class="button-link" routerLink="/tutoring">Iniciar o reanudar tutoría</a></p>}
     <p>Roles activos: {{ user.roles.length ? user.roles.join(', ') : 'Sin roles activos' }}</p>
     @if (user.teacherApproval === 'Pending') { <p class="notice">Tu solicitud docente está pendiente de aprobación administrativa.</p> }
     @if (user.teacherApproval === 'Rejected') { <p class="notice">Tu solicitud docente no fue aprobada. Consulta al administrador del piloto.</p> }

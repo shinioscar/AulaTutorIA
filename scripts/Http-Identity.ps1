@@ -11,6 +11,8 @@ $createdDatabase = $false
 $success = $false
 $originalConnection = $env:ConnectionStrings__AulaTutor
 $originalProvider = $env:Ai__Provider
+$originalGroqKey = $env:Ai__Groq__ApiKey
+$originalGeminiKey = $env:Ai__Gemini__ApiKey
 $apiDll = Join-Path $projectRoot 'src/AulaTutor.Api/bin/Release/net10.0/AulaTutor.Api.dll'
 $apiRoot = 'https://localhost:7080'
 $qaPassword = 'Aa1!' + [Guid]::NewGuid().ToString('N')
@@ -44,6 +46,8 @@ function Register([string]$email, [string]$role, [string]$name) {
 }
 try {
     $env:Ai__Provider = 'Mock'
+    $env:Ai__Groq__ApiKey = $null
+    $env:Ai__Gemini__ApiKey = $null
     foreach ($port in 5080,7080) { if (Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue) { throw "Port $port is occupied; stop only the project API before running HTTP validation." } }
     docker compose --env-file "$projectRoot/.env" -f "$projectRoot/deploy/compose.yaml" exec -T postgres psql -U $localValues['POSTGRES_USER'] -d postgres -c "CREATE DATABASE `"$databaseName`";"
     if ($LASTEXITCODE -ne 0) { throw 'Could not create isolated HTTP test database.' }
@@ -104,12 +108,47 @@ try {
     Assert-Status (Invoke-Api $teacher.Session GET "/api/groups/$($foreign.id)") 404 'Foreign teacher group hidden'
     Assert-Status (Invoke-Api $student.Session GET "/api/groups/$($group.id)/members") 404 'Student roster denied'
     Assert-Status (Invoke-Api $admin POST '/api/groups/' @{name='No-CSRF'} -WithoutCsrf) 400 'Authenticated CSRF enforced'
+    # Tutoring HTTP QA is always Mock and isolated, never the user's Groq environment.
+    $tutoringRequest = @{requestId=[Guid]::NewGuid().ToString();topic='IF EXISTS';goal='Comprender condiciones';level='Beginner';directReview=$false}
+    Assert-Status (Invoke-Api $anonymous POST '/api/tutoring-sessions/' $tutoringRequest) 401 'Anonymous tutoring denied'
+    $createdTutoring = Invoke-Api $student.Session POST '/api/tutoring-sessions/' $tutoringRequest
+    Assert-Status $createdTutoring 201 'Private tutoring creation'
+    $tutoring = $createdTutoring.Content | ConvertFrom-Json
+    Assert-Status (Invoke-Api $student.Session POST '/api/tutoring-sessions/' $tutoringRequest) 201 'Idempotent tutoring creation'
+    Assert-Status (Invoke-Api $other.Session GET "/api/tutoring-sessions/$($tutoring.id)") 404 'Other student tutoring hidden'
+    Assert-Status (Invoke-Api $teacher.Session GET "/api/tutoring-sessions/$($tutoring.id)") 404 'Assigned teacher tutoring hidden'
+    Assert-Status (Invoke-Api $admin GET "/api/tutoring-sessions/$($tutoring.id)") 404 'Admin private tutoring hidden'
+    $startTurn = @{requestId=[Guid]::NewGuid().ToString();revision=$tutoring.revision;action='Start';text=$null;retry=$false}
+    Assert-Status (Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/messages" $startTurn -WithoutCsrf) 400 'Tutoring CSRF enforced'
+    $startResponse = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/messages" $startTurn
+    Assert-Status $startResponse 200 'Mock tutoring diagnostic'
+    $tutoring = $startResponse.Content | ConvertFrom-Json
+    if ($tutoring.messages.Count -ne 2 -or $tutoring.providerId -ne 'Mock') { throw 'Unexpected initial tutoring turn.' }
+    $replayed = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/messages" $startTurn
+    Assert-Status $replayed 200 'Idempotent turn replay'
+    if (($replayed.Content | ConvertFrom-Json).messages.Count -ne 2) { throw 'Turn replay duplicated a message.' }
+    foreach ($turnAction in 'Message','Hint','Simplify') {
+        $turn = @{requestId=[Guid]::NewGuid().ToString();revision=$tutoring.revision;action=$turnAction;text=$(if($turnAction -eq 'Message'){'Creo que comprueba si hay una fila.'}else{$null});retry=$false}
+        $turnResponse = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/messages" $turn
+        Assert-Status $turnResponse 200 "Tutoring $turnAction"
+        $tutoring = $turnResponse.Content | ConvertFrom-Json
+    }
+    $paused = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/pause" @{revision=$tutoring.revision}
+    Assert-Status $paused 200 'Tutoring pause'
+    $tutoring = $paused.Content | ConvertFrom-Json
+    $resumed = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/resume" @{revision=$tutoring.revision}
+    Assert-Status $resumed 200 'Tutoring resume'
+    $tutoring = $resumed.Content | ConvertFrom-Json
+    Assert-Status (Invoke-Api $student.Session GET "/api/tutoring-sessions/$($tutoring.id)") 200 'Stored tutoring reopened'
+    $completed = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/complete" @{revision=$tutoring.revision}
+    Assert-Status $completed 200 'Tutoring completion'
+    if (($completed.Content | ConvertFrom-Json).summary -notmatch 'sin llamada adicional') { throw 'Descriptive summary missing.' }
     Assert-Status (Invoke-Api $student.Session POST '/api/auth/logout' @{}) 204 'Logout'
     Assert-Status (Invoke-Api $student.Session GET '/api/me') 401 'Logged-out access denied'
     $checks | ConvertTo-Json | Set-Content "$artifactDir/results.json" -Encoding utf8
     $success = $true
     if ($KeepRunning) {
-        @{ database=$databaseName; processId=$apiProcess.Id; password=$qaPassword; adminEmail='admin@example.invalid'; teacherEmail='teacher@example.invalid'; studentEmail='student-a@example.invalid'; groupId=$group.id; foreignGroupId=$foreign.id } | ConvertTo-Json | Set-Content "$projectRoot/.cache/http-qa.json" -Encoding utf8
+        @{ database=$databaseName; processId=$apiProcess.Id; password=$qaPassword; adminEmail='admin@example.invalid'; teacherEmail='teacher@example.invalid'; studentEmail='student-a@example.invalid'; tutoringOwnerEmail='student-b@example.invalid'; completedTutoringId=$tutoring.id; groupId=$group.id; foreignGroupId=$foreign.id } | ConvertTo-Json | Set-Content "$projectRoot/.cache/http-qa.json" -Encoding utf8
         Write-Host 'HTTP checks passed. Isolated API retained for browser QA; private state in .cache/http-qa.json.'
     } else { Write-Host 'HTTP identity checks passed on real HTTPS API/PostgreSQL.' }
 } finally {
@@ -121,5 +160,7 @@ try {
     }
     $env:ConnectionStrings__AulaTutor = $originalConnection
     $env:Ai__Provider = $originalProvider
+    $env:Ai__Groq__ApiKey = $originalGroqKey
+    $env:Ai__Gemini__ApiKey = $originalGeminiKey
     Remove-Item Env:BootstrapAdmin__Email,Env:BootstrapAdmin__Password,Env:BootstrapAdmin__DisplayName -ErrorAction SilentlyContinue
 }

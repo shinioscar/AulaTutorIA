@@ -54,6 +54,10 @@ export const adminGuard: CanActivateFn = async () => {
   await auth.load();
   return auth.hasRole('Admin') ? true : router.createUrlTree(['/']);
 };
+export const studentGuard: CanActivateFn = async () => {
+  const auth=inject(AuthService); const router=inject(Router);
+  await auth.load(); return auth.hasRole('Student')?true:router.createUrlTree(['/']);
+};
 
 export const sessionErrorInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);

@@ -1,0 +1,21 @@
+<p class="eyebrow">APRENDIZAJE PERSONAL</p><h1>Mis tutorías</h1>
+<p>Un espacio privado para preguntar, practicar y volver al punto donde te quedaste.</p>
+<p class="message" role="status">{{message()}}</p>
+<section aria-labelledby="create-tutoring-title"><h2 id="create-tutoring-title">¿Qué quieres aprender?</h2>
+  <form #form="ngForm" (ngSubmit)="create()">
+    <label for="topic">Tema</label><input id="topic" name="topic" [(ngModel)]="topic" required minlength="2" maxlength="160" placeholder="Por ejemplo: IF EXISTS en SQL">
+    <label for="goal">Objetivo de aprendizaje</label><input id="goal" name="goal" [(ngModel)]="goal" required minlength="2" maxlength="500" placeholder="Qué te gustaría comprender o practicar">
+    <label for="level">Nivel percibido</label><select id="level" name="level" [(ngModel)]="level"><option value="Beginner">Estoy empezando</option><option value="Intermediate">Tengo conocimientos previos</option><option value="Advanced">Busco profundizar</option></select>
+    <label class="check-label"><input type="checkbox" name="directReview" [(ngModel)]="directReview"> Prefiero un repaso directo en vez de diagnóstico inicial</label>
+    <p class="note">Solo tú puedes consultar la conversación. Al comenzar o enviar un turno, el tema y el contexto reciente se envían al proveedor de IA configurado. Usa datos ficticios, sin información personal ni secretos. Las respuestas son orientativas.</p>
+    <button [disabled]="busy() || form.invalid">Crear tutoría privada</button>
+    <button type="button" class="secondary" (click)="newRequest()" [disabled]="busy()">Preparar otra solicitud</button>
+  </form>
+</section>
+<div class="actions"><h2>Tus conversaciones</h2><button type="button" class="secondary" (click)="load(page)" [disabled]="busy()">Actualizar listado</button></div>
+@if(busy()){<p role="status">Cargando…</p>}
+<div class="group-grid">
+  @for(session of sessions();track session.id){<a class="session-card" [routerLink]="['/tutoring',session.id]"><strong>{{session.topic}}</strong><p>{{session.goal}}</p><span class="state-badge">{{label(session.state)}}</span><p class="note">{{session.providerId}} · Historial privado</p><span>Abrir conversación →</span></a>}
+  @empty { @if(!busy()){<p class="notice">Todavía no tienes tutorías en esta página. Crea una para empezar.</p>} }
+</div>
+<div class="actions"><button type="button" class="secondary" (click)="load(page-1)" [disabled]="busy()||page<=1">Anteriores</button><span>Página {{page}}</span><button type="button" class="secondary" (click)="load(page+1)" [disabled]="busy()||sessions().length<50">Más tutorías</button></div>

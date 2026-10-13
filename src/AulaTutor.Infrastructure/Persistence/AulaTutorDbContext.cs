@@ -1,4 +1,5 @@
 using AulaTutor.Domain.Identity;
+using AulaTutor.Domain.Tutoring;
 using AulaTutor.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -12,10 +13,14 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<AcademicGroup> Groups => Set<AcademicGroup>();
     public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
+    public DbSet<TutoringSession> TutoringSessions => Set<TutoringSession>();
+    public DbSet<TutoringTurn> TutoringTurns => Set<TutoringTurn>();
+    public DbSet<TutoringMessage> TutoringMessages => Set<TutoringMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.ConfigureTutoring();
         builder.Entity<Organization>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100);

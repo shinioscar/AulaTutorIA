@@ -24,7 +24,9 @@ button:disabled { background:#e8eef1; border-color:#a5b3bb; color:#455d6b; curso
 .message:empty { display:none; } .message { color:#713700; }
 .form-card { max-width:34rem; margin:0 auto; }
 label { display:block; margin:.9rem 0 .4rem; font-weight:600; }
-input, select { width:100%; min-width:0; padding:.8rem; font:inherit; color:#173044; background:white; border:1px solid #8096a4; border-radius:.35rem; }
+input, select, textarea { width:100%; min-width:0; padding:.8rem; font:inherit; color:#173044; background:white; border:1px solid #8096a4; border-radius:.35rem; }
+textarea {resize:vertical}.check-label {display:flex;align-items:center;gap:.6rem;font-weight:400}.check-label input {width:auto}
+.session-card {display:block;background:white;border:1px solid #bdcbd4;border-radius:.7rem;padding:1.3rem;text-decoration:none}.session-card:hover{background:#eaf2f5}.session-card strong{font-size:1.2rem}.state-badge{display:inline-block;border-radius:2rem;padding:.3rem .8rem;background:#e2eeed;color:#254f50;font-size:.85rem}
 form button { margin-top:1rem; } .inline-form input { max-width:30rem; }
 .inline-form button { margin-right:.5rem; margin-bottom:.5rem; }
 .user-grid, .group-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr)); gap:1rem; }

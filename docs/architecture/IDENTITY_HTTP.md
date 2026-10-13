@@ -1,7 +1,7 @@
 # Contratos HTTP — identidad y diagnóstico (Iteraciones 1–2)
 
 Base: /api, mismo origen. HTTPS requerido para autenticación y escrituras.
-OpenAPI generado en /openapi/v 1.json (solo Development) incluye esquemas DTO,
+OpenAPI generado en /openapi/v1.json (solo Development) incluye esquemas DTO,
 cookie de autenticación, cabecera CSRF y respuestas. No Swagger UI ni bearer tokens.
 
 | Método / ruta | Acceso | Resultado normal |
@@ -45,8 +45,9 @@ si falla el proveedor; su 429 externo es RateLimited dentro del diagnóstico.401
 de sesión/permisos/CSRF y 429 de la API son ProblemDetails. Ninguno expone
 contraseñas, hash, connection strings, diagnóstico de cuentas ni excepciones SQL.
 
-No hay endpoints de tutoría/clases/evaluación. Las futuras tutorías personales
-requerirán propietario y compartición explícita, sin heredar acceso por grupo.
+Tutorías privadas implementadas en Iteración 3: contratos en TUTORING_HTTP.md.
+Solo propietario Student, sin compartición ni acceso implícito por grupo/rol.
+No hay endpoints de clases ni evaluación oficial.
 
 Contraseñas nuevas 5–128, sin composición obligatoria; política ADR-015. Modelo EF
 y hashes existentes conservados. Configuración IA/formatos/capacidades en ADR-014.

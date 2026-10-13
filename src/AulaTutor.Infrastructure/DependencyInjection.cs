@@ -1,5 +1,7 @@
 using AulaTutor.Application.Ai;
 using AulaTutor.Infrastructure.Ai;
+using AulaTutor.Application.Tutoring;
+using AulaTutor.Infrastructure.Tutoring;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -32,6 +34,9 @@ public static class DependencyInjection
             };
         });
         services.AddScoped<IAiDiagnostics, AiDiagnostics>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<TutoringOrchestrator>();
+        services.AddScoped<ITutoringService, TutoringService>();
         return services;
     }
 }

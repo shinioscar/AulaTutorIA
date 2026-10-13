@@ -39,7 +39,7 @@ public sealed class HealthEndpointTests
         Assert.Contains(loginOperation.GetProperty("parameters").EnumerateArray(), p => p.GetProperty("name").GetString() == "X-XSRF-TOKEN");
         Assert.True(loginOperation.GetProperty("responses").TryGetProperty("204", out _));
         Assert.True(loginOperation.GetProperty("responses").TryGetProperty("401", out _));
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/tutoring-sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/lessons")).StatusCode);
     }
 
     [Fact]

@@ -18,7 +18,7 @@ Groq/Gemini requieren clave y modelo; Ollama requiere modelo y URL local válida
 Una selección incompleta o desconocida falla sin fallback ni conexión externa.
 OpenAI queda reservado y se rechaza; los modelos gpt-oss no habilitan su API.
 
-Groq utiliza /openai/v 1/chat/completions y max_completion_tokens; Gemini adapta
+Groq utiliza /openai/v1/chat/completions y max_completion_tokens; Gemini adapta
 systemInstruction, contents user/model y generationConfig.responseFormat.text;
 Ollama usa /api/chat, stream=false y options.num_predict. No se permiten URLs
 remotas configurables para Groq/Gemini. Ollama permite http/https, solo localhost,

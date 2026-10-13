@@ -1,11 +1,14 @@
 # AulaTutor IA
 
-Iteración 2: proveedores IA intercambiables y diagnóstico administrativo, junto
-con identidad, roles, validación docente y grupos. Fuente de verdad:
-`AulaTutor_IA_Documento_Maestro_v 1.0.md`, intacto. La base de Iteración 0 conserva
-Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. No hay tutorías,
-clases ni evaluaciones. Groq, Gemini y Ollama tienen adaptadores REST; Mock sigue
-predeterminado. No se ejecutaron llamadas reales a proveedores externos.
+Iteración 3: tutorías privadas con conversación, ayudas, historial y cierre,
+además de proveedores IA, identidad, roles y grupos. Fuente de verdad:
+`AulaTutor_IA_Documento_Maestro_v1.0.md`, intacto. La base de Iteración 0 conserva
+Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. No hay clases ni
+evaluaciones oficiales. Groq, Gemini y Ollama tienen adaptadores REST; Mock es
+predeterminado sin configuración externa y obligatorio en pruebas. En el entorno
+local del usuario se conserva Groq, con diagnóstico real informado por él:
+openai/gpt-oss-20b, 555 ms, 97 tokens de entrada/77 de salida. El agente no ejecutó
+llamadas reales adicionales en Iteración 3 ni modificó claves privadas de .env.
 
 ## Herramientas
 
@@ -19,11 +22,11 @@ versionados; dotnet-ef local en dotnet-tools.json. Sin instalaciones globales.
 En PowerShell desde `F:\AulaTutorIA`:
 
 ```powershell
-. ./scripts/Initialize-Environment.ps 1
+. ./scripts/Initialize-Environment.ps1
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 # Elegir POSTGRES_PASSWORD privado en .env si aún es un placeholder.
-./scripts/Prepare-Local.ps 1
-. ./scripts/Load-LocalConfiguration.ps 1
+./scripts/Prepare-Local.ps1
+. ./scripts/Load-LocalConfiguration.ps1
 
 docker compose --env-file .env -f deploy/compose.yaml up -d postgres
 dotnet restore AulaTutorIA.slnx --locked-mode
@@ -32,7 +35,7 @@ dotnet run --project src/AulaTutor.Api --no-launch-profile -- --migrate
 ```
 
 PostgreSQL está en localhost:15432, con 5432 dentro de su contenedor. .env lo lee
-Compose; Load-LocalConfiguration.ps 1 carga explícitamente conexión, certificados
+Compose; Load-LocalConfiguration.ps1 carga explícitamente conexión, certificados
 y claves de protección/configuración IA para comandos .NET. No imprime secretos. .cache y .env se
 excluyen de Git. No copiar contraseñas en appsettings o Angular.
 
@@ -45,7 +48,7 @@ fuera de las verificaciones locales con certificado de desarrollo.
 ## Administrador inicial (explícito)
 
 ```powershell
-./scripts/Bootstrap-Admin.ps 1
+./scripts/Bootstrap-Admin.ps1
 ```
 
 Solicita email, nombre y contraseña de forma interactiva, sin contraseña en
@@ -61,15 +64,15 @@ BootstrapAdmin__DisplayName y BootstrapAdmin__Password para operación controlad
 API local (terminal 1, raíz):
 
 ```powershell
-. ./scripts/Initialize-Environment.ps 1
-. ./scripts/Load-LocalConfiguration.ps 1
+. ./scripts/Initialize-Environment.ps1
+. ./scripts/Load-LocalConfiguration.ps1
 dotnet run --project src/AulaTutor.Api --launch-profile https
 ```
 
 Web (terminal 2, raíz):
 
 ```powershell
-. ./scripts/Initialize-Environment.ps 1
+. ./scripts/Initialize-Environment.ps1
 Set-Location src/AulaTutor.Web
 npm.cmd ci
 npm.cmd start
@@ -77,7 +80,7 @@ npm.cmd start
 
 Abrir https://localhost:4200. Proxy HTTPS /api al mismo origen del navegador.
 API HTTPS https://localhost:7080; salud heredada http://127.0.0.1:5080/api/health.
-OpenAPI solo Development en /openapi/v 1.json. Salud conserva iteration=1 por
+OpenAPI solo Development en /openapi/v1.json. Salud conserva iteration=1 por
 compatibilidad y muestra el proveedor configurado, sin llamadas IA ni readiness DB.
 
 Alternativa API en Docker (no ejecutar a la vez la API local):
@@ -109,8 +112,9 @@ conserva volúmenes; no usar -v para una parada habitual. Para la web, Ctrl+C.
   la organización; paginación conserva filtro. No limita la búsqueda a 50 cuentas.
 - Diagnóstico IA solo Admin: configuración sin secretos, capacidades y prueba
   explícita breve con respuesta/duración/uso reportado/errores seguros.
-- Tutorías autónomas futuras privadas por defecto, sin acceso implícito por grupo,
-  organización o rol administrativo. No existen todavía endpoints de tutoría.
+- Tutorías privadas Student: tema/objetivo/nivel/repaso directo, conversación,
+  pistas/simplificación, historial, pausa/reanudación y resumen descriptivo al cierre.
+  Teacher/Admin/otros estudiantes no reciben acceso por grupo ni rol. Sin compartición.
 
 CSRF validado en todas las escrituras, incluido registro/login. Angular obtiene
 /api/auth/csrf y envía X-XSRF-TOKEN; renueva tras login/logout. 5 fallos bloquean
@@ -119,7 +123,45 @@ Errores genéricos para cuentas inexistentes, bloqueadas o desactivadas; registr
 válido duplicado mantiene respuesta 202. DTO validados y permisos en backend.
 
 Contratos completos: docs/architecture/IDENTITY_HTTP.md y OpenAPI con cookie,
-cabecera CSRF y códigos de respuesta. Decisiones: ADR-012 a ADR-015.
+cabecera CSRF y códigos de respuesta. Tutorías: docs/architecture/TUTORING_HTTP.md.
+Decisiones: ADR-012 a ADR-017.
+
+## Tutoría privada
+
+Entrar como Student y abrir «Tutorías». Crear tema y objetivo conserva una sesión
+sin llamar IA. «Comenzar conversación» realiza el primer turno explícito. «Enviar
+mensaje», «Necesito una pista» y «Explícalo más sencillo» envían un turno cada uno
+al proveedor/modelo fijados al crear. Groq permanece activo en el entorno local;
+no se hace fallback ni se genera al abrir, actualizar o reanudar una sesión.
+
+La IA recibe política del servidor, metadatos y una ventana reciente acotada. Las
+observaciones son orientativas, no corrección objetiva ni calificaciones. Mock usa
+guiones de SQL rotulados como simulación; no comprende cualquier tema como un LLM.
+Código/listas/texto se representan sin HTML arbitrario y nunca se ejecutan.
+
+Pausar y reanudar conservan historial. Tras cerrar la app o volver a entrar, abrir
+la sesión desde el listado recupera el estado. Un turno pendiente tiene generación,
+error o recuperación explícita: no escribir otro hasta resolverlo/cancelarlo. Retry
+conserva el mismo intento y clave, con máximo 3 ejecuciones y espera del proveedor.
+Cancelar conserva el intento y descarta respuestas tardías; no garantiza detener
+la facturación externa. Una recuperación podría consumir cuota otra vez.
+
+Finalizar es terminal y conserva fecha/resumen descriptivo local sin nueva llamada
+IA; puedes leer la conversación posteriormente. El resumen no es un reporte
+académico validado ni se envía a docentes. Límites: tema 160/objetivo 500, mensajes
+de 2000 caracteres, 100 mensajes por sesión, 100 sesiones por alumno y 6 envíos/minuto
+por cuenta/proceso. Revisiones y claves idempotentes protegen pestañas concurrentes.
+
+Privacidad provisional: SOLO datos ficticios. Se conservan en PostgreSQL local
+hasta limpieza explícita del piloto, sin eliminación automática o compartición.
+Antes de usuarios reales hay que aprobar retención, consentimientos, políticas de
+proveedores y solicitudes de eliminación. La contraseña mínima de 5 sigue vigente
+por decisión del usuario, pero es un riesgo pendiente y no es apropiada para un
+piloto con usuarios reales. No se modificó esa política en 3.
+
+Aplicar PrivateTutoring de forma explícita con el comando --migrate de Preparación;
+es una migración aditiva, sin modificar hashes/cuentas/grupos existentes. El arranque
+web no migra. Detalles de integridad/recuperación en ADR-016/017.
 
 ## Configurar IA
 
@@ -157,12 +199,13 @@ script de verificación hace llamadas reales: todos fuerzan Mock o servidor simu
 
 ```powershell
 # PostgreSQL del proyecto activo; API/web detenidas (puertos 5080, 7080, 4200 libres).
-./scripts/Verify.ps 1 -Smoke -Http
+./scripts/Verify.ps1 -Smoke -Http
 ```
 
-Restaura locks, compila, ejecuta 46 pruebas unitarias y 22 de integración, verifica
+Restaura locks, compila, ejecuta 55 pruebas unitarias y 36 de integración, verifica
 consistencia de migración, npm ci/TypeScript/Angular, Compose, Git y dos recorridos
-reales: smoke de fundaciones y HTTP de identidad sobre HTTPS/PostgreSQL.
+reales: smoke de fundaciones y HTTP de identidad/tutoría Mock sobre HTTPS/PostgreSQL.
+La última ejecución aprobó 91 pruebas y 48 comprobaciones HTTP.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
 omite pruebas sin PostgreSQL. Requiere credenciales locales con CREATE DATABASE.
 HTTP usa cuentas @example.invalid y contraseña aleatoria, sin sembrar usuarios en
@@ -170,14 +213,15 @@ la BD principal. `.env` y certificados deben estar preparados para estos scripts
 
 La revisión visual funcional usa escritorio 1440×1000 y móvil 390×844/320 de ancho.
 Capturas e informes históricos en docs/iterations/evidence-1 e ITERATION_1.md;
-diagnóstico y nuevos ajustes en evidence-2 e ITERATION_2.md.
+diagnóstico y nuevos ajustes en evidence-2 e ITERATION_2.md; tutorías en evidence-3
+e ITERATION_3.md. Proveedores/tutorías reales adicionales no se ejecutan en CI/QA.
 En Windows detener la API antes de compilar para evitar bloqueo de DLL.
 
 ## Continuar el proyecto
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de
-iteraciones. Solo se autoriza hasta Iteración 2. La Iteración 3 requiere un nuevo
-encargo: tutoría privada, ciclo de sesión y orquestación sobre el contrato IA.
+iteraciones. Solo se autoriza hasta Iteración 3. No avanzar a 4 sin nuevo encargo:
+evidencias/validadores/reportes/compartición deberán respetar propietario y permisos.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
 políticas de retención/compartición. Antes de producción: TLS confiable, mismo
