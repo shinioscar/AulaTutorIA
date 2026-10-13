@@ -33,6 +33,8 @@ try {
         Assert-CommandExit 'npm ci'
         npm.cmd run check
         Assert-CommandExit 'TypeScript check'
+        npm.cmd run check:theme
+        Assert-CommandExit 'Theme tokens and contrast'
         npm.cmd run build
         Assert-CommandExit 'Angular production build'
     } finally { Pop-Location }

@@ -1,6 +1,6 @@
 <a class="skip-link" href="#content">Saltar al contenido</a>
-<header>
-  <a class="brand" routerLink="/">AulaTutor IA</a>
+<header class="app-header">
+  <a class="brand" routerLink="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Zm0 0v14"/></svg></span><span>AulaTutor IA</span></a>
   <nav aria-label="Navegación principal">
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Inicio</a>
     @if (auth.user(); as user) {
@@ -13,9 +13,10 @@
       <a routerLink="/login" routerLinkActive="active">Entrar</a><a routerLink="/register" routerLinkActive="active">Registro</a>
     }
   </nav>
+  <app-theme-toggle />
 </header>
 <main id="content" tabindex="-1">
   <p role="status" class="message">{{ message() }}</p>
   <router-outlet />
 </main>
-<footer>Aprendizaje con supervisión docente · Piloto con datos ficticios</footer>
+<footer>Acompañamiento académico · Piloto con datos ficticios</footer>

@@ -11,6 +11,28 @@ local del usuario se conserva Groq, con diagnóstico real informado por él:
 openai/gpt-oss-20b, 555 ms, 97 tokens de entrada/77 de salida. El agente no ejecutó
 llamadas reales adicionales en Iteración 3 ni modificó claves privadas de .env.
 
+## Sistema visual y temas (UI-0)
+
+AulaTutor Light es el tema inicial; el botón «Oscuro» de la cabecera cambia
+el tema para cualquier rol. La elección explícita persiste en el navegador bajo
+`aulatutor.theme.v1`; es la única preferencia guardada en localStorage, sin datos
+académicos, credenciales ni sesiones. Se aplica antes de arrancar Angular. Si el
+almacenamiento está bloqueado, el cambio sigue funcionando en la página actual.
+
+La guía oficial está en [DESIGN_SYSTEM](docs/design/DESIGN_SYSTEM.md),
+[THEME_TOKENS](docs/design/THEME_TOKENS.md) y
+[COMPONENT_GUIDELINES](docs/design/COMPONENT_GUIDELINES.md), con arquitectura en
+[ADR-020](docs/decisions/ADR-020-temas-y-sistema-visual.md). Inicio demuestra la
+identidad educativa: superficies claras/azul/verde y alternativa marino/turquesa/
+violeta. Cabecera, navegación, tarjetas, controles, avisos, conversación, código
+y reportes consumen tokens semánticos comunes. No se añadieron dependencias.
+
+Los demás flujos conservan su distribución; los dashboards completos, sidebar/
+drawer y opción de tema del sistema quedan para encargos posteriores. No hay
+métricas inventadas ni cambios en autenticación o permisos. Las próximas pantallas
+deben reutilizar esta base y funcionar en ambos temas. Evidencia y comprobaciones
+de UI-0: [QA_UI_0](docs/design/QA_UI_0.md).
+
 ## Herramientas
 
 .NET SDK 10.0.302, EF Core/Identity 10.0.10, Npgsql EF 10.0.3, PostgreSQL 18.6;
@@ -254,7 +276,7 @@ script de verificación hace llamadas reales: todos fuerzan Mock o servidor simu
 ```
 
 Restaura locks, compila, ejecuta 68 pruebas unitarias y 55 de integración, verifica
-consistencia de migración, npm ci/TypeScript/Angular, Compose, Git y dos recorridos
+consistencia de migración, npm ci/TypeScript/contraste de temas/Angular, Compose, Git y dos recorridos
 reales: smoke de fundaciones y HTTP de identidad/tutoría Mock sobre HTTPS/PostgreSQL.
 La verificación final de Iteración 4 aprobó 123 pruebas y 75 comprobaciones HTTP.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
@@ -275,7 +297,7 @@ En Windows detener la API antes de compilar para evitar bloqueo de DLL.
 ## Continuar el proyecto
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de
-iteraciones. Solo se autoriza hasta Iteración 4. No avanzar a 5 sin nuevo encargo:
+iteraciones y las guías de docs/design. Iteraciones 0–4 y UI-0 completados. No avanzar a 5 sin nuevo encargo:
 el constructor docente deberá distinguir LessonVersion de los planes personales.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y

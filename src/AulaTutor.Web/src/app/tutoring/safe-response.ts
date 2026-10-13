@@ -9,7 +9,7 @@ interface Block { kind:'paragraph'|'code'|'list'; text:string; language:string; 
     @else if (block.kind === 'list') { <ul>@for (item of block.items; track $index) { <li>@for (part of inline(item); track $index) { @if (part.code) { <code>{{part.text}}</code> } @else { {{part.text}} } }</li> }</ul> }
     @else { <p>@for (part of inline(block.text); track $index) { @if (part.code) { <code>{{part.text}}</code> } @else { {{part.text}} } }</p> }
   }
-`,styles:[`p {white-space:pre-wrap;margin:.4rem 0;line-height:1.65;overflow-wrap:anywhere} pre {white-space:pre;overflow:auto;max-width:100%;padding:1rem;background:#112c3b;color:#eef6fa;border-radius:.5rem;font-size:.9rem} code {font-family:ui-monospace,Consolas,monospace} p code,li code {background:#e5edf2;color:#143c4d;padding:.1rem .3rem;border-radius:.2rem} ul {padding-left:1.4rem} li {overflow-wrap:anywhere;line-height:1.65}`]})
+`,styles:[`p {white-space:pre-wrap;margin:.4rem 0;line-height:var(--line-body);overflow-wrap:anywhere} pre {white-space:pre;overflow:auto;max-width:100%;padding:var(--space-4);background:var(--code-background);color:var(--code-text);border:1px solid var(--border);border-radius:var(--radius-medium);font-size:var(--font-small)} code {font-family:var(--font-mono)} p code,li code {background:var(--code-inline-background);color:var(--code-inline-text);padding:.1rem .3rem;border-radius:var(--radius-small)} ul {padding-left:1.4rem} li {overflow-wrap:anywhere;line-height:var(--line-body)}`]})
 export class SafeResponse {
   blocks:Block[]=[];
   @Input() set text(value:string) {

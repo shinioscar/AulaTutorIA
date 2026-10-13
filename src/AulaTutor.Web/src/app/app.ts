@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth.service';
+import { ThemeToggle } from './theme/theme-toggle';
 
 @Component({
   selector: 'app-root', standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet], templateUrl: './app.html',
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, ThemeToggle], templateUrl: './app.html',
 })
 export class App {
   readonly auth = inject(AuthService);

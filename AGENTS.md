@@ -4,9 +4,9 @@
 
 - Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **exclusivamente Iteración 4**, evidencias, diagnóstico/planes personales y reportes,
+- Último encargo: **UI-0**, guía visual oficial, tokens y temas Light/Dark,
   con Groq activo local y Mock en pruebas. No ejecutar cuota real sin autorización.
-  Iteraciones 0–4 completadas. No avanzar a 5 sin nuevo encargo.
+  Iteraciones 0–4 y UI-0 completados. No avanzar a 5 sin nuevo encargo.
 - Registros: docs/iterations/ITERATION_0.md a ITERATION_4.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
 - En 4 se autorizan compartición mínima de reportes y validadores formativos cerrados,
@@ -29,6 +29,25 @@
 - IAiProvider/DTO en Application/Ai; Mock y adaptadores HTTP en Infrastructure/Ai.
   Mock conserva texto sin red/estado/uso ficticio; configuración explícita válida
   habilita Groq/Gemini/Ollama, nunca fallback silencioso. No SDK ni paquetes nuevos.
+
+## Sistema visual y temas (UI-0 / ADR-020)
+
+- Guías obligatorias para nuevas interfaces: docs/design/DESIGN_SYSTEM.md,
+  THEME_TOKENS.md y COMPONENT_GUIDELINES.md. Reutilizar tokens semánticos de
+  src/AulaTutor.Web/src/styles/theme-tokens.css; no colores literales en componentes.
+- Light predeterminado; Dark explícito, data-theme en html, ThemeService/ThemeToggle
+  compartidos. Solo aulatutor.theme.v1 (light/dark) puede guardarse en localStorage;
+  excepción visual, nunca credenciales, sesión, roles o contenido académico.
+  Preferencia por navegador/origen, independiente de login/rol. Head aplica antes
+  del render; storage bloqueado no impide usar el tema. System queda futuro.
+- UI-0 adapta únicamente Inicio y estilos compartidos. Layouts de tutorías/grupos/
+  usuarios/diagnóstico se conservan con colores tokenizados. Dashboards completos,
+  sidebar/drawer y nuevos módulos requieren otro encargo. Referencias en docs son
+  inspiración, sin estadísticas, costos, notas o disponibilidad ficticios.
+- Fuentes/iconos locales de sistema/SVG; sin dependencias visuales o fuentes remotas.
+  Controles 44 px, foco visible, teclado, reduced-motion y contraste en contexto.
+  npm run check:theme verifica 70 pares y centralización; integrado en Verify.ps1.
+  Capturas/QA en docs/design/evidence-ui-0 y QA_UI_0.md. No certifica auditoría WCAG.
 
 ## Identidad y autorización (ADR-012/013)
 
@@ -187,10 +206,12 @@
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
 - CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 123
   pruebas (68 unitarias/55 integración; conserva 91 previas), consistencia EF,
-  npm ci/check/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
+  npm ci/check/check:theme/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
+  UI-0 repitió 123 pruebas/75 HTTP y añadió 70 comprobaciones de contraste y
+  19 capturas por rol/viewport; QA_UI_0.md registra teclado/storage/responsive.
   Iteración 4: 123 pruebas y 75 comprobaciones HTTP aprobadas; cierre visual en QA_4.md. Histórico:
   91 pruebas y 48 comprobaciones HTTP de 3; revisión visual
-  desktop/móvil registrada en QA_3.md. PrivateTutoring aplicada en BD local;
+  desktop/móvil registrada en QA_3.md. PrivateTutoring/LearningEvidence aplicadas en BD local;
   entorno de QA eliminado y API local restaurada con Groq sin llamadas reales.
 - Integración exige AULATUTOR_TEST_CONNECTION (el loader lo asigna si falta) y
   PostgreSQL real con CREATE DATABASE. Bases aulatutor_test_<GUID> / aulatutor_http_<GUID>
@@ -202,7 +223,7 @@
 - Pruebas con @example.invalid, claves aleatorias ficticias. Capturas versionadas
   en docs/iterations/evidence-1/2/3/4, sin secretos. Caches/logs ignorados.
 - /api/health conserva iteration=1 por contrato heredado; liveness/configuración IA,
-  sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1/2/3.
+  sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1–4.
   Los endpoints nuevos deben exigir autorización; nunca diagnóstico IA público.
 - Git main, sin remoto. Commit solo al pasar verificaciones; no push sin autorización.
 

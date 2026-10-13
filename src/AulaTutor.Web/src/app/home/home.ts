@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 
-@Component({ standalone: true, imports: [RouterLink], templateUrl: './home.html' })
+@Component({ standalone: true, imports: [RouterLink], templateUrl: './home.html', styleUrl: './home.css' })
 export class Home {
   private readonly http = inject(HttpClient);
   readonly auth = inject(AuthService);

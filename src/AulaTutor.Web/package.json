@@ -5,7 +5,8 @@
   "scripts": {
     "start": "ng serve --host localhost --port 4200 --ssl --ssl-cert ../../.cache/certs/localhost.pem --ssl-key ../../.cache/certs/localhost.key --proxy-config proxy.conf.json",
     "build": "ng build",
-    "check": "tsc --noEmit -p tsconfig.app.json"
+    "check": "tsc --noEmit -p tsconfig.app.json",
+    "check:theme": "node ../../scripts/verify-theme.mjs"
   },
   "engines": {
     "node": "^20.19.0 || ^22.12.0 || ^24.0.0"

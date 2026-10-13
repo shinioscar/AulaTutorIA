@@ -15,5 +15,5 @@ import { SafeResponse } from './safe-response';
     <h4>Aspectos no evaluados</h4><ul>@for(item of r.content.notAssessed;track $index){<li>{{item}}</li>}</ul>
     <h4>Prácticas siguientes</h4><ul>@for(item of r.content.recommendations;track $index){<li>{{item.goal}}</li>}</ul>
   }
-`,styles:`.statistics{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.6rem}.statistics div{background:#f2f6f7;border-radius:.4rem;padding:.65rem}.statistics dt{font-size:.82rem}.statistics dd{font-size:1.25rem;margin:.25rem 0 0;font-weight:600}.evidence-reference{display:block;overflow-wrap:anywhere;color:#536673}`})
+`,styles:`.statistics{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:var(--space-3)}.statistics div{background:var(--surface-secondary);border-radius:var(--radius-medium);padding:var(--space-3)}.statistics dt{font-size:var(--font-small)}.statistics dd{font-size:var(--font-heading);margin:var(--space-1) 0 0;font-weight:var(--weight-semibold)}.evidence-reference{display:block;overflow-wrap:anywhere;color:var(--text-secondary)}`})
 export class ReportCard {readonly report=input.required<Report>();}

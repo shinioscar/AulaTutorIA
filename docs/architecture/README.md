@@ -49,3 +49,8 @@ y errores seguros según ADR-014. Mock predeterminado, sin fallback ni llamadas
 durante arranque/salud. Orquestación inicial en Application y persistencia/leases en
 Infrastructure (ADR-016/017). Streaming, auditoría integral y cuotas distribuidas
 permanecen pendientes. Contraseñas y búsqueda de miembros: ADR-015.
+
+UI-0: temas globales en ThemeService/ThemeToggle y CSS custom properties,
+sin acoplarse a identidad o HTTP. Light inicial, Dark explícito; solo preferencia
+visual en localStorage y aplicación temprana (ADR-020). Guías oficiales y evidencia
+en docs/design. Inicio demuestra la composición; los demás flujos conservan layout.
