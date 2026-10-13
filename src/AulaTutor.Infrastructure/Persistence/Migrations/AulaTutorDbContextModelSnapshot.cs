@@ -96,6 +96,402 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.DiagnosticAssessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasMaxLength(12000)
+                        .HasColumnType("character varying(12000)");
+
+                    b.Property<long>("EvidenceRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Preliminary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PromptVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("DiagnosticAssessments");
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.ExerciseAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ExerciseVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Feedback")
+                        .IsRequired()
+                        .HasMaxLength(3000)
+                        .HasColumnType("character varying(3000)");
+
+                    b.Property<int>("HintsUsed")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ModelId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PromptVersion")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderId")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SimplificationsUsed")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ValidationType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("ExerciseId", "Number")
+                        .IsUnique();
+
+                    b.HasIndex("ExerciseId", "SessionId");
+
+                    b.HasIndex("SessionId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("SessionId", "StudentId");
+
+                    b.ToTable("ExerciseAttempts", t =>
+                        {
+                            t.HasCheckConstraint("CK_Attempt_Limits", "\"Number\" BETWEEN 1 AND 10 AND \"HintsUsed\" >= 0 AND \"Outcome\" BETWEEN 0 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.LearningExercise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcceptedAnswersJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("HintCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDiagnostic")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPresented")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ObjectiveOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OptionsJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OriginRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasMaxLength(1500)
+                        .HasColumnType("character varying(1500)");
+
+                    b.Property<string>("Rubric")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SimplificationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId", "SessionId");
+
+                    b.HasIndex("SessionId", "PlanId", "Order")
+                        .IsUnique()
+                        .HasFilter("\"PlanId\" IS NOT NULL");
+
+                    b.ToTable("LearningExercises", t =>
+                        {
+                            t.HasCheckConstraint("CK_Exercise_Limits", "\"Version\" > 0 AND \"HintCount\" >= 0 AND \"Kind\" BETWEEN 0 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.LearningRecommendation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EvidenceIdsJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Goal")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsGeneral")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ReportId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportId", "SessionId");
+
+                    b.ToTable("LearningRecommendations");
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.LearningReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasMaxLength(12000)
+                        .HasColumnType("character varying(12000)");
+
+                    b.Property<long>("EvidenceRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PromptVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StatisticsJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("LearningReports");
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.PersonalizedLearningPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasMaxLength(24000)
+                        .HasColumnType("character varying(24000)");
+
+                    b.Property<int>("CurrentActivity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DiagnosticId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DiagnosticVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PromptVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("DiagnosticId", "SessionId");
+
+                    b.HasIndex("SessionId", "StudentId");
+
+                    b.HasIndex("SessionId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("LearningPlans", t =>
+                        {
+                            t.HasCheckConstraint("CK_Plan_State", "\"State\" BETWEEN 0 AND 3 AND \"CurrentActivity\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.ReportShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConsentVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTimeOffset>("GrantedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReportId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientId");
+
+                    b.HasIndex("ReportId", "SessionId");
+
+                    b.HasIndex("SessionId", "RequestId")
+                        .IsUnique();
+
+                    b.ToTable("ReportShares");
+                });
+
             modelBuilder.Entity("AulaTutor.Domain.Tutoring.TutoringMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -182,6 +578,9 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.Property<bool>("DirectReview")
                         .HasColumnType("boolean");
 
+                    b.Property<long>("EvidenceRevision")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Goal")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -223,6 +622,12 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("SourceRecommendationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceReportId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
@@ -239,6 +644,10 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(160)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SourceRecommendationId");
+
+                    b.HasIndex("SourceReportId");
 
                     b.HasIndex("StudentId", "CreationKey")
                         .IsUnique();
@@ -271,6 +680,10 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.Property<int>("Attempts")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ContextJson")
+                        .HasMaxLength(28000)
+                        .HasColumnType("character varying(28000)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -280,6 +693,9 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.Property<string>("ErrorCode")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
+
+                    b.Property<Guid?>("ExerciseId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("InputHash")
                         .IsRequired()
@@ -298,6 +714,10 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.Property<int?>("OutputTokens")
                         .HasColumnType("integer");
 
+                    b.Property<string>("RequestText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<DateTimeOffset?>("RetryNotBefore")
                         .HasColumnType("timestamp with time zone");
 
@@ -308,7 +728,7 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
                     b.ToTable("TutoringTurns", null, t =>
                         {
-                            t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 3");
+                            t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 11");
 
                             t.HasCheckConstraint("CK_TutoringTurn_Attempts", "\"Attempts\" BETWEEN 1 AND 3");
 
@@ -576,6 +996,117 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.DiagnosticAssessment", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.ExerciseAttempt", b =>
+                {
+                    b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.LearningExercise", null)
+                        .WithMany()
+                        .HasForeignKey("ExerciseId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringTurn", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId", "RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId", "StudentId")
+                        .HasPrincipalKey("Id", "StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.LearningExercise", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.PersonalizedLearningPlan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.LearningRecommendation", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Tutoring.LearningReport", null)
+                        .WithMany()
+                        .HasForeignKey("ReportId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.LearningReport", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.PersonalizedLearningPlan", b =>
+                {
+                    b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.DiagnosticAssessment", null)
+                        .WithMany()
+                        .HasForeignKey("DiagnosticId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId", "StudentId")
+                        .HasPrincipalKey("Id", "StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.ReportShare", b =>
+                {
+                    b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.LearningReport", null)
+                        .WithMany()
+                        .HasForeignKey("ReportId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AulaTutor.Domain.Tutoring.TutoringMessage", b =>
                 {
                     b.HasOne("AulaTutor.Domain.Tutoring.TutoringTurn", null)
@@ -587,6 +1118,16 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("AulaTutor.Domain.Tutoring.TutoringSession", b =>
                 {
+                    b.HasOne("AulaTutor.Domain.Tutoring.LearningRecommendation", null)
+                        .WithMany()
+                        .HasForeignKey("SourceRecommendationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.LearningReport", null)
+                        .WithMany()
+                        .HasForeignKey("SourceReportId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("StudentId", "OrganizationId")

@@ -7,10 +7,10 @@ public sealed record CreateTutoringRequest(Guid RequestId,
     [Required, StringLength(160, MinimumLength = 2)] string Topic,
     [Required, StringLength(500, MinimumLength = 2)] string Goal,
     [Required, RegularExpression("^(Beginner|Intermediate|Advanced)$")] string Level = "Beginner",
-    bool DirectReview = false);
+    bool DirectReview = false, Guid? SourceRecommendationId = null);
 public sealed record TutoringTurnRequest(Guid RequestId, long Revision,
-    [Required, RegularExpression("^(Start|Message|Hint|Simplify)$")] string Action,
-    [StringLength(2000)] string? Text = null, bool Retry = false);
+    [Required, RegularExpression("^(Start|Message|Hint|Simplify|DiagnosticQuestion|AnalyzeDiagnosis|GeneratePlan|ActivatePlan|SubmitAttempt|NextActivity|GenerateExercise|FinalReport)$")] string Action,
+    [StringLength(2000)] string? Text = null, bool Retry = false, Guid? ExerciseId = null);
 public sealed record TutoringTransitionRequest(long Revision);
 public sealed record TutoringSessionItem(Guid Id, string Topic, string Goal, string State,
     DateTimeOffset CreatedAt, DateTimeOffset LastActivityAt, DateTimeOffset? CompletedAt,
@@ -20,14 +20,14 @@ public sealed record TutoringMessageView(Guid Id, Guid RequestId, int Sequence, 
     string? PromptVersion, AiTokenUsage? Usage);
 public sealed record TutoringTurnView(Guid RequestId, string Action, string State, int Attempts,
     bool IsGenerating, bool CanRetry, string? ErrorCode, string? Error,
-    DateTimeOffset? RetryNotBefore, long? DurationMs);
+    DateTimeOffset? RetryNotBefore, long? DurationMs, Guid? ExerciseId = null, string? RetryText = null);
 public sealed record TutoringSessionView(Guid Id, string Topic, string Goal, string Level,
     bool DirectReview, string State, long Revision, DateTimeOffset CreatedAt,
     DateTimeOffset LastActivityAt, DateTimeOffset? CompletedAt, string ProviderId,
     string ModelId, string PolicyVersion, string Activity, string CurrentFocus,
     TutoringMessageView[] Messages, TutoringTurnView[] Turns, Guid? PendingRequestId,
-    string? Summary);
-public sealed record TutoringReply(string Text, string Activity, string Focus, AiChatResult Result);
+    string? Summary, LearningView? Learning = null);
+public sealed record TutoringReply(string Text, string Activity, string Focus, AiChatResult Result, string? LearningPayload = null);
 public interface ITutoringService
 {
     Task<TutoringSessionView> CreateAsync(CreateTutoringRequest request, CancellationToken ct);

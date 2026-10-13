@@ -36,6 +36,11 @@ public static class DependencyInjection
         services.AddScoped<IAiDiagnostics, AiDiagnostics>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<TutoringOrchestrator>();
+        services.AddOptions<LearningPolicy>().Bind(configuration.GetSection("Learning"))
+            .Validate(p => p.IsValid(), "Límites de diagnóstico inválidos.").ValidateOnStart();
+        services.AddScoped<LearningOrchestrator>();
+        services.AddScoped<LearningWorkflow>();
+        services.AddScoped<ILearningService, LearningService>();
         services.AddScoped<ITutoringService, TutoringService>();
         return services;
     }

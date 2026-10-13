@@ -1,6 +1,7 @@
 # AulaTutor IA
 
-Iteración 3: tutorías privadas con conversación, ayudas, historial y cierre,
+Iteración 4: diagnóstico estructurado, planes personales ejecutables, ejercicios,
+intentos, reportes orientativos, refuerzo y compartición voluntaria mínima,
 además de proveedores IA, identidad, roles y grupos. Fuente de verdad:
 `AulaTutor_IA_Documento_Maestro_v1.0.md`, intacto. La base de Iteración 0 conserva
 Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. No hay clases ni
@@ -114,7 +115,8 @@ conserva volúmenes; no usar -v para una parada habitual. Para la web, Ctrl+C.
   explícita breve con respuesta/duración/uso reportado/errores seguros.
 - Tutorías privadas Student: tema/objetivo/nivel/repaso directo, conversación,
   pistas/simplificación, historial, pausa/reanudación y resumen descriptivo al cierre.
-  Teacher/Admin/otros estudiantes no reciben acceso por grupo ni rol. Sin compartición.
+  Teacher/Admin/otros estudiantes no reciben acceso por grupo ni rol. El alumno puede
+  compartir expresamente una versión de reporte con un docente relacionado (ADR-019).
 
 CSRF validado en todas las escrituras, incluido registro/login. Angular obtiene
 /api/auth/csrf y envía X-XSRF-TOKEN; renueva tras login/logout. 5 fallos bloquean
@@ -124,7 +126,7 @@ válido duplicado mantiene respuesta 202. DTO validados y permisos en backend.
 
 Contratos completos: docs/architecture/IDENTITY_HTTP.md y OpenAPI con cookie,
 cabecera CSRF y códigos de respuesta. Tutorías: docs/architecture/TUTORING_HTTP.md.
-Decisiones: ADR-012 a ADR-017.
+Decisiones: ADR-012 a ADR-019. Aprendizaje: docs/architecture/LEARNING_HTTP.md.
 
 ## Tutoría privada
 
@@ -153,7 +155,8 @@ de 2000 caracteres, 100 mensajes por sesión, 100 sesiones por alumno y 6 envío
 por cuenta/proceso. Revisiones y claves idempotentes protegen pestañas concurrentes.
 
 Privacidad provisional: SOLO datos ficticios. Se conservan en PostgreSQL local
-hasta limpieza explícita del piloto, sin eliminación automática o compartición.
+hasta limpieza explícita del piloto, sin eliminación automática. Compartición de
+reportes limitada a consentimiento y relación docente vigente; el historial sigue privado.
 Antes de usuarios reales hay que aprobar retención, consentimientos, políticas de
 proveedores y solicitudes de eliminación. La contraseña mínima de 5 sigue vigente
 por decisión del usuario, pero es un riesgo pendiente y no es apropiada para un
@@ -162,6 +165,54 @@ piloto con usuarios reales. No se modificó esa política en 3.
 Aplicar PrivateTutoring de forma explícita con el comando --migrate de Preparación;
 es una migración aditiva, sin modificar hashes/cuentas/grupos existentes. El arranque
 web no migra. Detalles de integridad/recuperación en ADR-016/017.
+
+## Diagnóstico, ruta personal y resultados
+
+En una sesión nueva puedes «Comenzar diagnóstico estructurado»: las preguntas se
+registran como consignas. Responde mediante «Registrar respuesta» en su tarjeta;
+el chat sigue disponible para dudas libres. Finaliza el diagnóstico cuando resulte
+razonable, con un máximo configurable de cinco preguntas. Si hay menos de dos
+consignas respondidas, el análisis es preliminar. No produce notas oficiales.
+
+«Generar plan personalizado» usa el diagnóstico vigente; la tarjeta muestra metas,
+explicaciones, dificultad y tiempos orientativos. Puedes pedir ajustes (hasta tres
+versiones). «Iniciar tutoría personalizada» acepta la ruta y empieza su primera
+actividad en la misma conversación. Preguntas y ayudas mantienen la actividad;
+«Continuar ruta» exige una respuesta registrada y controla el avance en backend.
+Un resultado abierto pendiente de revisión permite continuar, sin certificar dominio.
+Pausar/reanudar conserva posición. Puedes seguir en modo libre y pedir ejercicios
+independientes sin generar un plan.
+
+Ejercicios cerrados se contrastan con reglas privadas; código y respuestas abiertas
+reciben orientación IA y quedan no verificados. No se ejecuta código/SQL. Los
+intentos conservan versión, respuesta, ayudas y resultado, incluso si falla la IA.
+El panel de evidencias permite revisarlos; ningún mensaje libre se convierte por sí
+solo en un intento. Una coincidencia con una regla propuesta por IA no demuestra
+dominio ni validez curricular: las reglas también requieren revisión pedagógica.
+
+Finalizar conserva el resumen local. «Generar reporte orientativo con IA» añade
+observaciones vinculadas a evidencias y estadísticas calculadas desde PostgreSQL.
+La acción es explícita y no se repite al recargar. Reportes antiguos se marcan
+desactualizados cuando cambian evidencias. Las recomendaciones permiten «Iniciar
+tutoría de refuerzo» conservando su origen y sin mezclar conversaciones anteriores.
+
+Puedes compartir únicamente una versión del reporte con un Teacher aprobado que
+comparta un grupo vigente contigo. Revisa el contenido y autoriza expresamente;
+el docente consulta «Reportes compartidos», sin acceso al historial ni respuestas
+completas. Puedes revocar nuevas consultas; eso no elimina copias previas. Admin
+no recibe acceso a reportes privados por su rol.
+
+Aplicar LearningEvidence explícitamente con --migrate. Límites de diagnóstico en
+configuración backend Learning:MaxDiagnosticQuestions (1–8) / MinimumEvidence
+(1–máximo). Se conserva el límite de seis envíos por minuto: puede ser necesario
+esperar durante un recorrido largo. Máximo diez intentos por ejercicio, diez
+ejercicios libres y diez revisiones de reporte por sesión.
+
+Mock permite recorrer estos controles con guiones rotulados. No evalúa semánticamente
+una materia ni personaliza como un LLM. El usuario informó una tutoría pedagógica
+real satisfactoria con Groq antes de 4; los nuevos prompts/planes/reportes con
+Groq/Gemini/Ollama requieren validación manual autorizada posterior. No se realizaron
+nuevas llamadas reales ni cambios a secretos durante esta iteración.
 
 ## Configurar IA
 
@@ -202,10 +253,10 @@ script de verificación hace llamadas reales: todos fuerzan Mock o servidor simu
 ./scripts/Verify.ps1 -Smoke -Http
 ```
 
-Restaura locks, compila, ejecuta 55 pruebas unitarias y 36 de integración, verifica
+Restaura locks, compila, ejecuta 68 pruebas unitarias y 55 de integración, verifica
 consistencia de migración, npm ci/TypeScript/Angular, Compose, Git y dos recorridos
 reales: smoke de fundaciones y HTTP de identidad/tutoría Mock sobre HTTPS/PostgreSQL.
-La última ejecución aprobó 91 pruebas y 48 comprobaciones HTTP.
+La verificación final de Iteración 4 aprobó 123 pruebas y 75 comprobaciones HTTP.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
 omite pruebas sin PostgreSQL. Requiere credenciales locales con CREATE DATABASE.
 HTTP usa cuentas @example.invalid y contraseña aleatoria, sin sembrar usuarios en
@@ -215,13 +266,17 @@ La revisión visual funcional usa escritorio 1440×1000 y móvil 390×844/320 de
 Capturas e informes históricos en docs/iterations/evidence-1 e ITERATION_1.md;
 diagnóstico y nuevos ajustes en evidence-2 e ITERATION_2.md; tutorías en evidence-3
 e ITERATION_3.md. Proveedores/tutorías reales adicionales no se ejecutan en CI/QA.
+La Iteración 4 añade QA_4.md y evidence-4 para diagnóstico, ruta, ejercicios,
+reportes, refuerzo y compartición. `Http-Identity.ps1 -KeepRunning -SetupOnly`
+prepara una base temporal para revisión visual; no equivale al recorrido HTTP
+completo. Limpiar su proceso/base/.cache/http-qa.json al terminar.
 En Windows detener la API antes de compilar para evitar bloqueo de DLL.
 
 ## Continuar el proyecto
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de
-iteraciones. Solo se autoriza hasta Iteración 3. No avanzar a 4 sin nuevo encargo:
-evidencias/validadores/reportes/compartición deberán respetar propietario y permisos.
+iteraciones. Solo se autoriza hasta Iteración 4. No avanzar a 5 sin nuevo encargo:
+el constructor docente deberá distinguir LessonVersion de los planes personales.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
 políticas de retención/compartición. Antes de producción: TLS confiable, mismo

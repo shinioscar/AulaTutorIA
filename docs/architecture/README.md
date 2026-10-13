@@ -1,4 +1,4 @@
-# Arquitectura del piloto (Iteraciones 0–3)
+# Arquitectura del piloto (Iteraciones 0–4)
 
 Monolito modular. Dependencias permitidas:
 
@@ -11,18 +11,20 @@ Web (Angular) → HTTP /api → Api → Application → Domain
 ```
 
 - Domain: organización, grupo, membresía, roles, aprobación docente y entidades
-  de tutoría privada, sin frameworks.
+  de tutoría privada, ejercicios/intentos/diagnósticos/planes/reportes y permisos, sin frameworks.
 - Application: IAiProvider/DTO/capacidades/errores/diagnóstico; identidad/grupos y reglas
   de autorización puras, DTO de tutoría y orquestador pedagógico inicial,
-  independientes de EF/Identity.
+  independientes de EF/Identity; LearningOrchestrator valida propuestas/evidencias y
+  ExerciseValidators determina coincidencias de ejercicios cerrados.
 - Infrastructure: Identity/EF Core/Npgsql, servicios por recurso, bootstrap,
   Mock/Groq/Gemini/Ollama y transporte HTTP limitado sin SDK.
 - Api: composición, Minimal APIs, filtro CSRF/DTO, logs JSON y OpenAPI con cookie/CSRF.
 - Web: Angular standalone con router y formularios; sesión en cookies, navegación
   por permisos y proxy HTTPS de mismo origen. Sin SSR ni SDK IA.
 
-PostgreSQL 18 tiene InitialIdentity y PrivateTutoring: identidad/grupos y sesiones,
-mensajes/turnos privados. Se siembran roles/organización, sin usuarios predeterminados. Mantenimiento
+PostgreSQL 18 tiene InitialIdentity, PrivateTutoring y LearningEvidence: identidad/grupos,
+sesiones/mensajes/turnos privados y aprendizaje formativo versionado. Se siembran
+roles/organización, sin usuarios predeterminados. Mantenimiento
 explícito (--migrate / --bootstrap-admin), sin migrar en el inicio normal.
 No se instala Redis, SignalR, colas, bibliotecas UI ni SDK de proveedores IA.
 
@@ -32,6 +34,10 @@ compatibilidad y no comprueba PostgreSQL. `GET /openapi/v1.json` solo Developmen
 Endpoints de identidad/grupos y /api/admin/ai/ con prueba explícita Admin+CSRF,
 prompt fijo y máximo 128 tokens. Tutorías Student con autorización de propietario,
 CSRF, historial durable y resumen local; contratos en TUTORING_HTTP.md.
+Diagnóstico/plan/actividad/reporte usan los mismos turnos, leases y límites, nunca
+transacciones abiertas durante IA. Contratos de evidencias/compartición/refuerzo en
+LEARNING_HTTP.md; ADR-018/019. El profesor solo recibe un reporte autorizado con
+relación vigente, sin permiso sobre historial/planes privados. Sin estadísticas del modelo.
 No hay clases ni evaluaciones oficiales.
 
 HTTPS local para cookies Secure, con certificados excluidos en .cache. HTTP 5080

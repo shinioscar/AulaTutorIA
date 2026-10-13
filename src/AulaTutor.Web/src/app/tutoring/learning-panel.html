@@ -1,0 +1,71 @@
+<div class="learning-panel">
+  @let s=session(); @let l=s.learning;
+  <p class="message" role="status">{{error()}}</p>
+  @if(s.state!=='Completed'&&s.state!=='Paused'){
+    @if(!l.diagnostic&&!free()&&!s.directReview){
+      <div class="learning-heading"><strong>Diagnóstico breve</strong><span class="note">Hasta {{l.diagnosticQuestionLimit}} preguntas; puedes finalizar antes.</span></div>
+      <div class="actions">
+        @if((!exercise()?.isDiagnostic||attempts().length)&&l.exercises.length<l.diagnosticQuestionLimit){<button type="button" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">{{l.exercises.length?'Otra pregunta diagnóstica':'Comenzar diagnóstico estructurado'}}</button>}
+        <button type="button" class="secondary" (click)="emit('AnalyzeDiagnosis')" [disabled]="disabled()">Finalizar diagnóstico y analizar</button>
+        <button type="button" class="secondary" (click)="free.set(true)">Continuar en tutoría libre</button>
+      </div>
+    }
+    @if(free()&&!l.diagnostic){<p class="note">Modo libre. Puedes conversar y registrar ejercicios cuando quieras.</p><button type="button" class="secondary" (click)="free.set(false)">Ver diagnóstico</button>}
+  }
+  @if(l.diagnostic;as d){
+    <details [open]="!l.plan"><summary>Resumen diagnóstico · versión {{d.version}}{{d.preliminary?' · preliminar':''}}</summary>
+      <p class="note">Interpretación IA, sujeta a revisión. No certifica dominio.</p><p>{{d.content.summary}}</p>
+      <h4>Fortalezas observadas</h4><ul>@for(item of d.content.strengths;track $index){<li>{{item.text}}<small>Evidencias: {{item.evidenceIds.join(', ')}}</small></li>}@empty{<li>No hay fortalezas fundamentadas suficientes.</li>}</ul>
+      <h4>Áreas de refuerzo sugeridas</h4><ul>@for(item of d.content.difficulties;track $index){<li>{{item.text}}<small>Evidencias: {{item.evidenceIds.join(', ')}}</small></li>}@empty{<li>No se identificaron dificultades con fundamento suficiente.</li>}</ul>
+      <h4>No evaluado</h4><ul>@for(item of d.content.notAssessed;track $index){<li>{{item}}</li>}</ul>
+      <ul>@for(item of d.content.practice;track $index){<li>{{item}}</li>}</ul>
+    </details>
+    @if(!l.plan&&s.state==='Active'){<button type="button" (click)="emit('GeneratePlan')" [disabled]="disabled()">Generar plan personalizado</button><p class="note">Se enviarán al proveedor las preguntas y respuestas diagnósticas acotadas.</p>}
+  }
+  @if(l.plan;as p){
+    <details [open]="p.state==='Proposed'"><summary>Tu ruta personalizada · versión {{p.version}}</summary><p><strong>{{p.content.mainGoal}}</strong></p><p>{{p.content.progression}}</p>
+      <ol>@for(o of p.content.objectives;track $index){<li><strong>{{o.title}}</strong> · {{o.progress==='Worked'?'Trabajado, sin certificar dominio':o.progress==='Current'?'Actividad actual':'Por trabajar'}}
+        @for(a of o.activities;track $index){<p>{{a.explanation}}</p><small>Dificultad: {{a.difficulty}} · {{a.estimatedMinutes}} min orientativos</small>}
+      </li>}</ol>
+      @if(p.state==='Proposed'&&s.state==='Active'){
+        <button type="button" (click)="emit('ActivatePlan')" [disabled]="disabled()">Iniciar tutoría personalizada</button>
+        <details><summary>Solicitar un ajuste al plan</summary><label for="plan-adjustment">Qué necesitas cambiar</label><textarea id="plan-adjustment" [(ngModel)]="adjustment" maxlength="500" rows="2"></textarea><button type="button" class="secondary" (click)="emit('GeneratePlan',adjustment)" [disabled]="disabled()||!adjustment.trim()">Solicitar ajuste</button></details>
+        <button type="button" class="secondary" (click)="free.set(true)">Continuar en tutoría libre</button>
+      }
+    </details>
+    @if(p.state==='Active'){<p class="route-state">Actividad {{p.currentActivity+1}} de {{p.content.objectives.length}} · Puedes preguntar libremente sin perder tu lugar.</p>}
+    @if(p.state==='Completed'){<p class="notice">Ruta trabajada. Esto no certifica dominio ni es una calificación.</p>}
+  }
+  @if(exercise();as e){
+    @if(s.state==='Active'){
+      <section class="exercise-card" aria-label="Ejercicio actual"><h3>{{e.isDiagnostic?'Pregunta diagnóstica':'Actividad actual'}}</h3>
+        @if(l.plan?.state==='Active'){@for(o of l.plan?.content?.objectives??[];track $index){@if($index===e.objectiveOrder){@for(a of o.activities;track $index){<p>{{a.explanation}}</p>}}}}
+        <p>{{e.prompt}}</p><p class="note">Criterios: {{e.rubric}} · Pistas recibidas: {{e.hints}} · Explicaciones adicionales: {{e.simplifications}}</p>
+        <form (ngSubmit)="submit()"><label [for]="'answer-'+e.id">Respuesta de este ejercicio</label>
+          @if(e.options.length){<select [id]="'answer-'+e.id" name="exercise-answer" [(ngModel)]="answer" [disabled]="disabled()"><option value="">Selecciona una respuesta</option>@for(option of e.options;track option){<option [value]="option">{{option}}</option>}</select>}
+          @else{<textarea [id]="'answer-'+e.id" name="exercise-answer" [(ngModel)]="answer" maxlength="2000" rows="2" [disabled]="disabled()"></textarea>}
+          <div class="actions"><button [disabled]="disabled()||!answer.trim()">Registrar respuesta</button>
+            @if(l.plan?.state==='Active'&&attempts().length){<button type="button" class="secondary" (click)="emit('NextActivity')" [disabled]="disabled()">Continuar ruta</button>}
+            @if(e.isDiagnostic&&attempts().length&&l.exercises.length<l.diagnosticQuestionLimit){<button type="button" class="secondary" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">Otra pregunta</button>}
+          </div>
+        </form>
+        @for(a of attempts();track a.id){<details><summary>Intento {{a.number}} · {{outcome(a.outcome)}} · {{a.hintsUsed}} pistas</summary><p>{{a.answer}}</p><p class="feedback">{{a.feedback}}</p><small>Evidencia: {{a.id}}</small></details>}
+      </section>
+    }
+  }
+  @if(s.state==='Active'&&l.plan?.state!=='Active'){<button type="button" class="secondary" (click)="emit('GenerateExercise')" [disabled]="disabled()">Proponer ejercicio de práctica libre</button>}
+  @if(l.attempts.length){<details><summary>Evidencias registradas · {{l.attempts.length}} intentos</summary>@for(a of l.attempts;track a.id){<article [id]="'evidence-'+a.id"><strong>Intento {{a.number}} · {{outcome(a.outcome)}}</strong><p>{{a.answer}}</p><p class="feedback">{{a.feedback}}</p><small>Evidencia {{a.id}} · Ejercicio {{a.exerciseId}}</small></article>}</details>}
+  @if(s.state==='Completed'||report()){
+    @if(report();as r){<details open><summary>Resultados y recomendaciones</summary><app-report-card [report]="r" /></details>
+      @if(s.state==='Completed'){@for(item of l.recommendations;track item.id){<article><p>{{item.goal}}</p><p class="note">{{item.isGeneral?'Recomendación general; no representa una dificultad comprobada.':'Recomendación IA basada en evidencias; sujeta a revisión.'}}</p><button type="button" (click)="reinforce(item.id)" [disabled]="disabled()||localBusy()">Iniciar tutoría de refuerzo</button></article>}}
+      <details><summary>Compartir solo este reporte</summary><p>Compartirás el resumen, estadísticas, observaciones y referencias de evidencia de esta versión. El destinatario no obtiene acceso al chat, respuestas completas ni soluciones privadas. Las observaciones IA pueden mencionar datos pertinentes de tus respuestas: revisa el reporte antes de autorizar.</p>
+        <button type="button" class="secondary" (click)="loadRecipients()" [disabled]="localBusy()">Consultar docentes autorizados</button>
+        @if(recipients();as teachers){<label for="report-recipient">Docente relacionado</label><select id="report-recipient" [(ngModel)]="recipient" (ngModelChange)="consent=false"><option value="">Selecciona docente</option>@for(t of teachers;track t.id){<option [value]="t.id">{{t.displayName}}</option>}</select>@if(!teachers.length){<p>No tienes docentes aprobados en un grupo vigente.</p>}
+          <label class="consent"><input type="checkbox" [(ngModel)]="consent"> Autorizo compartir esta versión del reporte con el docente elegido.</label><button type="button" (click)="share()" [disabled]="disabled()||localBusy()||!consent||!recipient||r.outdated">Autorizar compartición</button>}
+        <p class="note">Revocar impide nuevas consultas. No elimina copias que el destinatario haya obtenido previamente.</p>
+        @for(sh of l.shares;track sh.id){<p>{{sh.recipientName}} · {{sh.revokedAt?'Revocado':'Autorizado'}} @if(!sh.revokedAt){<button type="button" class="secondary" (click)="revoke(sh.id)" [disabled]="localBusy()">Revocar permiso</button>}</p>}
+      </details>
+    }
+    @if(!report()||report()?.outdated){<button type="button" (click)="emit('FinalReport')" [disabled]="disabled()">Generar reporte orientativo con IA</button><p class="note">Acción explícita. Si el proveedor falla, tus evidencias y el resumen local permanecen disponibles.</p>}
+  }
+</div>

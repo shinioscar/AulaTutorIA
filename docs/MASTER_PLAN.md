@@ -18,3 +18,9 @@ de Iteración 3. Tutorías privadas y orquestación inicial: ADR-016/017 e infor
 iterations/ITERATION_3.md. Groq permanece activo localmente y Mock se usa en todas
 las verificaciones; no se hicieron llamadas reales adicionales. No autoriza avanzar
 a Iteración 4 automáticamente ni modifica el maestro original.
+
+Nuevo encargo explícito de Iteración 4, 2026-10-13: evidencias, evaluación formativa,
+reportes y compartición mínima, con ampliación autorizada de diagnóstico y planes
+personales ejecutables. ADR-018/019 e informe ITERATION_4.md. No modifica el maestro
+ni autoriza el constructor docente de Iteración 5. Groq local conservado; pruebas
+exclusivamente Mock/simuladas, sin llamadas adicionales a proveedores reales.

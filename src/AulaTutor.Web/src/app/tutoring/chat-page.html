@@ -3,7 +3,7 @@
 @if(session();as session){
   <div class="conversation-heading"><div><p class="eyebrow">TUTORÍA PRIVADA</p><h1>{{session.topic}}</h1><p class="goal">{{session.goal}}</p></div><span class="state-badge">{{label(session.state)}}</span></div>
   <div class="tutoring-layout">
-    <aside class="session-details"><h2>Tu espacio de aprendizaje</h2><p><strong>Quién puede consultar:</strong> solo tú. No se comparte con profesores ni administradores.</p><p class="note">{{session.providerId}} · {{session.modelId}}</p><p class="note">El tutor usa contexto reciente acotado. Tu historial completo permanece aquí. Usa datos ficticios y no escribas secretos.</p><p class="notice">Las explicaciones y observaciones de la IA son orientativas; no son calificaciones ni una validación objetiva.</p>
+    <aside class="session-details"><h2>Tu espacio de aprendizaje</h2><p><strong>Historial privado:</strong> solo tú. Puedes autorizar por separado una versión de tu reporte para un docente relacionado.</p><p class="note">{{session.providerId}} · {{session.modelId}}</p><p class="note">El tutor usa contexto reciente acotado. Tu historial completo permanece aquí. Usa datos ficticios y no escribas secretos.</p><p class="notice">Las interpretaciones de la IA son orientativas. Los resultados de ejercicios cerrados se contrastan con reglas; no son calificaciones oficiales.</p>
       @if(session.currentFocus){<p>Foco sugerido: {{session.currentFocus}}</p>}
       <button type="button" class="secondary" (click)="refresh()">Actualizar estado</button>
       @if(session.state==='Active'){<button type="button" class="secondary" (click)="transition('pause')" [disabled]="busy()||pending?.isGenerating">Pausar tutoría</button>}
@@ -11,6 +11,7 @@
       @if(session.state!=='Completed'){<button type="button" class="secondary" (click)="transition('complete')" [disabled]="busy()||pending?.isGenerating">Finalizar tutoría</button>}
     </aside>
     <div class="conversation">
+      <app-learning-panel [session]="session" [disabled]="busy()||!!session.pendingRequestId||!!uncertain()" (action)="learningAction($event)" (changed)="refresh()" />
       <div #thread class="thread" aria-label="Historial de la tutoría" aria-live="polite">
         @for(item of session.messages;track item.id){
           <article class="bubble" [class.student]="item.role==='Student'"><div class="bubble-meta"><strong>{{item.role==='Student'?'Tú':'Tutor IA'}}</strong><time>{{item.createdAt|date:'shortTime'}}</time></div><app-safe-response [text]="item.text" />

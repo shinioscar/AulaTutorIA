@@ -1,5 +1,8 @@
 # Contratos HTTP — tutorías privadas (Iteración 3)
 
+Contrato heredado conservado. La Iteración 4 amplía acciones, LearningView,
+reportes/compartición y refuerzo según [LEARNING_HTTP.md](LEARNING_HTTP.md).
+
 Base: `/api`, HTTPS y cookies del mismo origen. Todas las rutas exigen sesión
 activa; todas las escrituras exigen `X-XSRF-TOKEN` obtenido de `/api/auth/csrf`.
 La identidad procede de Identity. Nunca se acepta `studentId` como propietario.
@@ -76,4 +79,5 @@ recuperar podría consumir cuota nuevamente; no se promete facturación exactly-
 
 400: CSRF/datos; 401: sin sesión o revocada; 403: función sin permiso; 404: recurso
 ajeno/inexistente; 409: conflicto; 429: límite API. No hay acceso administrativo
-ordinario, compartición, borrado ni ejecución de código. OpenAPI solo Development.
+ordinario ni compartición del historial, borrado ni ejecución de código. La
+compartición de versiones de reportes de 4 se regula separadamente. OpenAPI solo Development.

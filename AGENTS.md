@@ -4,13 +4,13 @@
 
 - Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **exclusivamente Iteración 3**, tutorías privadas/motor inicial,
+- Último encargo: **exclusivamente Iteración 4**, evidencias, diagnóstico/planes personales y reportes,
   con Groq activo local y Mock en pruebas. No ejecutar cuota real sin autorización.
-  Iteraciones 0–3 completadas; no avanzar a 4 sin nuevo encargo del usuario.
-- Registros: docs/iterations/ITERATION_0.md a ITERATION_3.md; ADR en docs/.
+  Iteraciones 0–4 completadas. No avanzar a 5 sin nuevo encargo.
+- Registros: docs/iterations/ITERATION_0.md a ITERATION_4.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
-- No implementar clases, asignaciones, notas, reportes docentes, compartición,
-  validadores oficiales ni ejecución SQL en 3. Resumen descriptivo local sí incluido.
+- En 4 se autorizan compartición mínima de reportes y validadores formativos cerrados,
+  sin clases docentes, asignaciones, notas oficiales ni ejecución SQL/código de alumnos.
   Mock, salud y estructura de proveedores permanecen funcionales.
 
 ## Arquitectura y convenciones
@@ -135,13 +135,45 @@
 - Mock conserva comportamiento/8 pruebas previas; añade guiones SQL explícitamente
   simulados de diagnóstico/repaso/ejercicio/pista/simplificación. No comprensión LLM.
 - Resumen descriptivo local al cierre: fechas/tema/objetivo/ayudas/turnos, sin IA,
-  sin calificar ni reportar a Teacher. No módulo de evidencias/reportes de 4.
+  sin calificar ni reportar a Teacher. El reporte IA de 4 es una acción separada.
 - Angular renderiza párrafos/código/listas por interpolación segura. No innerHTML,
   HTML arbitrario, enlaces activos ni renderizador remoto. Sin local/sessionStorage
   para conversación/credenciales. Poll GET cada 2 s mientras genera; salir aborta POST.
 - Retención provisional: SOLO ficticios en DB local hasta limpieza explícita,
-  sin autoexpiración/borrado/compartición. Antes de reales aprobar políticas de
+  sin autoexpiración/borrado; reportes compartidos solo conforme ADR-019. Antes de reales aprobar políticas de
   retención, consentimiento, proveedor y solicitudes de eliminación.
+
+## Aprendizaje formativo (ADR-018/019)
+
+- LearningExercise/ExerciseAttempt identifican consigna, respuesta y ayudas; los mensajes
+  libres no son intentos. Respuesta guardada antes de orientación IA. Cerrados: comparador
+  determinista de reglas privadas, nunca claves en Angular ni chat contextual. Abiertos/Code
+  NeedsReview, sin ejecutar código/SQL. Coincidir con una regla no certifica validez curricular.
+- DiagnosticAssessment versionado: mínimo de evidencias distintas configurable; preliminar
+  si insuficiente, sin fortalezas/dificultades categóricas. Learning:MaxDiagnosticQuestions
+  1–8 (5), MinimumEvidence 1–máximo (2). Finalización temprana explícita permitida.
+- PersonalizedLearningPlan independiente de LessonVersion: 3–5 objetivos con una actividad
+  por objetivo; máximo tres propuestas ajustadas explícitamente. Aceptación inicia dentro
+  de la misma sesión. Servidor exige intento antes de avanzar; preguntas libres no cambian
+  posición. Trabajado no significa dominado. Pausa/reanudación conserva ruta.
+- Nuevas acciones en /messages usan el mismo lock/lease/revisión/retry de 3. ContextJson
+  durable privado para retries, ExerciseId y RetryText en TurnView. Hasta ocho evidencias,
+  cuatro mensajes cortos, contexto 28k y salida 2048 tokens. Prompt learning-v1 y JSON
+  validado incluso con proveedores de solo texto; fallo seguro sin fallback externo.
+- LearningReport conserva estadísticas PostgreSQL y observaciones IA trazables; máximo
+  diez revisiones. EvidenceRevision marca desactualizados; sin regeneración al GET ni
+  con clave nueva sobre reporte vigente. FinalReport explícito admite Completed sin reabrir.
+  Resumen local conservado. Correctos cuentan ejercicios distintos, errores cuentan intentos.
+- LearningRecommendation crea refuerzo idempotente con SourceRecommendationId/SourceReportId,
+  solo tema/meta/nivel, sin mezclar historiales. Crear refuerzo no llama IA.
+- ReportShare solo versión revisada/autorizada expresamente: Teacher activo/aprobado,
+  mismo grupo vigente Student/Teacher, verificado en cada consulta. Revocación o retirada
+  de relación impide nuevas consultas; no elimina copias previas. Teacher/Admin no leen
+  chat/intentos/diagnóstico/plan ajenos. Vista docente mínima de reportes, sin supervisión.
+- Migración aditiva LearningEvidence después de PrivateTutoring. Las dos previas intactas.
+  Retención real, consentimiento institucional, borrado/exportación y auditoría siguen pendientes.
+- El usuario informó una tutoría Groq real satisfactoria antes de 4. El agente no repite
+  llamadas reales. Mock nuevo usa guiones genéricos rotulados, sin personalización semántica.
 
 ## Operación y pruebas
 
@@ -153,10 +185,11 @@
 - PostgreSQL localhost:15432 (interno 5432) en proyecto Compose aulatutor-ia.
   API/web pueden seguir activos al entregar: inspeccionar puertos/procesos y detener
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
-- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 91
-  pruebas (55 unitarias/36 integración; conserva 68 previas), consistencia EF,
+- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 123
+  pruebas (68 unitarias/55 integración; conserva 91 previas), consistencia EF,
   npm ci/check/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
-  Última ejecución: 91 pruebas y 48 comprobaciones HTTP aprobadas; revisión visual
+  Iteración 4: 123 pruebas y 75 comprobaciones HTTP aprobadas; cierre visual en QA_4.md. Histórico:
+  91 pruebas y 48 comprobaciones HTTP de 3; revisión visual
   desktop/móvil registrada en QA_3.md. PrivateTutoring aplicada en BD local;
   entorno de QA eliminado y API local restaurada con Groq sin llamadas reales.
 - Integración exige AULATUTOR_TEST_CONNECTION (el loader lo asigna si falta) y
@@ -167,7 +200,7 @@
   contraseña ficticia aleatoria/PID/base temporal. Limpiar proceso/base/archivo al
   terminar; no mantener el administrador de QA en la BD principal.
 - Pruebas con @example.invalid, claves aleatorias ficticias. Capturas versionadas
-  en docs/iterations/evidence-1/2/3, sin secretos. Caches/logs ignorados.
+  en docs/iterations/evidence-1/2/3/4, sin secretos. Caches/logs ignorados.
 - /api/health conserva iteration=1 por contrato heredado; liveness/configuración IA,
   sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1/2/3.
   Los endpoints nuevos deben exigir autorización; nunca diagnóstico IA público.
@@ -175,8 +208,8 @@
 
 ## Pendientes y continuidad
 
-- Iteración 4: evidencias/validadores/reportes/compartición, preservar tutoría
-  privada y no otorgar acceso implícito al docente. No continuar automáticamente.
+- Iteración 5: constructor docente y LessonVersion; requiere encargo nuevo. Preservar
+  tutoría privada y planes personales como concepto diferente. No continuar automáticamente.
 - Pendientes documentados: confirmación email, recuperación/MFA, invitaciones,
   auditoría integral (8), retención/compartición (4), frontera Approved/Published (5).
 - Antes de producción/datos reales: aprobación/políticas institucionales, TLS/proxy

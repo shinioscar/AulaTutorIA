@@ -30,5 +30,17 @@ public static class TutoringEndpoints
         sessions.MapPost("/{id:guid}/turns/{requestId:guid}/cancel", async (Guid id, Guid requestId, TutoringTransitionRequest request, ITutoringService service, CancellationToken ct) =>
             TypedResults.Ok(await service.CancelAsync(id, requestId, request.Revision, ct)))
             .WithSummary("Cancela turno propio conservando intento y descarta respuesta tardía; no garantiza detener facturación externa.");
+        sessions.MapGet("/{id:guid}/share-recipients", async (Guid id, ILearningService service, CancellationToken ct) => TypedResults.Ok(await service.RecipientsAsync(id, ct)))
+            .WithSummary("Docentes aprobados con relación de grupo vigente; solo propietario.");
+        sessions.MapPost("/{id:guid}/shares", async (Guid id, ShareReportRequest request, ILearningService service, CancellationToken ct) => TypedResults.Ok(await service.ShareAsync(id, request, ct)))
+            .WithSummary("Autoriza expresamente una versión de reporte; nunca comparte historial, respuestas ni soluciones.");
+        sessions.MapDelete("/{id:guid}/shares/{shareId:guid}", async (Guid id, Guid shareId, ILearningService service, CancellationToken ct) => { await service.RevokeAsync(id, shareId, ct); return TypedResults.NoContent(); });
+        sessions.MapPost("/{id:guid}/recommendations/{recommendationId:guid}/start", async (Guid id, Guid recommendationId, ReinforcementRequest request, ILearningService service, CancellationToken ct) =>
+            TypedResults.Ok(await service.ReinforceAsync(id, recommendationId, request, ct)))
+            .WithSummary("Crea refuerzo relacionado sin mezclar historiales ni generar IA automáticamente.");
+        var teacher = app.MapGroup("/api/teacher/reports").RequireAuthorization();
+        teacher.MapGet("/", async (ILearningService service, CancellationToken ct) => TypedResults.Ok(await service.SharedReportsAsync(ct)));
+        teacher.MapGet("/{id:guid}", async (Guid id, ILearningService service, CancellationToken ct) => TypedResults.Ok(await service.SharedReportAsync(id, ct)))
+            .WithSummary("Solo reporte expresamente compartido y relación vigente; revocación impide nuevas consultas.");
     }
 }

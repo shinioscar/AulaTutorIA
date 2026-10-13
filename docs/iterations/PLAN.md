@@ -8,7 +8,7 @@ Fuente: documento maestro v1.0 §18. Una sola iteración por encargo.
 | 1 | Completada; registro ITERATION_1.md | Identity, registro/login piloto, validación Teacher, grupos y autorización por recurso; pruebas de acceso cruzado. |
 | 2 | Implementada; registro ITERATION_2.md | IAiProvider/Mock, Groq/Gemini/Ollama funcionales por encargo adicional, configuración, capacidades, telemetría y diagnóstico Admin. |
 | 3 | Implementada; registro ITERATION_3.md | Tutoría privada, orquestación inicial, conversación/ayudas/historial/pausa/reanudación/cierre local, concurrencia e idempotencia; Mock en QA. |
-| 4 | Pendiente | Evidencias, validadores, reportes, compartición; correspondencia con intentos. |
+| 4 | Completada; registro ITERATION_4.md | Diagnóstico estructurado, ampliación autorizada de planes personales ejecutables, evidencias, validadores, reportes, refuerzo y compartición mínima. |
 | 5 | Pendiente | Constructor, simulación, aprobación, versiones inmutables. |
 | 6 | Pendiente | Asignaciones, progreso independiente por alumno con misma versión. |
 | 7 | Pendiente | Panel docente, revisión, progreso y atención humana pendiente autorizada. |
@@ -23,5 +23,5 @@ sin privilegio automático sobre chats. No implementar tutorías en ese encargo.
 
 Los encargos de 0/1 se conservan. La Iteración 2 añade proveedores según autorización
 explícita del 2026-10-13, más política de contraseña y búsqueda por correo (ADR-014/015).
-Iteración 3 autorizada por nuevo encargo. No avanzar a 4 automáticamente. Mantener
+Iteraciones 3/4 autorizadas por nuevos encargos. No avanzar a 5 automáticamente. Mantener
 cookies/CSRF, propiedad, privacidad y Groq local; pruebas solo Mock/simulaciones.

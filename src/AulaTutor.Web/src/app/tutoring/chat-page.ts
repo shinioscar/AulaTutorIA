@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
-import { Session, Turn, TurnRequest, TutoringService } from './tutoring.service';
+import { Session, Turn, TurnRequest, TutoringService, LearningAction } from './tutoring.service';
+import { LearningPanel } from './learning-panel';
 import { SafeResponse } from './safe-response';
 
-@Component({standalone:true,imports:[FormsModule,RouterLink,DatePipe,SafeResponse],templateUrl:'./chat-page.html',styleUrl:'./chat-page.css'})
+@Component({standalone:true,imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LearningPanel],templateUrl:'./chat-page.html',styleUrl:'./chat-page.css'})
 export class ChatPage implements OnDestroy {
   private readonly api=inject(TutoringService); private readonly route=inject(ActivatedRoute);
   readonly session=signal<Session|null>(null); readonly busy=signal(false); readonly message=signal('');
@@ -51,7 +52,7 @@ export class ChatPage implements OnDestroy {
     if(retry){
       const pending=this.pending;if(!pending?.canRetry)return;
       const original=session.messages.find(m=>m.requestId===pending.requestId&&m.role==='Student');
-      request={requestId:pending.requestId,revision:session.revision,action:pending.action,text:pending.action==='Message'?original?.text??null:null,retry:true};
+      request={requestId:pending.requestId,revision:session.revision,action:pending.action,text:pending.retryText??(pending.action==='Message'?original?.text??null:null),retry:true,exerciseId:pending.exerciseId};
     } else {
       if(this.uncertain()||session.pendingRequestId)return;
       if(action!=='Start'&&!this.canSend)return;
@@ -61,6 +62,10 @@ export class ChatPage implements OnDestroy {
     this.dispatch(request);
   }
   recover():void {const request=this.uncertain();if(request&&!this.busy())this.dispatch(request);}
+  learningAction(event:LearningAction):void {
+    const session=this.session();if(!session||this.busy()||session.pendingRequestId||this.uncertain())return;
+    this.dispatch({requestId:crypto.randomUUID(),revision:session.revision,action:event.action,text:event.text??null,retry:false,exerciseId:event.exerciseId??null});
+  }
   private dispatch(request:TurnRequest):void {
     const targetId=this.id;
     this.busy.set(true);this.message.set('');this.uncertain.set(request);this.schedulePoll();

@@ -1,4 +1,4 @@
-param([switch]$KeepRunning)
+param([switch]$KeepRunning, [switch]$SetupOnly)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/Initialize-Environment.ps1"
 . "$PSScriptRoot/Load-LocalConfiguration.ps1"
@@ -43,6 +43,20 @@ function Register([string]$email, [string]$role, [string]$name) {
     Assert-Status (Invoke-Api $session POST '/api/auth/register' @{email=$email;password=$qaPassword;displayName=$name;requestedRole=$role}) 202 "Register $role"
     Login $session $email
     @{ Session=$session; User=((Invoke-Api $session GET '/api/me').Content | ConvertFrom-Json) }
+}
+function Invoke-LearningTurn($session, $state, [string]$action, [string]$text = '', [string]$exerciseId = '') {
+    $turn = @{requestId=[Guid]::NewGuid().ToString();revision=$state.revision;action=$action;text=$(if($text){$text}else{$null});retry=$false;exerciseId=$(if($exerciseId){$exerciseId}else{$null})}
+    for ($retryWindow=0; $retryWindow -lt 8; $retryWindow++) {
+        $response = Invoke-Api $session POST "/api/tutoring-sessions/$($state.id)/messages" $turn
+        if ([int]$response.StatusCode -ne 429) { break }
+        # Respect the production limiter; this is Mock in an isolated QA database only.
+        Start-Sleep -Seconds 10
+    }
+    Assert-Status $response 200 "Learning $action"
+    $result = $response.Content | ConvertFrom-Json
+    if ($result.pendingRequestId) { throw "Learning $action did not finish successfully." }
+    if ($response.Content -match 'acceptedAnswers|acceptedAnswersJson|contextJson') { throw 'Private exercise rules leaked in HTTP projection.' }
+    $result
 }
 try {
     $env:Ai__Provider = 'Mock'
@@ -109,6 +123,7 @@ try {
     Assert-Status (Invoke-Api $student.Session GET "/api/groups/$($group.id)/members") 404 'Student roster denied'
     Assert-Status (Invoke-Api $admin POST '/api/groups/' @{name='No-CSRF'} -WithoutCsrf) 400 'Authenticated CSRF enforced'
     # Tutoring HTTP QA is always Mock and isolated, never the user's Groq environment.
+    if (-not $SetupOnly) {
     $tutoringRequest = @{requestId=[Guid]::NewGuid().ToString();topic='IF EXISTS';goal='Comprender condiciones';level='Beginner';directReview=$false}
     Assert-Status (Invoke-Api $anonymous POST '/api/tutoring-sessions/' $tutoringRequest) 401 'Anonymous tutoring denied'
     $createdTutoring = Invoke-Api $student.Session POST '/api/tutoring-sessions/' $tutoringRequest
@@ -143,12 +158,66 @@ try {
     $completed = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/complete" @{revision=$tutoring.revision}
     Assert-Status $completed 200 'Tutoring completion'
     if (($completed.Content | ConvertFrom-Json).summary -notmatch 'sin llamada adicional') { throw 'Descriptive summary missing.' }
+    # Complete Iteration 4 A/B/C against the actual HTTPS API and PostgreSQL, Mock only.
+    Assert-Status (Invoke-Api $admin PUT "/api/groups/$($group.id)/members" @{userId=$other.User.id;kind='Student'}) 204 'Learning student relationship'
+    $learningCreate = Invoke-Api $other.Session POST '/api/tutoring-sessions/' @{requestId=[Guid]::NewGuid().ToString();topic='Fracciones';goal='Explicar y practicar fracciones';level='Beginner'}
+    Assert-Status $learningCreate 201 'Learning private creation'
+    $learning = $learningCreate.Content | ConvertFrom-Json
+    foreach ($questionIndex in 1,2) {
+        $learning = Invoke-LearningTurn $other.Session $learning 'DiagnosticQuestion'
+        $exercise = $learning.learning.exercises[-1]
+        $learning = Invoke-LearningTurn $other.Session $learning 'SubmitAttempt' 'Mi ejemplo ficticio describe una fracción.' $exercise.id
+    }
+    $learning = Invoke-LearningTurn $other.Session $learning 'AnalyzeDiagnosis'
+    if ($learning.learning.diagnostic.preliminary -or $learning.learning.attempts.Count -ne 2) { throw 'Diagnostic evidence was not persisted.' }
+    $learning = Invoke-LearningTurn $other.Session $learning 'GeneratePlan'
+    if ($learning.learning.plan.content.objectives.Count -ne 3) { throw 'Mock learning route missing.' }
+    $historyLength = $learning.messages.Count
+    $learning = Invoke-LearningTurn $other.Session $learning 'ActivatePlan'
+    if ($learning.learning.plan.state -ne 'Active' -or $learning.messages.Count -le $historyLength) { throw 'Plan did not start in the same conversation.' }
+    $learning = Invoke-LearningTurn $other.Session $learning 'Message' 'Tengo una duda adicional.'
+    if ($learning.learning.plan.currentActivity -ne 0) { throw 'Free question changed the activity.' }
+    $learning = Invoke-LearningTurn $other.Session $learning 'Hint'
+    $exercise = $learning.learning.exercises | Where-Object { -not $_.isDiagnostic -and $_.order -eq 0 }
+    $learning = Invoke-LearningTurn $other.Session $learning 'SubmitAttempt' 'Verdadero' $exercise.id
+    $learning = Invoke-LearningTurn $other.Session $learning 'SubmitAttempt' 'Falso' $exercise.id
+    if ($learning.learning.attempts[-1].outcome -ne 'CorrectWithHelp') { throw 'Help-aware deterministic validation failed.' }
+    $learning = Invoke-LearningTurn $other.Session $learning 'NextActivity'
+    $pauseLearning = Invoke-Api $other.Session POST "/api/tutoring-sessions/$($learning.id)/pause" @{revision=$learning.revision}
+    Assert-Status $pauseLearning 200 'Learning pause'
+    $learning = $pauseLearning.Content | ConvertFrom-Json
+    $resumeLearning = Invoke-Api $other.Session POST "/api/tutoring-sessions/$($learning.id)/resume" @{revision=$learning.revision}
+    Assert-Status $resumeLearning 200 'Learning resume position'
+    $learning = $resumeLearning.Content | ConvertFrom-Json
+    if ($learning.learning.plan.currentActivity -ne 1) { throw 'Learning position lost after pause.' }
+    $finishLearning = Invoke-Api $other.Session POST "/api/tutoring-sessions/$($learning.id)/complete" @{revision=$learning.revision}
+    Assert-Status $finishLearning 200 'Learning deterministic completion'
+    $learning = Invoke-LearningTurn $other.Session ($finishLearning.Content | ConvertFrom-Json) 'FinalReport'
+    $report = $learning.learning.reports[0]
+    if ($report.statistics.attempts -ne 4 -or $report.statistics.correctWithHelp -ne 1 -or $report.statistics.incorrect -ne 1 -or $report.statistics.hints -ne 1) { throw 'Report statistics do not match PostgreSQL evidence.' }
+    Assert-Status (Invoke-Api $other.Session GET "/api/tutoring-sessions/$($learning.id)") 200 'Learning report reopened'
+    $shareResponse = Invoke-Api $other.Session POST "/api/tutoring-sessions/$($learning.id)/shares" @{requestId=[Guid]::NewGuid().ToString();reportId=$report.id;recipientId=$teacher.User.id;consent=$true}
+    Assert-Status $shareResponse 200 'Explicit report sharing'
+    $share = $shareResponse.Content | ConvertFrom-Json
+    Assert-Status (Invoke-Api $teacher.Session GET "/api/teacher/reports/$($report.id)") 200 'Authorized teacher report'
+    Assert-Status (Invoke-Api $teacher.Session GET "/api/tutoring-sessions/$($learning.id)") 404 'Shared report does not share chat'
+    Assert-Status (Invoke-Api $admin GET "/api/teacher/reports/$($report.id)") 404 'Admin report denied'
+    Assert-Status (Invoke-Api $other.Session DELETE "/api/tutoring-sessions/$($learning.id)/shares/$($share.id)") 204 'Report share revoked'
+    Assert-Status (Invoke-Api $teacher.Session GET "/api/teacher/reports/$($report.id)") 404 'Revocation blocks teacher'
+    $recommendation = $learning.learning.recommendations[0]
+    $reinforcementKey = @{requestId=[Guid]::NewGuid().ToString()}
+    $reinforceResponse = Invoke-Api $other.Session POST "/api/tutoring-sessions/$($learning.id)/recommendations/$($recommendation.id)/start" $reinforcementKey
+    Assert-Status $reinforceResponse 200 'Learning reinforcement creation'
+    $reinforceReplay = Invoke-Api $other.Session POST "/api/tutoring-sessions/$($learning.id)/recommendations/$($recommendation.id)/start" $reinforcementKey
+    Assert-Status $reinforceReplay 200 'Learning reinforcement replay'
+    if (($reinforceResponse.Content | ConvertFrom-Json).id -ne ($reinforceReplay.Content | ConvertFrom-Json).id) { throw 'Reinforcement duplicated session.' }
     Assert-Status (Invoke-Api $student.Session POST '/api/auth/logout' @{}) 204 'Logout'
     Assert-Status (Invoke-Api $student.Session GET '/api/me') 401 'Logged-out access denied'
+    }
     $checks | ConvertTo-Json | Set-Content "$artifactDir/results.json" -Encoding utf8
     $success = $true
     if ($KeepRunning) {
-        @{ database=$databaseName; processId=$apiProcess.Id; password=$qaPassword; adminEmail='admin@example.invalid'; teacherEmail='teacher@example.invalid'; studentEmail='student-a@example.invalid'; tutoringOwnerEmail='student-b@example.invalid'; completedTutoringId=$tutoring.id; groupId=$group.id; foreignGroupId=$foreign.id } | ConvertTo-Json | Set-Content "$projectRoot/.cache/http-qa.json" -Encoding utf8
+        @{ database=$databaseName; processId=$apiProcess.Id; password=$qaPassword; adminEmail='admin@example.invalid'; teacherEmail='teacher@example.invalid'; studentEmail='student-a@example.invalid'; tutoringOwnerEmail='student-b@example.invalid'; completedTutoringId=$tutoring.id; completedLearningId=$learning.id; groupId=$group.id; foreignGroupId=$foreign.id } | ConvertTo-Json | Set-Content "$projectRoot/.cache/http-qa.json" -Encoding utf8
         Write-Host 'HTTP checks passed. Isolated API retained for browser QA; private state in .cache/http-qa.json.'
     } else { Write-Host 'HTTP identity checks passed on real HTTPS API/PostgreSQL.' }
 } finally {

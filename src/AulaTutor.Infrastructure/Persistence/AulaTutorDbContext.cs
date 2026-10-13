@@ -16,11 +16,19 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
     public DbSet<TutoringSession> TutoringSessions => Set<TutoringSession>();
     public DbSet<TutoringTurn> TutoringTurns => Set<TutoringTurn>();
     public DbSet<TutoringMessage> TutoringMessages => Set<TutoringMessage>();
+    public DbSet<LearningExercise> LearningExercises => Set<LearningExercise>();
+    public DbSet<ExerciseAttempt> ExerciseAttempts => Set<ExerciseAttempt>();
+    public DbSet<DiagnosticAssessment> DiagnosticAssessments => Set<DiagnosticAssessment>();
+    public DbSet<PersonalizedLearningPlan> LearningPlans => Set<PersonalizedLearningPlan>();
+    public DbSet<LearningReport> LearningReports => Set<LearningReport>();
+    public DbSet<LearningRecommendation> LearningRecommendations => Set<LearningRecommendation>();
+    public DbSet<ReportShare> ReportShares => Set<ReportShare>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
         builder.ConfigureTutoring();
+        builder.ConfigureLearning();
         builder.Entity<Organization>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100);

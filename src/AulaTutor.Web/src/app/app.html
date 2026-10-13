@@ -5,6 +5,7 @@
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Inicio</a>
     @if (auth.user(); as user) {
       @if(auth.hasRole('Student')){<a routerLink="/tutoring" routerLinkActive="active">Tutorías</a>}
+      @if(auth.hasRole('Teacher')){<a routerLink="/teacher/reports" routerLinkActive="active">Reportes compartidos</a>}
       @if (user.roles.length) { <a routerLink="/groups" routerLinkActive="active">Grupos</a> }
       @if (auth.hasRole('Admin')) { <a routerLink="/admin/users" routerLinkActive="active">Administración</a><a routerLink="/admin/ai" routerLinkActive="active">Diagnóstico IA</a> }
       <button type="button" class="secondary" (click)="logout()">Cerrar sesión</button>

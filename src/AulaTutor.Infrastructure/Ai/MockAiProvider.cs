@@ -1,4 +1,6 @@
 using AulaTutor.Application.Ai;
+using AulaTutor.Application.Tutoring;
+using System.Text.Json;
 
 namespace AulaTutor.Infrastructure.Ai;
 
@@ -13,6 +15,35 @@ public sealed class MockAiProvider : IAiProvider
     {
         ct.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(request);
+        if (request.UseCase.StartsWith("learning_", StringComparison.Ordinal) && request.ResponseContract.Format == "text")
+        {
+            using var context = JsonDocument.Parse(request.Messages.Last().Text);
+            var root = context.RootElement;
+            var topic = root.GetProperty("topic").GetString()!;
+            var goal = root.GetProperty("goal").GetString()!;
+            var ids = root.GetProperty("evidence").EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).Take(3).ToArray();
+            var preliminary = root.GetProperty("preliminary").GetBoolean();
+            var exercise = new ExerciseProposal("[Simulación Mock] ¿Una sola respuesta correcta demuestra dominio completo de un tema?", "TrueFalse", ["Verdadero", "Falso"], ["Falso"], "Distinguir una respuesta puntual de evidencia suficiente.");
+            object payload = request.UseCase switch
+            {
+                "learning_diagnosticquestion" => new ExerciseProposal($"[Simulación Mock] Explica con un ejemplo qué conoces sobre {topic} y qué te gustaría practicar.", "OpenResponse", [], [], "Describe una idea y un ejemplo pertinente. La respuesta queda sin verificación objetiva."),
+                "learning_analyzediagnosis" => new AssessmentContent(
+                    preliminary ? "[Simulación Mock] Evaluación preliminar: faltan respuestas suficientes para identificar fortalezas o dificultades." : "[Simulación Mock] Hay respuestas registradas; el guion no evalúa su contenido ni demuestra dominio.",
+                    [], [], ["Comprensión y transferencia a otros contextos no verificadas."], ["Practicar el objetivo declarado con ejemplos y revisión."]),
+                "learning_generateplan" => new PlanContent(goal, "[Simulación Mock] Ruta demostrativa de repaso, aplicación y reflexión; no sustituye una planificación real de un LLM.",
+                    Enumerable.Range(0, 3).Select(i => new LearningPlanObjective(new[] { "Relacionar conceptos y ejemplos", "Aplicar el objetivo a un caso", "Revisar y explicar lo aprendido" }[i], ids,
+                        [new LearningPlanActivity($"[Simulación Mock] Trabajaremos {topic} mediante una explicación breve y una actividad. Este guion ilustra el flujo, sin comprensión semántica.", i == 2 ? "Intermediate" : "Beginner", 5, exercise)])).ToArray()),
+                "learning_generateexercise" => exercise,
+                "learning_finalreport" => new ReportContent("[Simulación Mock] Los resultados objetivos se muestran desde los intentos almacenados. El guion no infiere aprendizaje.",
+                    ids.Length == 0 ? [] : [new EvidenceObservation("Se registraron respuestas en ejercicios explícitos; revisar sus resultados y ayudas. Interpretación simulada, sin certificar dominio.", ids)],
+                    ["Transferencia y dominio de la asignatura no evaluados."], [new RecommendationProposal("Practicar " + topic[..Math.Min(topic.Length, 140)] + " con un ejemplo nuevo", preliminary ? [] : ids)]),
+                "learning_activateplan" or "learning_nextactivity" => new LearningOrchestrator.FeedbackContent(root.GetProperty("exercise").ValueKind == JsonValueKind.Null
+                    ? "[Simulación Mock] Ruta trabajada. Puedes continuar preguntando libremente o finalizar para consultar tus resultados. No se certifica dominio."
+                    : "[Simulación Mock] Comenzamos con una explicación breve: practicar y explicar tu razonamiento aporta evidencia, sin demostrar por sí solo dominio.\n\n" + root.GetProperty("exercise").GetProperty("prompt").GetString() + "\n\nResponde en la tarjeta; tus preguntas libres conservan esta actividad."),
+                _ => new LearningOrchestrator.FeedbackContent("[Simulación Mock] Respuesta registrada. Consulta el resultado del validador en la tarjeta. La orientación simulada no cambia el resultado objetivo ni ejecuta código.")
+            };
+            return Task.FromResult(new AiChatResult(LearningJson.Write(payload), ProviderId, ModelId, null, null, "stop"));
+        }
         if (request.UseCase.StartsWith("tutoring_", StringComparison.Ordinal) && request.ResponseContract.Format == "text")
         {
             var count = request.Messages.Count(m => m.Role == "assistant");

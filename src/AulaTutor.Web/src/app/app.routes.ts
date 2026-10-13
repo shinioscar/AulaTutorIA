@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { signedInGuard, adminGuard, studentGuard } from './auth/auth.service';
 
 export const routes: Routes = [
+  {path:'teacher/reports',canActivate:[signedInGuard],loadComponent:()=>import('./tutoring/shared-reports-page').then(m=>m.SharedReportsPage)},
   {path:'tutoring',canActivate:[studentGuard],loadComponent:()=>import('./tutoring/sessions-page').then(m=>m.SessionsPage)},
   {path:'tutoring/:id',canActivate:[studentGuard],loadComponent:()=>import('./tutoring/chat-page').then(m=>m.ChatPage)},
   {path:'', loadComponent:() => import('./home/home').then(m => m.Home)},

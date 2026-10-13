@@ -150,7 +150,7 @@ public sealed class IdentityTests : IAsyncLifetime
         Assert.Contains("secure", cookie); Assert.Contains("httponly", cookie); Assert.Contains("samesite=strict", cookie);
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>();
-        Assert.Equal(2, (await db.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.Equal(3, (await db.Database.GetAppliedMigrationsAsync()).Count());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         var persisted = await db.Users.SingleAsync(x => x.Id == user.Id);
         Assert.NotEqual(password, persisted.PasswordHash);

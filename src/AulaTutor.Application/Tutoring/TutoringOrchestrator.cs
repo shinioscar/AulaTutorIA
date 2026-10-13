@@ -51,9 +51,10 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         var useCase = action == TutoringAction.Start && session.DirectReview ? "review" : action.ToString().ToLowerInvariant();
         return new("tutoring_" + useCase, messages, contract, requestId.ToString("N"), 1024, PolicyVersion);
     }
-    public async Task<TutoringReply> GenerateAsync(TutoringSession session, IReadOnlyList<TutoringMessage> context, TutoringAction action, Guid requestId, CancellationToken ct)
+    public async Task<TutoringReply> GenerateAsync(TutoringSession session, IReadOnlyList<TutoringMessage> context, TutoringAction action, Guid requestId, CancellationToken ct, string? guidance = null)
     {
         var request = BuildRequest(session, context, action, requestId);
+        if (guidance is not null) request = request with { Messages = request.Messages.Append(new AiMessage("user", guidance)).ToArray() };
         var result = await provider.GenerateAsync(request, ct);
         if (result.ProviderId != session.ProviderId || result.ModelId != session.ModelId) throw new AiProviderException(AiErrorCode.Configuration);
         string text = result.Text, activity = action switch
@@ -77,7 +78,7 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
     }
     public static string Summarize(TutoringSession session, IReadOnlyList<TutoringTurn> turns) =>
         $"Tutoría finalizada: {session.Topic}\n\nObjetivo declarado: {session.Goal}\n\n" +
-        $"Se completaron {turns.Count(x => x.State == TutoringTurnState.Succeeded)} turnos de conversación; " +
+        $"Se completaron {turns.Count(x => x.State == TutoringTurnState.Succeeded && x.Action != TutoringAction.FinalReport)} turnos de conversación; " +
         $"se solicitaron {turns.Count(x => x.Action == TutoringAction.Hint)} pistas y {turns.Count(x => x.Action == TutoringAction.Simplify)} explicaciones más sencillas.\n\n" +
         (string.IsNullOrWhiteSpace(session.CurrentFocus) ? "" : $"Último foco sugerido por IA: {session.CurrentFocus}\n\n") +
         "Resumen descriptivo generado por la aplicación a partir del registro, sin llamada adicional de IA. " +

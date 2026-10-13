@@ -32,7 +32,7 @@ internal static class TutoringModel
             e.ToTable("TutoringTurns", t =>
             {
                 t.HasCheckConstraint("CK_TutoringTurn_State", "\"State\" BETWEEN 0 AND 3");
-                t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 3");
+                t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 11");
                 t.HasCheckConstraint("CK_TutoringTurn_Attempts", "\"Attempts\" BETWEEN 1 AND 3");
             });
             e.HasKey(x => new { x.SessionId, x.RequestId });
