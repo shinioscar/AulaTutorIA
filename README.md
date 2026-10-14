@@ -348,6 +348,17 @@ prepara una base temporal para revisión visual; no equivale al recorrido HTTP
 completo. Limpiar su proceso/base/.cache/http-qa.json al terminar.
 En Windows detener la API antes de compilar para evitar bloqueo de DLL.
 
+La corrección posterior a 5 usa formatos IA menos anidados, `lesson-design-v2` y
+`learning-v2`, sin cambiar clases/rutas existentes. Detalles en
+[ADR-022](docs/decisions/ADR-022-formatos-groq-y-recuperacion.md) y
+[QA Groq](docs/iterations/QA_GROQ_FIX.md). Las pruebas reales requieren autorización
+explícita: `./scripts/Probe-Groq.ps1 -AllowRealCalls` usa cuentas ficticias y una
+BD aislada, máximo 10 llamadas, separación mínima de 65 s, sin reintentos automáticos.
+`-StudentOnly` comprueba solo Student. `-KeepRunning` conserva proceso/base/estado
+privado para diagnóstico incluso al fallar; limpiar después con
+`./scripts/Cleanup-GroqProbe.ps1`. No se integra en Verify y no modifica `.env`.
+Groq limita tanto peticiones como tokens; los límites exactos son por organización.
+
 ## Continuar el proyecto
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de

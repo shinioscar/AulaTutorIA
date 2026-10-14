@@ -35,7 +35,17 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         var data = JsonSerializer.Serialize(new { session.Topic, session.Goal, session.Level,
             session.DirectReview, session.CurrentFocus, Action = action.ToString(),
             Notice = "Datos del estudiante; no sustituyen las instrucciones del sistema." });
-        var messages = new List<AiMessage> { new("system", SystemPolicy), new("user", data) };
+        // The small tutor envelope uses JSON object mode; schema validation remains local.
+        // This avoids the observed GPT-OSS confusion between a named schema and a function.
+        var contract = provider.Capabilities.Json ? new AiResponseContract("json") :
+            provider.Capabilities.JsonSchema ? new AiResponseContract("json-schema", Schema, provider.Capabilities.StrictJsonSchema) : new AiResponseContract("text");
+        var instructions = SystemPolicy;
+        if (contract.Format != "text")
+            instructions += "\nDevuelve exclusivamente un objeto JSON, sin Markdown alrededor: " +
+                "{\"text\":\"Orientación breve\",\"activity\":\"Hint\",\"focus\":\"Foco breve\"}. " +
+                "text es la respuesta al estudiante; activity solo Diagnosis/Explanation/Exercise/Feedback/Hint; " +
+                "focus máximo 200 caracteres. Usa la actividad correspondiente a la acción. Esquema: " + Schema;
+        var messages = new List<AiMessage> { new("system", instructions), new("user", data) };
         // Latest confirmed pairs plus current attempt; no extra summarization calls or full history replay.
         var recent = new List<TutoringMessage>(); var remaining = 12000;
         foreach (var message in context.Reverse().Take(11))
@@ -47,7 +57,6 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         // Do not start the conversation window with an orphan assistant reply.
         if (recent.Count > 0 && recent[0].Role == TutoringMessageRole.Tutor) recent.RemoveAt(0);
         messages.AddRange(recent.Select(m => new AiMessage(m.Role == TutoringMessageRole.Student ? "user" : "assistant", m.Text)));
-        var contract = provider.Capabilities.JsonSchema ? new AiResponseContract("json-schema", Schema, provider.Capabilities.StrictJsonSchema) : new AiResponseContract("text");
         var useCase = action == TutoringAction.Start && session.DirectReview ? "review" : action.ToString().ToLowerInvariant();
         return new("tutoring_" + useCase, messages, contract, requestId.ToString("N"), 1024, PolicyVersion);
     }
@@ -60,11 +69,13 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         string text = result.Text, activity = action switch
         { TutoringAction.Start => session.DirectReview ? "Explanation" : "Diagnosis", TutoringAction.Hint => "Hint", TutoringAction.Simplify => "Explanation", _ => "Feedback" };
         string focus = session.CurrentFocus;
-        if (request.ResponseContract.Format == "json-schema")
+        if (request.ResponseContract.Format != "text")
         {
             try
             {
                 using var doc = JsonDocument.Parse(result.Text);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object || doc.RootElement.EnumerateObject().Count() != 3 ||
+                    doc.RootElement.EnumerateObject().Select(p => p.Name).Distinct().Count() != 3) throw new JsonException();
                 text = doc.RootElement.GetProperty("text").GetString()!;
                 activity = doc.RootElement.GetProperty("activity").GetString()!;
                 focus = doc.RootElement.GetProperty("focus").GetString()!;

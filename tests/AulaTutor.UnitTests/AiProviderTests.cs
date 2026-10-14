@@ -140,6 +140,55 @@ public sealed class AiProviderTests
         Assert.Equal(AiErrorCode.Unsupported,(await Assert.ThrowsAsync<AiProviderException>(()=>adapter.GenerateAsync(Request("json"),CancellationToken.None))).Code);
         Assert.Equal(0,handler.Calls);
     }
+    [Theory] [InlineData("json_validate_failed",AiErrorCode.InvalidResponse)] [InlineData("tool_use_failed",AiErrorCode.InvalidResponse)] [InlineData("unknown",AiErrorCode.Rejected)]
+    public async Task GroqJsonFailureUsesOnlyAllowlistedCodeAndDiscardsSensitiveFields(string code,AiErrorCode expected)
+    {
+        var config=Config("Groq");var logger=new CaptureLogger();
+        using var handler=new Handler((_,_)=>Task.FromResult(Reply(JsonSerializer.Serialize(new {error=new {code,message=config.Groq.ApiKey,failed_generation="PRIVATE_OUTPUT"}}),HttpStatusCode.BadRequest)));
+        var adapter=Provider(config,handler,out var transport,logger);using var _=transport;
+        var error=await Assert.ThrowsAsync<AiProviderException>(()=>adapter.GenerateAsync(Request(),default));
+        Assert.Equal(expected,error.Code); Assert.Null(error.InnerException);
+        var exposed=error.ToString()+string.Join('\n',logger.Lines);Assert.DoesNotContain(config.Groq.ApiKey,exposed);Assert.DoesNotContain("PRIVATE_OUTPUT",exposed);Assert.Equal(1,handler.Calls);
+    }
+    [Theory] [InlineData("{")] [InlineData("[]")] [InlineData("{\"error\":null}")]
+    public async Task MalformedErrorBodiesKeepSafeRejection(string body)
+    {
+        using var handler=new Handler((_,_)=>Task.FromResult(Reply(body,HttpStatusCode.BadRequest)));
+        var adapter=Provider(Config("Groq"),handler,out var transport);using var _=transport;
+        Assert.Equal(AiErrorCode.Rejected,(await Assert.ThrowsAsync<AiProviderException>(()=>adapter.GenerateAsync(Request(),default))).Code);
+    }
+    [Fact] public async Task OversizedErrorBodyIsNotParsed()
+    {
+        using var handler=new Handler((_,_)=>Task.FromResult(Reply(new string('x',16_385),HttpStatusCode.BadRequest)));
+        var adapter=Provider(Config("Groq"),handler,out var transport);using var _=transport;
+        Assert.Equal(AiErrorCode.Rejected,(await Assert.ThrowsAsync<AiProviderException>(()=>adapter.GenerateAsync(Request(),default))).Code);
+    }
+    [Theory] [InlineData("lesson_plan",4096,true)] [InlineData("lesson_exercises",4097,false)] [InlineData("learning_generateplan",2049,false)]
+    public async Task ExtendedBudgetIsRestrictedToClassDesign(string useCase,int tokens,bool allowed)
+    {
+        using var handler=new Handler(async(request,ct)=>{using var sent=JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
+            Assert.Equal(tokens,sent.RootElement.GetProperty("max_completion_tokens").GetInt32());
+            Assert.Equal("low",sent.RootElement.GetProperty("reasoning_effort").GetString());Assert.False(sent.RootElement.GetProperty("include_reasoning").GetBoolean());
+            return Reply(Body("Groq"));});
+        var adapter=Provider(Config("Groq"),handler,out var transport);using var _=transport;
+        var request=Request() with {UseCase=useCase,MaxOutputTokens=tokens};
+        if(allowed)await adapter.GenerateAsync(request,default);
+        else Assert.Equal(AiErrorCode.InvalidRequest,(await Assert.ThrowsAsync<AiProviderException>(()=>adapter.GenerateAsync(request,default))).Code);
+        Assert.Equal(allowed?1:0,handler.Calls);
+    }
+    [Theory] [InlineData("lesson_plan","low")] [InlineData("tutoring_hint","medium")]
+    public async Task StructuredGroqUsesBoundedReasoningWithoutReturningIt(string useCase,string effort)
+    {
+        using var handler=new Handler(async(request,ct)=>{
+            using var sent=JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
+            Assert.Equal(effort,sent.RootElement.GetProperty("reasoning_effort").GetString());
+            Assert.False(sent.RootElement.GetProperty("include_reasoning").GetBoolean());
+            Assert.Equal(0.2,sent.RootElement.GetProperty("temperature").GetDouble());
+            Assert.False(sent.RootElement.TryGetProperty("tools",out var unusedTools));
+            return Reply(Body("Groq","{\"status\":\"ok\"}"));});
+        var adapter=Provider(Config("Groq"),handler,out var transport);using var _=transport;
+        await adapter.GenerateAsync(Request("json") with {UseCase=useCase},default);
+    }
 
     [Fact]
     public async Task MissingConfigurationAndHealthNeverSend()

@@ -27,6 +27,7 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
                 using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
                 if (!response.IsSuccessStatusCode)
                 {
+                    logger.LogWarning("AI upstream rejection {Provider} {Model} HTTP {StatusCode}", provider, model, (int)response.StatusCode);
                     var retryAfter = response.Headers.RetryAfter?.Delta;
                     if (response.Headers.RetryAfter?.Date is { } date) retryAfter = date - DateTimeOffset.UtcNow;
                     if (retryAfter < TimeSpan.Zero) retryAfter = TimeSpan.Zero;
@@ -36,7 +37,11 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
                         await Task.Delay(retryAfter ?? TimeSpan.FromSeconds(1), deadline.Token);
                         continue;
                     }
-                    // Never read or expose upstream error bodies or headers containing secrets.
+                    // Only an exact allowlisted Groq code is classified. Never retain or expose
+                    // error.message, failed_generation or arbitrary upstream strings.
+                    if (provider == "Groq" && response.StatusCode == HttpStatusCode.BadRequest &&
+                        await IsGroqGenerationFailureAsync(response.Content, deadline.Token))
+                        throw new AiProviderException(AiErrorCode.InvalidResponse);
                     throw new AiProviderException(response.StatusCode switch
                     {
                         HttpStatusCode.Unauthorized => AiErrorCode.Authentication,
@@ -70,6 +75,28 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
             if (admitted) slots.Release();
             logger.LogInformation("AI transport {Provider} {Model} {DurationMs}ms {Outcome}", provider, model, timer.ElapsedMilliseconds, outcome);
         }
+    }
+    private static async Task<bool> IsGroqGenerationFailureAsync(HttpContent content, CancellationToken ct)
+    {
+        const int limit = 16_384;
+        if (content.Headers.ContentLength > limit) return false;
+        await using var stream = await content.ReadAsStreamAsync(ct);
+        using var buffer = new MemoryStream(); var chunk = new byte[2048];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, ct)) != 0)
+        {
+            if (buffer.Length + read > limit) return false;
+            buffer.Write(chunk, 0, read);
+        }
+        try
+        {
+            using var error = JsonDocument.Parse(buffer.ToArray(), new JsonDocumentOptions { MaxDepth = 8 });
+            return error.RootElement.ValueKind == JsonValueKind.Object &&
+                error.RootElement.TryGetProperty("error", out var detail) && detail.ValueKind == JsonValueKind.Object &&
+                detail.TryGetProperty("code", out var code) && code.ValueKind == JsonValueKind.String &&
+                code.GetString() is "json_validate_failed" or "tool_use_failed";
+        }
+        catch (JsonException) { return false; }
     }
     public void Dispose() => slots.Dispose();
 }

@@ -77,6 +77,13 @@ public sealed partial class LearningTests
         s=await Act(user,s,"Message","Duda libre no es intento");Assert.Empty(s.Learning!.Attempts);
         s=await Act(user,s,"GenerateExercise");var exercise=Current(s);var key=Guid.NewGuid();s=await Act(user,s,"SubmitAttempt","Verdadero",exercise.Id,key);
         Assert.Equal("Incorrect",s.Learning!.Attempts.Last().Outcome);var calls=provider.Calls;
+        using(var context=System.Text.Json.JsonDocument.Parse(provider.Requests.Last().Messages.Last().Text))
+        {
+            var evidence=context.RootElement.GetProperty("evidence")[0];
+            Assert.Equal("Incorrect",evidence.GetProperty("outcome").GetString());
+            Assert.Contains("No coincide",evidence.GetProperty("feedback").GetString());
+            Assert.False(evidence.TryGetProperty("acceptedAnswers",out _));
+        }
         s=await Act(user,s,"SubmitAttempt","Verdadero",exercise.Id,key);Assert.Equal(calls,provider.Calls);Assert.Single(s.Learning!.Attempts);
         s=await Act(user,s,"Hint");s=await Act(user,s,"SubmitAttempt","Falso",exercise.Id);Assert.Equal("CorrectWithHelp",s.Learning!.Attempts.Last().Outcome);
         s=await Close(user,s);calls=provider.Calls;Assert.NotNull(s.Summary);Assert.Equal(calls,provider.Calls);

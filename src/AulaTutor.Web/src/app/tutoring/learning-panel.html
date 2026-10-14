@@ -5,7 +5,7 @@
     @if(!l.diagnostic&&!free()&&!s.directReview){
       <div class="learning-heading"><strong>Diagnóstico breve</strong><span class="note">Hasta {{l.diagnosticQuestionLimit}} preguntas; puedes finalizar antes.</span></div>
       <div class="actions">
-        @if((!exercise()?.isDiagnostic||attempts().length)&&l.exercises.length<l.diagnosticQuestionLimit){<button type="button" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">{{l.exercises.length?'Otra pregunta diagnóstica':'Comenzar diagnóstico estructurado'}}</button>}
+        @if((!exercise()?.isDiagnostic||attempts().length)&&diagnosticCount()<l.diagnosticQuestionLimit){<button type="button" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">{{diagnosticCount()?'Otra pregunta diagnóstica':'Comenzar diagnóstico estructurado'}}</button>}
         <button type="button" class="secondary" (click)="emit('AnalyzeDiagnosis')" [disabled]="disabled()">Finalizar diagnóstico y analizar</button>
         <button type="button" class="secondary" (click)="free.set(true)">Continuar en tutoría libre</button>
       </div>
@@ -40,13 +40,13 @@
     @if(s.state==='Active'){
       <section class="exercise-card" aria-label="Ejercicio actual"><h3>{{e.isDiagnostic?'Pregunta diagnóstica':'Actividad actual'}}</h3>
         @if(l.plan?.state==='Active'){@for(o of l.plan?.content?.objectives??[];track $index){@if($index===e.objectiveOrder){@for(a of o.activities;track $index){<p>{{a.explanation}}</p>}}}}
-        <p>{{e.prompt}}</p><p class="note">Criterios: {{e.rubric}} · Pistas recibidas: {{e.hints}} · Explicaciones adicionales: {{e.simplifications}}</p>
+        <app-safe-response [text]="e.prompt"/><p class="note">Criterios: {{e.rubric}} · Pistas recibidas: {{e.hints}} · Explicaciones adicionales: {{e.simplifications}}</p>
         <form (ngSubmit)="submit()"><label [for]="'answer-'+e.id">Respuesta de este ejercicio</label>
           @if(e.options.length){<select [id]="'answer-'+e.id" name="exercise-answer" [(ngModel)]="answer" [disabled]="disabled()"><option value="">Selecciona una respuesta</option>@for(option of e.options;track option){<option [value]="option">{{option}}</option>}</select>}
           @else{<textarea [id]="'answer-'+e.id" name="exercise-answer" [(ngModel)]="answer" maxlength="2000" rows="2" [disabled]="disabled()"></textarea>}
           <div class="actions"><button [disabled]="disabled()||!answer.trim()">Registrar respuesta</button>
             @if(l.plan?.state==='Active'&&attempts().length){<button type="button" class="secondary" (click)="emit('NextActivity')" [disabled]="disabled()">Continuar ruta</button>}
-            @if(e.isDiagnostic&&attempts().length&&l.exercises.length<l.diagnosticQuestionLimit){<button type="button" class="secondary" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">Otra pregunta</button>}
+            @if(e.isDiagnostic&&attempts().length&&diagnosticCount()<l.diagnosticQuestionLimit){<button type="button" class="secondary" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">Otra pregunta</button>}
           </div>
         </form>
         @for(a of attempts();track a.id){<details><summary>Intento {{a.number}} · {{outcome(a.outcome)}} · {{a.hintsUsed}} pistas</summary><p>{{a.answer}}</p><p class="feedback">{{a.feedback}}</p><small>Evidencia: {{a.id}}</small></details>}

@@ -86,7 +86,7 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
             db.TutoringTurns.Any(t => t.SessionId == s.Id && t.RequestId == m.RequestId && t.State == TutoringTurnState.Succeeded))
             .OrderByDescending(m => m.Sequence).Take(4).ToArrayAsync(ct);
         var supplied = evidence.Select(a => new { a.Id, question = exercises.Single(e => e.Id == a.ExerciseId).Prompt[..Math.Min(exercises.Single(e => e.Id == a.ExerciseId).Prompt.Length, 350)],
-            answer = a.Answer[..Math.Min(a.Answer.Length, 650)], a.Outcome, a.ValidationType, a.HintsUsed }).ToArray();
+            answer = a.Answer[..Math.Min(a.Answer.Length, 650)], outcome = a.Outcome.ToString(), a.ValidationType, a.Feedback, a.HintsUsed }).ToArray();
         turn.ContextJson = LearningJson.Write(new { s.Topic, s.Goal, s.Level, action = turn.Action.ToString(),
             adjustment = request.Text, evidenceRevision = s.EvidenceRevision,
             preliminary = evidence.Select(e => e.ExerciseId).Distinct().Count() < policy.Value.MinimumEvidence,

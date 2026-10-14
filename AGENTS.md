@@ -10,6 +10,11 @@
   Iteraciones 0–5 y UI-0 completadas. No avanzar a 6 sin nuevo encargo.
 - Registros: docs/iterations/ITERATION_0.md a ITERATION_5.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
+- Corrección posterior a 5 autorizada: investigar rechazos Groq y revisar Student
+  con pruebas reales ficticias espaciadas. ADR-022/QA_GROQ_FIX registran resultados.
+  Verify/CI siguen Mock. Probe-Groq.ps1 exige -AllowRealCalls, máximo 10 por ejecución,
+  65 s entre llamadas y parada al fallar; Cleanup-GroqProbe.ps1 limpia estado privado.
+  Esta autorización corresponde al encargo actual; no autoriza pruebas periódicas.
 - En 4 se autorizan compartición mínima de reportes y validadores formativos cerrados,
   sin clases docentes, asignaciones, notas oficiales ni ejecución SQL/código de alumnos.
   Mock, salud y estructura de proveedores permanecen funcionales.
@@ -148,7 +153,8 @@
 - Orquestador sin secretos/herramientas/SQL. SystemPolicy solo servidor; metadatos
   e historial son datos user no confiables. Ventana hasta 11 mensajes en total/12k caracteres;
   conserva todo el historial en DB. Foco/activity sugeridos NO validan dominio.
-- JSON Schema cuando hay capacidad, texto para Mock. Modelo/proveedor se fijan al
+- ADR-022: tutor/simulación usa JSON object cuando hay JSON y valida localmente
+  text/activity/focus; esquemas para aprendizaje/diseño, texto para Mock. Modelo/proveedor se fijan al
   crear; cambio de configuración: 409 antes de llamada, sin fallback. tutor texto de 6000,
   entrada de 2000, tema 160/objetivo 500/foco 200, 100 mensajes y 100 sesiones/alumno.
   Rate limit de 6 envíos/min/cuenta/proceso; presupuesto/auditoría completa siguen para 8.
@@ -169,6 +175,10 @@
   libres no son intentos. Respuesta guardada antes de orientación IA. Cerrados: comparador
   determinista de reglas privadas, nunca claves en Angular ni chat contextual. Abiertos/Code
   NeedsReview, sin ejecutar código/SQL. Coincidir con una regla no certifica validez curricular.
+- ADR-022: learning-v2 envía Outcome como nombre y feedback del comparador; plan
+  personal tiene transporte poco anidado, reconstruido/validado en servidor. Student
+  muestra SQL con SafeResponse, cuenta solo preguntas diagnósticas y refresca por GET
+  tras espera de cuota, sin reintentar IA automáticamente. Contextos previos intactos.
 - DiagnosticAssessment versionado: mínimo de evidencias distintas configurable; preliminar
   si insuficiente, sin fortalezas/dificultades categóricas. Learning:MaxDiagnosticQuestions
   1–8 (5), MinimumEvidence 1–máximo (2). Finalización temprana explícita permitida.
@@ -241,13 +251,14 @@
 - PostgreSQL localhost:15432 (interno 5432) en proyecto Compose aulatutor-ia.
   API/web pueden seguir activos al entregar: inspeccionar puertos/procesos y detener
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
-- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 155
-  pruebas (81 unitarias/74 integración; conserva 123 previas), consistencia EF,
+- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 174
+  pruebas (100 unitarias/74 integración; conserva 155 previas), consistencia EF,
   npm ci/check/check:theme/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
   UI-0 repitió 123 pruebas/75 HTTP y añadió 70 comprobaciones de contraste y
   19 capturas por rol/viewport; QA_UI_0.md registra teclado/storage/responsive.
   Iteración 4: 123 pruebas y 75 comprobaciones HTTP aprobadas; cierre visual en QA_4.md.
   Iteración 5: 155 pruebas/107 HTTP/70 contraste, 26 capturas en evidence-5 y QA_5.md;
+  corrección Groq posterior: 174 pruebas, QA_GROQ_FIX.md y evidence-groq-fix;
   TeacherLessons aplicada localmente, Docker API compilada y QA temporal eliminado.
   Histórico:
   91 pruebas y 48 comprobaciones HTTP de 3; revisión visual

@@ -4,7 +4,8 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Session, LearningAction, TutoringService, Report } from './tutoring.service';
 import { ReportCard } from './report-card';
-@Component({selector:'app-learning-panel',standalone:true,imports:[FormsModule,ReportCard],templateUrl:'./learning-panel.html',styleUrl:'./learning-panel.css'})
+import { SafeResponse } from './safe-response';
+@Component({selector:'app-learning-panel',standalone:true,imports:[FormsModule,ReportCard,SafeResponse],templateUrl:'./learning-panel.html',styleUrl:'./learning-panel.css'})
 export class LearningPanel implements OnChanges {
   readonly session=input.required<Session>(); readonly disabled=input(false);
   readonly action=output<LearningAction>();readonly changed=output<void>();
@@ -19,6 +20,7 @@ export class LearningPanel implements OnChanges {
     return [...l.exercises].reverse().find(e=>!e.completed&&(!e.isDiagnostic||!l.diagnostic));
   });
   readonly attempts=computed(()=>this.session().learning.attempts.filter(a=>a.exerciseId===this.exercise()?.id));
+  readonly diagnosticCount=computed(()=>this.session().learning.exercises.filter(e=>e.isDiagnostic).length);
   readonly report=computed<Report|undefined>(()=>this.session().learning.reports[0]);
   emit(action:string,text?:string,exerciseId?:string):void {if(!this.disabled()&&!this.localBusy()){this.error.set('');this.action.emit({action,text,exerciseId});}}
   ngOnChanges():void {const id=this.exercise()?.id??'';const count=this.attempts().length;if(id!==this.previousExercise||count>this.previousAttempts)this.answer='';this.previousExercise=id;this.previousAttempts=count;}

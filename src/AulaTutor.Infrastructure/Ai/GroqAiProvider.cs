@@ -16,6 +16,12 @@ public sealed class GroqAiProvider(AiHttpTransport transport, IOptions<AiProvide
         var body = new Dictionary<string, object> { ["model"] = Model, ["stream"] = false,
             ["max_completion_tokens"] = request.MaxOutputTokens,
             ["messages"] = request.Messages.Select(x => new { role = x.Role, content = x.Text }).ToArray() };
+        if (Model is "openai/gpt-oss-20b" or "openai/gpt-oss-120b")
+        {
+            body["reasoning_effort"] = request.UseCase.StartsWith("tutoring_", StringComparison.Ordinal) ? "medium" : "low";
+            body["include_reasoning"] = false;
+            if (request.ResponseContract.Format != "text") body["temperature"] = 0.2;
+        }
         if (request.ResponseContract.Format == "json") body["response_format"] = new { type = "json_object" };
         if (schema.HasValue) body["response_format"] = new { type = "json_schema", json_schema = new { name = "aulatutor_response", strict = request.ResponseContract.Strict, schema = schema.Value } };
         return JsonPost("https://api.groq.com/openai/v1/chat/completions", body, settings.ApiKey);

@@ -45,5 +45,44 @@ public sealed class LessonTests
         Assert.Equal("Contenido", Content().Sections[0].Content);
     }
     [Fact] public void PortableSchemaIncludesBooleansWithoutFrameworkDependencies()
-    { using var doc = JsonDocument.Parse(LearningJson.Write(LearningOrchestrator.SchemaFor(typeof(LessonPlanProposal)))); Assert.Contains("\"type\":\"boolean\"", doc.RootElement.GetRawText()); }
+    { using var doc = JsonDocument.Parse(LearningJson.Write(LearningOrchestrator.SchemaFor(typeof(LessonDesignPayload)))); Assert.Contains("\"type\":\"boolean\"", doc.RootElement.GetRawText()); }
+    [Fact] public void ShallowWireFormatPreservesSectionsAndPrivateRules()
+    {
+        var original = new LessonPlanProposal("Explicación", Content());
+        var wire = LessonDesignPayload.FromProposal(original);
+        Assert.Equal(LearningJson.Write(original), LearningJson.Write(wire.ToProposal()));
+    }
+    [Theory] [InlineData("orphan-section")] [InlineData("orphan-objective")] [InlineData("duplicate-id")] [InlineData("invalid-closed-rule")]
+    public async Task ProviderPayloadCannotDropOrAcceptInvalidActivities(string problem)
+    {
+        var wire = LessonDesignPayload.FromProposal(new("Explicación", Content())); var e=wire.Exercises[0];
+        wire.Exercises[0] = problem switch {
+            "orphan-section" => e with { SectionId="missing" }, "orphan-objective" => e with { ObjectiveId="missing" },
+            "duplicate-id" => e with { Id="s1" }, _ => e with { Options=[] }
+        };
+        var provider = new DesignProvider(LearningJson.Write(wire));
+        var op=new LessonOperation { Action="Plan", RequestId=Guid.NewGuid(), ProviderId="Groq", ModelId="test", ContextJson="{}" };
+        var error=await Assert.ThrowsAsync<AiProviderException>(()=>new LessonOrchestrator(provider,new(provider)).DesignAsync(op,default));
+        Assert.Equal(AiErrorCode.InvalidResponse,error.Code);
+    }
+    [Fact] public async Task RealProviderContractIsShallowStrictAndUsesVersionedBudget()
+    {
+        var provider=new DesignProvider(LearningJson.Write(LessonDesignPayload.FromProposal(new("Explicación",Content()))));
+        var op=new LessonOperation { Action="Exercises", RequestId=Guid.NewGuid(), ProviderId="Groq", ModelId="test", ContextJson="{}" };
+        await new LessonOrchestrator(provider,new(provider)).DesignAsync(op,default);
+        Assert.Equal(4096,provider.Request!.MaxOutputTokens); Assert.Equal("lesson-design-v2",provider.Request.PromptVersion);
+        Assert.True(provider.Request.ResponseContract.Strict);
+        using var schema=JsonDocument.Parse(provider.Request.ResponseContract.JsonSchema!);
+        var properties=schema.RootElement.GetProperty("properties");
+        Assert.Equal("object",properties.GetProperty("exercises").GetProperty("items").GetProperty("type").GetString());
+        Assert.False(properties.GetProperty("sections").GetProperty("items").GetProperty("properties").TryGetProperty("exercises",out _));
+    }
+    private sealed class DesignProvider(string output):IAiProvider
+    {
+        public string ProviderId=>"Groq"; public AiCapabilities Capabilities=>new(true,true,true,false);
+        public AiChatRequest? Request{get;private set;}
+        public Task<AiHealthResult> CheckHealthAsync(CancellationToken ct)=>Task.FromResult(new AiHealthResult(true,"Groq","test"));
+        public Task<AiChatResult> GenerateAsync(AiChatRequest request,CancellationToken ct)
+        { Request=request; return Task.FromResult(new AiChatResult(output,"Groq","test",null,output,"stop")); }
+    }
 }

@@ -30,7 +30,7 @@ public sealed class MockAiProvider : IAiProvider
                     [new("e1", "o1", true, new("[Simulación Mock] ¿Una respuesta correcta demuestra dominio completo del tema?", "TrueFalse", ["Verdadero", "Falso"], ["Falso"], "Distinguir respuesta puntual y dominio."), new(["Explica la diferencia entre un acierto y evidencia suficiente."], "Falso: se necesitan evidencias variadas.", "Invitar a comparar un caso con varios ejemplos antes de dar la solución."))]),
                     new("s2", "Reflexión", "[Simulación Mock] Describe qué necesitarías observar para revisar la comprensión.",
                     [new("e2", "o1", false, new("Propón otra evidencia para el mismo objetivo.", "OpenResponse", [], [], "Proponer un ejemplo pertinente."), new(["Pertinencia del ejemplo."], "", "Invitar a proponer un contexto diferente."))])] };
-            return Task.FromResult(new AiChatResult(LearningJson.Write(new LessonPlanProposal("[Simulación Mock] Propuesta de demostración; revisa el contenido antes de aplicarlo. No es planificación semántica de un LLM.", content)), ProviderId, ModelId, null, null, "stop"));
+            return Task.FromResult(new AiChatResult(LearningJson.Write(LessonDesignPayload.FromProposal(new("[Simulación Mock] Propuesta de demostración; revisa el contenido antes de aplicarlo. No es planificación semántica de un LLM.", content))), ProviderId, ModelId, null, null, "stop"));
         }
         if (request.UseCase.StartsWith("learning_", StringComparison.Ordinal) && request.ResponseContract.Format == "text")
         {
@@ -47,9 +47,9 @@ public sealed class MockAiProvider : IAiProvider
                 "learning_analyzediagnosis" => new AssessmentContent(
                     preliminary ? "[Simulación Mock] Evaluación preliminar: faltan respuestas suficientes para identificar fortalezas o dificultades." : "[Simulación Mock] Hay respuestas registradas; el guion no evalúa su contenido ni demuestra dominio.",
                     [], [], ["Comprensión y transferencia a otros contextos no verificadas."], ["Practicar el objetivo declarado con ejemplos y revisión."]),
-                "learning_generateplan" => new PlanContent(goal, "[Simulación Mock] Ruta demostrativa de repaso, aplicación y reflexión; no sustituye una planificación real de un LLM.",
+                "learning_generateplan" => LearningPlanPayload.FromPlan(new PlanContent(goal, "[Simulación Mock] Ruta demostrativa de repaso, aplicación y reflexión; no sustituye una planificación real de un LLM.",
                     Enumerable.Range(0, 3).Select(i => new LearningPlanObjective(new[] { "Relacionar conceptos y ejemplos", "Aplicar el objetivo a un caso", "Revisar y explicar lo aprendido" }[i], ids,
-                        [new LearningPlanActivity($"[Simulación Mock] Trabajaremos {topic} mediante una explicación breve y una actividad. Este guion ilustra el flujo, sin comprensión semántica.", i == 2 ? "Intermediate" : "Beginner", 5, exercise)])).ToArray()),
+                        [new LearningPlanActivity($"[Simulación Mock] Trabajaremos {topic} mediante una explicación breve y una actividad. Este guion ilustra el flujo, sin comprensión semántica.", i == 2 ? "Intermediate" : "Beginner", 5, exercise)])).ToArray())),
                 "learning_generateexercise" => exercise,
                 "learning_finalreport" => new ReportContent("[Simulación Mock] Los resultados objetivos se muestran desde los intentos almacenados. El guion no infiere aprendizaje.",
                     ids.Length == 0 ? [] : [new EvidenceObservation("Se registraron respuestas en ejercicios explícitos; revisar sus resultados y ayudas. Interpretación simulada, sin certificar dominio.", ids)],

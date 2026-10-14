@@ -6,6 +6,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
 import { Session, Turn, TurnRequest, TutoringService, LearningAction } from './tutoring.service';
 import { LearningPanel } from './learning-panel';
 import { SafeResponse } from './safe-response';
+const loadErrorMessage='No se pudo cargar la tutoría. Comprueba tu sesión y vuelve a actualizar.';
 
 @Component({standalone:true,imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LearningPanel],templateUrl:'./chat-page.html',styleUrl:'./chat-page.css'})
 export class ChatPage implements OnDestroy {
@@ -27,9 +28,10 @@ export class ChatPage implements OnDestroy {
     try {
       const session=await firstValueFrom(this.api.get(requestedId));if(this.destroyed||requestedId!==this.id)return;
       if(!this.adopt(session)){this.schedulePoll();return;}
+      if(this.message()===loadErrorMessage)this.message.set('');
       const uncertain=this.uncertain();if(uncertain&&session.turns.some(t=>t.requestId===uncertain.requestId)){this.uncertain.set(null);this.draft='';}
       this.schedulePoll();
-    } catch {if(!this.destroyed&&requestedId===this.id)this.message.set('No se pudo cargar la tutoría. Comprueba tu sesión y vuelve a actualizar.');}
+    } catch {if(!this.destroyed&&requestedId===this.id)this.message.set(loadErrorMessage);}
   }
   private adopt(session:Session,forceScroll=false):boolean {
     if(session.id!==this.id||session.revision<(this.session()?.revision??-1))return false;
@@ -45,6 +47,11 @@ export class ChatPage implements OnDestroy {
   private schedulePoll():void {
     if(this.poll)clearTimeout(this.poll);
     if(!this.destroyed&&(this.pending?.isGenerating||this.busy()))this.poll=setTimeout(()=>void this.refresh(),2000);
+    else if(!this.destroyed&&this.pending?.retryNotBefore&&this.pending.attempts<3){
+      const wait=Date.parse(this.pending.retryNotBefore)-Date.now();
+      // Refresh server eligibility once the cooldown expires; never resend to the provider.
+      if(wait>0)this.poll=setTimeout(()=>void this.refresh(),Math.min(wait+250,2_147_483_647));
+    }
   }
   send(action:string,retry=false):void {
     const session=this.session();if(!session||this.busy())return;

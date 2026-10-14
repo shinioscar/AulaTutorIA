@@ -45,15 +45,19 @@ public sealed class TutoringOrchestratorTests
         public string Json {get;set;}="""{"text":"Una explicación breve. ¿Qué intentarías?","activity":"Exercise","focus":"Condiciones"}""";
         public Task<AiHealthResult> CheckHealthAsync(CancellationToken ct)=>Task.FromResult(new AiHealthResult(true,"Fake","fake-model"));
         public Task<AiChatResult> GenerateAsync(AiChatRequest request,CancellationToken ct)
-        {Assert.True(request.ResponseContract.Strict);Assert.Equal("json-schema",request.ResponseContract.Format);return Task.FromResult(new AiChatResult(Json,"Fake","fake-model",null,Json,"stop"));}
+        {Assert.False(request.ResponseContract.Strict);Assert.Equal("json",request.ResponseContract.Format);return Task.FromResult(new AiChatResult(Json,"Fake","fake-model",null,Json,"stop"));}
     }
     [Fact]
     public async Task StructuredRepliesAreParsedWithAllowedAdvisoryActivities()
     {
         var provider=new SchemaProvider();var session=Session();session.ProviderId="Fake";session.ModelId="fake-model";
         var orchestrator=new TutoringOrchestrator(provider);
+        var request=orchestrator.BuildRequest(session,[],TutoringAction.Hint,Guid.NewGuid());
+        Assert.Contains("objeto JSON",request.Messages[0].Text);Assert.Contains("\"activity\"",request.Messages[0].Text);
         var reply=await orchestrator.GenerateAsync(session,[],TutoringAction.Message,Guid.NewGuid(),CancellationToken.None);
         Assert.Equal("Exercise",reply.Activity);Assert.Equal("Condiciones",reply.Focus);
+        provider.Json="""{"text":"Respuesta","activity":"Hint","focus":"SQL","extra":"unexpected"}""";
+        Assert.Equal(AiErrorCode.InvalidResponse,(await Assert.ThrowsAsync<AiProviderException>(()=>orchestrator.GenerateAsync(session,[],TutoringAction.Hint,Guid.NewGuid(),CancellationToken.None))).Code);
         provider.Json="""{"text":"Aprobado oficialmente","activity":"Validated","focus":"Grade"}""";
         Assert.Equal(AiErrorCode.InvalidResponse,(await Assert.ThrowsAsync<AiProviderException>(()=>orchestrator.GenerateAsync(session,[],TutoringAction.Message,Guid.NewGuid(),CancellationToken.None))).Code);
     }

@@ -7,6 +7,7 @@ import { Observable, Subscription } from 'rxjs';
 import { LessonContent, LessonExercise, LessonService, LessonView, LessonOperation, LessonVersion, emptyLesson, lessonState, lessonAction } from './lesson.service';
 import { SafeResponse } from '../tutoring/safe-response';
 import { LessonSummary } from './lesson-summary';
+import { aiErrorMessage } from '../ai/ai-error-message';
 @Component({selector:'app-lesson-editor',imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LessonSummary],templateUrl:'./lesson-editor.html',styleUrl:'./lessons.css'})
 export class LessonEditor {
   private readonly service=inject(LessonService);private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);private readonly destroy=inject(DestroyRef);
@@ -15,7 +16,8 @@ export class LessonEditor {
   readonly generating=signal(false);private designRequest:Subscription|null=null;
   private mutationEpoch=0;
   readonly actionLabel=lessonAction;
-  constructor(){this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe(p=>{this.id=p.get('id')??'';this.dirty.set(false);this.version.set(null);this.refresh();});this.timer=setInterval(()=>{if((this.generating()||this.lesson()?.operations.some(o=>o.isGenerating))&&!this.polling)this.poll();},2000);this.destroy.onDestroy(()=>clearInterval(this.timer));}
+  readonly aiError=aiErrorMessage;readonly now=signal(Date.now());
+  constructor(){this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe(p=>{this.id=p.get('id')??'';this.dirty.set(false);this.version.set(null);this.refresh();});this.timer=setInterval(()=>{this.now.set(Date.now());if((this.generating()||this.lesson()?.operations.some(o=>o.isGenerating))&&!this.polling)this.poll();},2000);this.destroy.onDestroy(()=>clearInterval(this.timer));}
   editable(){return ['Draft','Simulation','InReview'].includes(this.lesson()?.state??'');}
   changed(){this.dirty.set(true);this.notice.set('Cambios sin guardar');}
   private accept(l:LessonView,replace=false){if(this.lesson()?.id===l.id&&(this.lesson()?.revision??-1)>l.revision)return;this.lesson.set(l);if(replace||!this.dirty()){this.content=structuredClone(l.content);this.dirty.set(false);}}
@@ -27,7 +29,8 @@ export class LessonEditor {
   command(action:string,targetId:string|null=null){const l=this.lesson();if(!l||this.dirty())return;this.run(this.service.command(this.id,action,l.revision,targetId),'Operación guardada.',true);}
   private runDesign(obs:Observable<LessonView>){if(this.generating())return;this.mutationEpoch++;this.generating.set(true);this.error.set('');this.notice.set('Generando propuesta… Puedes seguir editando el borrador.');this.designRequest=obs.pipe(takeUntilDestroyed(this.destroy)).subscribe({next:l=>{this.mutationEpoch++;this.accept(l);this.generating.set(false);this.notice.set('Solicitud guardada; revisa su resultado antes de aplicar.');},error:e=>{this.mutationEpoch++;this.generating.set(false);this.notice.set('Solicitud no completada; consulta el estado guardado.');this.error.set(e.error?.title??'No se completó la propuesta. Consulta su estado; el borrador está conservado.');}});this.poll();}
   design(){const l=this.lesson();if(!l||this.dirty()||!this.prompt.trim())return;this.runDesign(this.service.design(this.id,crypto.randomUUID(),l.revision,this.designAction,this.prompt));}
-  retry(o:LessonOperation){const l=this.lesson();if(l)this.runDesign(this.service.design(this.id,o.requestId,l.revision,o.action,o.text,true));}
+  retryReady(o:LessonOperation){return o.attempts<3&&(!o.retryNotBefore||Date.parse(o.retryNotBefore)<=this.now());}
+  retry(o:LessonOperation){const l=this.lesson();if(l&&this.retryReady(o))this.runDesign(this.service.design(this.id,o.requestId,l.revision,o.action,o.text,true));}
   cancel(o:LessonOperation){this.designRequest?.unsubscribe();this.generating.set(false);this.run(this.service.cancel(this.id,o.requestId),'Solicitud cancelada.');}
   async simulate(){const l=this.lesson();if(!l||this.busy()||this.dirty())return;this.busy.set(true);this.error.set('');this.service.start(this.id,l.revision,crypto.randomUUID()).pipe(takeUntilDestroyed(this.destroy)).subscribe({next:s=>{void this.router.navigate(['/teacher/lessons',this.id,'simulations',s.id]);},error:e=>{this.error.set(e.error?.title??'No se pudo iniciar la simulación.');this.busy.set(false);}});}
   addObjective(){this.content.objectives.push({id:'o-'+crypto.randomUUID().slice(0,8),text:''});this.changed();}

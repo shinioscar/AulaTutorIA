@@ -22,7 +22,8 @@ public abstract class HttpAiProvider(AiHttpTransport transport, AiProviderOption
         ct.ThrowIfCancellationRequested();
         if (!options.IsValid() || options.Provider != ProviderId) throw new AiProviderException(AiErrorCode.Configuration);
         if (request.Messages.Count is < 1 or > 32 || request.Messages.Any(x => x.Role is not ("system" or "user" or "assistant") || string.IsNullOrWhiteSpace(x.Text)) ||
-            request.Messages.Sum(x => (long)x.Text.Length) > 32000 || !request.Messages.Any(x => x.Role == "user") || request.MaxOutputTokens is < 1 or > 2048)
+            request.Messages.Sum(x => (long)x.Text.Length) > 32000 || !request.Messages.Any(x => x.Role == "user") ||
+            request.MaxOutputTokens < 1 || request.MaxOutputTokens > (request.UseCase is "lesson_plan" or "lesson_content" or "lesson_exercises" or "lesson_rubrics" ? 4096 : 2048))
             throw new AiProviderException(AiErrorCode.InvalidRequest);
         if (request.ResponseContract.Format is not ("text" or "json" or "json-schema")) throw new AiProviderException(AiErrorCode.Unsupported);
         if (request.ResponseContract.Format == "json" && !Capabilities.Json || request.ResponseContract.Format == "json-schema" && !Capabilities.JsonSchema ||

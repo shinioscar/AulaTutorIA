@@ -129,3 +129,8 @@ No se tocaron procesos ajenos ni usuarios de la base principal. TeacherLessons a
 explícitamente a PostgreSQL local, sin bootstrap ni cambios de cuentas. API principal
 restaurada con Groq y Angular HTTPS; salud solo lee configuración, sin generación.
 Commit local de cierre con verificación satisfactoria; sin remoto ni push. No avanzar a 6.
+
+Corrección posterior por encargo del usuario: formatos de clases/planes menos anidados,
+reglas de salida y manejo de errores Groq, recuperación de cuota y mejoras de Student.
+No amplía a Iteración 6. Decisiones en ADR-022; pruebas reales autorizadas y cierre
+de regresión documentados en QA_GROQ_FIX.md. Los resultados originales de 5 se conservan.

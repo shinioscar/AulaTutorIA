@@ -48,6 +48,15 @@ public sealed class LearningTests
         Assert.Throws<JsonException>(()=>LearningOrchestrator.ValidatePayload(TutoringAction.FinalReport,json[..^1]+",\"correctWithoutHelp\":100}",[],true));
         Assert.Throws<JsonException>(()=>LearningOrchestrator.ValidatePayload(TutoringAction.FinalReport,LearningJson.Write(report with{Observations=[new("Dominio",[Guid.NewGuid()])]}),[],true));
     }
+    [Fact] public void PlanWireFormatPreservesExactlyOneValidatedActivityPerObjective()
+    {
+        var exercise=new ExerciseProposal("Explica el concepto","OpenResponse",[],[],"Pertinencia");
+        var p=new PlanContent("Meta","Ruta",Enumerable.Range(0,3).Select(i=>new LearningPlanObjective("Objetivo "+i,[],[new("Explicación","Beginner",5,exercise)])).ToArray());
+        var payload=LearningPlanPayload.FromPlan(p);var restored=payload.ToPlan();
+        Assert.Equal(LearningJson.Write(p),LearningJson.Write(restored));
+        Assert.Contains("lista",LearningOrchestrator.ValidatePayload(TutoringAction.GeneratePlan,LearningJson.Write(restored),[],true));
+        Assert.Throws<JsonException>(()=>LearningOrchestrator.ValidatePayload(TutoringAction.GeneratePlan,LearningJson.Write(payload with {Objectives=[]}),[],true));
+    }
     [Fact]
     public void DiagnosticPolicyIsBoundedAndConfigurable()
     {Assert.True(new LearningPolicy{MaxDiagnosticQuestions=3,MinimumEvidence=1}.IsValid());Assert.False(new LearningPolicy{MaxDiagnosticQuestions=0}.IsValid());Assert.False(new LearningPolicy{MinimumEvidence=9}.IsValid());}
@@ -68,7 +77,7 @@ public sealed class LearningTests
         var provider=new StructuredProvider(schema);var engine=new LearningOrchestrator(provider);
         var s=new TutoringSession{ProviderId=provider.ProviderId,ModelId="test-model"};
         var reply=await engine.GenerateAsync(s,new TutoringTurn{Action=TutoringAction.DiagnosticQuestion,RequestId=Guid.NewGuid(),ContextJson="{\"evidence\":[],\"preliminary\":true}"},CancellationToken.None);
-        Assert.Equal("Pregunta diagnóstica",reply.Text);Assert.Equal(format,provider.Request!.ResponseContract.Format);Assert.Equal(2048,provider.Request.MaxOutputTokens);Assert.Equal("learning-v1",provider.Request.PromptVersion);
+        Assert.Equal("Pregunta diagnóstica",reply.Text);Assert.Equal(format,provider.Request!.ResponseContract.Format);Assert.Equal(2048,provider.Request.MaxOutputTokens);Assert.Equal("learning-v2",provider.Request.PromptVersion);
         Assert.Equal("system",provider.Request.Messages[0].Role);Assert.DoesNotContain("Groq",provider.Request.Messages[0].Text);Assert.Equal(schema,provider.Request.ResponseContract.Strict);
     }
 }
