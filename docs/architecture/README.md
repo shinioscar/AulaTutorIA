@@ -1,4 +1,4 @@
-# Arquitectura del piloto (Iteraciones 0–4)
+# Arquitectura del piloto (Iteraciones 0–5)
 
 Monolito modular. Dependencias permitidas:
 
@@ -38,7 +38,13 @@ Diagnóstico/plan/actividad/reporte usan los mismos turnos, leases y límites, n
 transacciones abiertas durante IA. Contratos de evidencias/compartición/refuerzo en
 LEARNING_HTTP.md; ADR-018/019. El profesor solo recibe un reporte autorizado con
 relación vigente, sin permiso sobre historial/planes privados. Sin estadísticas del modelo.
-No hay clases ni evaluaciones oficiales.
+Constructor docente en Lessons: Lesson/Draft/Revision/Version/Publication, propuestas
+expresas y simulaciones aisladas. Valores Section/Objective/Exercise/Rubric en JSON
+validado. LessonOrchestrator comparte TutoringOrchestrator y validadores de 4;
+no inserta tutorías ni evidencias estudiantiles. Aprobación congela contenido y
+publicación separada prepara referencia estable para 6. TeacherLessons es la cuarta
+migración, aditiva; triggers de inmutabilidad y contratos en LESSONS_HTTP.md / ADR-021.
+No asignaciones a grupos, ejecución estudiantil ni evaluaciones oficiales.
 
 HTTPS local para cookies Secure, con certificados excluidos en .cache. HTTP 5080
 conserva salud y OpenAPI de desarrollo. Fuera de desarrollo se activa HTTPS/HSTS;

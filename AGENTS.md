@@ -4,10 +4,11 @@
 
 - Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **UI-0**, guía visual oficial, tokens y temas Light/Dark,
+- Último encargo: **Iteración 5**, constructor docente, simulación y publicación;
+  UI-0 conserva guía visual oficial, tokens y temas Light/Dark,
   con Groq activo local y Mock en pruebas. No ejecutar cuota real sin autorización.
-  Iteraciones 0–4 y UI-0 completados. No avanzar a 5 sin nuevo encargo.
-- Registros: docs/iterations/ITERATION_0.md a ITERATION_4.md; ADR en docs/.
+  Iteraciones 0–5 y UI-0 completadas. No avanzar a 6 sin nuevo encargo.
+- Registros: docs/iterations/ITERATION_0.md a ITERATION_5.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
 - En 4 se autorizan compartición mínima de reportes y validadores formativos cerrados,
   sin clases docentes, asignaciones, notas oficiales ni ejecución SQL/código de alumnos.
@@ -194,6 +195,42 @@
 - El usuario informó una tutoría Groq real satisfactoria antes de 4. El agente no repite
   llamadas reales. Mock nuevo usa guiones genéricos rotulados, sin personalización semántica.
 
+## Clases docentes (Iteración 5 / ADR-021)
+
+- Lesson propia Teacher activo/aprobado del piloto; Admin/Student/Pending no crean,
+  otros actores reciben 404 en recursos. /api/lessons exige sesión y CSRF en escrituras.
+- LessonDraft editable y LessonDraftRevision inmutable con contenido completo JSON.
+  Objective/Section/Exercise/Rubric son valores validados; ExerciseProposal y comparador
+  de 4 se reutilizan. IDs únicos y referencias a objetivos verificadas; orden por arrays.
+- Draft→Simulation→InReview→Approved→Published→Archived; editar/aplicar vuelve a Draft.
+  Aprobación exige objetivos/contenidos/actividades/criterios/pistas. Simulación completa
+  no obligatoria. OpenResponse/Code requieren revisión, sin ejecutar SQL ni código.
+- Approved crea LessonVersion inmutable (número, revisión, snapshot, actor/fecha/hash).
+  Publish explícito crea LessonPublication separada; archive cambia disponibilidad.
+  Nuevo borrador conserva versiones previas. Triggers PostgreSQL impiden reescribir
+  versiones/revisiones/origen de simulación. Sin endpoints de edición de versiones.
+- LessonOrchestrator/IAiProvider: Plan/Content/Exercises/Rubrics, lesson-design-v1,
+  objeto completo validado en todos los proveedores. LessonProposal no cambia draft;
+  apply/discard explícitos. DraftRevision antigua impide aplicar propuesta tardía.
+- LessonOperation: contexto durable privado, requestId/hash, locks cortos de Lesson,
+  lease timeout+30s/token cercado, máximo tres ejecuciones y RetryNotBefore. GET no IA;
+  pending 202; cancel/stop descarta resultados tardíos; revalidar Teacher vigente en BD.
+  Proveedor/modelo fijados por operación/simulación, cambio 409 sin fallback externo.
+- LessonSimulation ligada a copia/revisión concreta, Active/Stopped y reapertura sin IA.
+  Reutiliza TutoringOrchestrator/SystemPolicy; proyección temporal de tutoría en memoria,
+  nunca filas de TutoringSession/ExerciseAttempt/LearningReport ni miembros/asignaciones.
+  Answer se guarda/valida antes de IA; dudas/ayudas no avanzan; Next exige respuesta en
+  obligatorio. Ensayo permite avanzar tras respuesta incorrecta, no certifica al docente.
+- El constructor propietario recibe soluciones privadas; vista de simulación y modelo
+  conversacional excluyen claves y referencias. No endpoints estudiantiles de clases.
+- Límites: 100 clases/docente, 12 objetivos/secciones, 24 ejercicios, plan 20k caracteres,
+  contexto 28k, 30 propuestas/20 versiones/20 simulaciones por clase, 50 turnos/10 respuestas
+  por actividad/300 decisiones, seis solicitudes IA por minuto/docente/proceso.
+- TeacherLessons aditiva después de las tres anteriores intactas. Retención ficticia
+  local hasta limpieza expresa; futura eliminación requiere decisión sobre triggers.
+  Contratos en docs/architecture/LESSONS_HTTP.md; QA_5.md y evidencia de 5.
+  Groq local intacto; pruebas Mock/controladas, cero nuevas llamadas reales.
+
 ## Operación y pruebas
 
 - Inicializar herramientas: . ./scripts/Initialize-Environment.ps1.
@@ -204,12 +241,15 @@
 - PostgreSQL localhost:15432 (interno 5432) en proyecto Compose aulatutor-ia.
   API/web pueden seguir activos al entregar: inspeccionar puertos/procesos y detener
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
-- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 123
-  pruebas (68 unitarias/55 integración; conserva 91 previas), consistencia EF,
+- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 155
+  pruebas (81 unitarias/74 integración; conserva 123 previas), consistencia EF,
   npm ci/check/check:theme/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
   UI-0 repitió 123 pruebas/75 HTTP y añadió 70 comprobaciones de contraste y
   19 capturas por rol/viewport; QA_UI_0.md registra teclado/storage/responsive.
-  Iteración 4: 123 pruebas y 75 comprobaciones HTTP aprobadas; cierre visual en QA_4.md. Histórico:
+  Iteración 4: 123 pruebas y 75 comprobaciones HTTP aprobadas; cierre visual en QA_4.md.
+  Iteración 5: 155 pruebas/107 HTTP/70 contraste, 26 capturas en evidence-5 y QA_5.md;
+  TeacherLessons aplicada localmente, Docker API compilada y QA temporal eliminado.
+  Histórico:
   91 pruebas y 48 comprobaciones HTTP de 3; revisión visual
   desktop/móvil registrada en QA_3.md. PrivateTutoring/LearningEvidence aplicadas en BD local;
   entorno de QA eliminado y API local restaurada con Groq sin llamadas reales.
@@ -229,10 +269,11 @@
 
 ## Pendientes y continuidad
 
-- Iteración 5: constructor docente y LessonVersion; requiere encargo nuevo. Preservar
+- Iteración 6: asignaciones de LessonVersion a grupos; requiere encargo nuevo. Preservar
   tutoría privada y planes personales como concepto diferente. No continuar automáticamente.
 - Pendientes documentados: confirmación email, recuperación/MFA, invitaciones,
-  auditoría integral (8), retención/compartición (4), frontera Approved/Published (5).
+  auditoría integral (8), retención institucional y borrado. Frontera Approved/Published
+  resuelta en ADR-021: inmutable al aprobar, publicación explícita independiente.
 - Antes de producción/datos reales: aprobación/políticas institucionales, TLS/proxy
   de mismo origen, mínimo privilegio PostgreSQL, claves Linux cifradas y respaldos.
 - No automatizar portal universitario ni conectar cuentas institucionales. No usar

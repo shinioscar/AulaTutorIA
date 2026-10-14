@@ -1,7 +1,10 @@
 import { Routes } from '@angular/router';
-import { signedInGuard, adminGuard, studentGuard } from './auth/auth.service';
+import { signedInGuard, adminGuard, studentGuard, teacherGuard } from './auth/auth.service';
 
 export const routes: Routes = [
+  {path:'teacher/lessons/:id/simulations/:simulationId',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lesson-simulation').then(m=>m.LessonSimulation)},
+  {path:'teacher/lessons/:id',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lesson-editor').then(m=>m.LessonEditor)},
+  {path:'teacher/lessons',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lessons-page').then(m=>m.LessonsPage)},
   {path:'teacher/reports',canActivate:[signedInGuard],loadComponent:()=>import('./tutoring/shared-reports-page').then(m=>m.SharedReportsPage)},
   {path:'tutoring',canActivate:[studentGuard],loadComponent:()=>import('./tutoring/sessions-page').then(m=>m.SessionsPage)},
   {path:'tutoring/:id',canActivate:[studentGuard],loadComponent:()=>import('./tutoring/chat-page').then(m=>m.ChatPage)},

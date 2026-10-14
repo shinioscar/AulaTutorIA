@@ -24,7 +24,7 @@ function Invoke-Api($session, [string]$method, [string]$path, $body = $null, [sw
     $session.Web.Headers.Remove('X-XSRF-TOKEN')
     $parameters = @{ Uri = "$apiRoot$path"; Method = $method; WebSession = $session.Web; SkipCertificateCheck = $true; SkipHttpErrorCheck = $true }
     if ($method -ne 'GET' -and -not $WithoutCsrf) { $parameters.Headers = @{ 'X-XSRF-TOKEN' = $session.Token } }
-    if ($null -ne $body) { $parameters.ContentType = 'application/json'; $parameters.Body = ConvertTo-Json -InputObject $body -Depth 5 }
+    if ($null -ne $body) { $parameters.ContentType = 'application/json'; $parameters.Body = ConvertTo-Json -InputObject $body -Depth 16 }
     Invoke-WebRequest @parameters
 }
 function Assert-Status($response, [int]$expected, [string]$label) {
@@ -211,6 +211,7 @@ try {
     $reinforceReplay = Invoke-Api $other.Session POST "/api/tutoring-sessions/$($learning.id)/recommendations/$($recommendation.id)/start" $reinforcementKey
     Assert-Status $reinforceReplay 200 'Learning reinforcement replay'
     if (($reinforceResponse.Content | ConvertFrom-Json).id -ne ($reinforceReplay.Content | ConvertFrom-Json).id) { throw 'Reinforcement duplicated session.' }
+    . "$PSScriptRoot/Http-Lessons.ps1"
     Assert-Status (Invoke-Api $student.Session POST '/api/auth/logout' @{}) 204 'Logout'
     Assert-Status (Invoke-Api $student.Session GET '/api/me') 401 'Logged-out access denied'
     }

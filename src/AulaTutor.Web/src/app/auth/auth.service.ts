@@ -58,6 +58,11 @@ export const studentGuard: CanActivateFn = async () => {
   const auth=inject(AuthService); const router=inject(Router);
   await auth.load(); return auth.hasRole('Student')?true:router.createUrlTree(['/']);
 };
+export const teacherGuard: CanActivateFn = async () => {
+  const auth=inject(AuthService); const router=inject(Router);
+  await auth.load();
+  return auth.hasRole('Teacher') && auth.user()?.isActive && auth.user()?.teacherApproval==='Approved' ? true : router.createUrlTree(['/']);
+};
 
 export const sessionErrorInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);

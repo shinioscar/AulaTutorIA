@@ -2,6 +2,8 @@ using AulaTutor.Application.Ai;
 using AulaTutor.Infrastructure.Ai;
 using AulaTutor.Application.Tutoring;
 using AulaTutor.Infrastructure.Tutoring;
+using AulaTutor.Application.Lessons;
+using AulaTutor.Infrastructure.Lessons;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -42,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<LearningWorkflow>();
         services.AddScoped<ILearningService, LearningService>();
         services.AddScoped<ITutoringService, TutoringService>();
+        services.AddScoped<LessonOrchestrator>();
+        services.AddScoped<ILessonService, LessonService>();
         return services;
     }
 }

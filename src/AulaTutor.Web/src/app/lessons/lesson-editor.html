@@ -1,0 +1,61 @@
+<a routerLink="/teacher/lessons">← Mis clases</a>
+@if(error()){<p role="alert" class="notice danger">{{error()}}</p>}
+<p role="status">{{busy()?'Procesando…':notice()}}</p>
+@if(lesson();as l){
+<section class="lesson-header"><div><h1>{{l.content.title || 'Borrador sin título'}}</h1><p>{{state(l.state)}} · Revisión {{l.draftRevision}}</p></div><div class="actions"><button class="secondary" (click)="refresh()" [disabled]="busy()">Consultar estado</button>@if(editable()){<button (click)="save()" [disabled]="busy()||!dirty()">Guardar borrador</button>}</div></section>
+@if(dirty()){<p class="notice warning">Tienes cambios sin guardar. Guarda antes de diseñar, simular o revisar. <button type="button" class="secondary" (click)="discardLocal()" [disabled]="busy()">Descartar cambios locales y recargar</button></p>}
+<nav aria-label="Constructor de clase" class="actions"><button class="secondary" (click)="tab.set('content')" [attr.aria-pressed]="tab()==='content'">Contenido</button><button class="secondary" (click)="tab.set('design')" [attr.aria-pressed]="tab()==='design'">Diseñar con IA</button><button class="secondary" (click)="tab.set('review')" [attr.aria-pressed]="tab()==='review'">Revisión y versiones</button></nav>
+@if(tab()==='content'){
+<form (ngSubmit)="save()"><fieldset [disabled]="!editable()||busy()"><legend>Datos generales</legend><div class="field-grid">
+<div><label for="title">Título</label><input id="title" name="title" maxlength="160" [(ngModel)]="content.title" (ngModelChange)="changed()"/></div>
+<div><label for="subject">Asignatura o tema</label><input id="subject" name="subject" maxlength="160" [(ngModel)]="content.subject" (ngModelChange)="changed()"/></div>
+<div><label for="level">Nivel académico</label><input id="level" name="level" maxlength="100" [(ngModel)]="content.level" (ngModelChange)="changed()"/></div>
+<div><label for="duration">Duración orientativa (minutos)</label><input id="duration" name="duration" type="number" min="0" max="480" [(ngModel)]="content.durationMinutes" (ngModelChange)="changed()"/></div></div>
+<label for="description">Descripción</label><textarea id="description" name="description" maxlength="1000" [(ngModel)]="content.description" (ngModelChange)="changed()"></textarea>
+<label for="prerequisites">Conocimientos previos recomendados</label><textarea id="prerequisites" name="prerequisites" maxlength="1000" [(ngModel)]="content.prerequisites" (ngModelChange)="changed()"></textarea>
+<label for="methodology">Metodología y reglas pedagógicas</label><textarea id="methodology" name="methodology" maxlength="1500" [(ngModel)]="content.methodology" (ngModelChange)="changed()"></textarea>
+<label for="instructions">Instrucciones adicionales</label><textarea id="instructions" name="instructions" maxlength="1500" [(ngModel)]="content.instructions" (ngModelChange)="changed()"></textarea>
+<h2>Objetivos de aprendizaje</h2>@for(o of content.objectives;track o.id){<label [for]="o.id">Objetivo {{ $index+1 }} · {{o.id}}</label><textarea [id]="o.id" [name]="o.id" maxlength="500" [(ngModel)]="o.text" (ngModelChange)="changed()"></textarea><button type="button" class="secondary" (click)="removeObjective(o.id)">Eliminar objetivo {{$index+1}}</button>}
+<button type="button" class="secondary" (click)="addObjective()" [disabled]="content.objectives.length>=12">Añadir objetivo</button>
+<h2>Secciones y actividades</h2>@for(s of content.sections;track s.id;let si=$index){<article class="section-editor"><h3>Sección {{si+1}}</h3><div class="actions"><button type="button" class="secondary" (click)="move(si,-1)" [disabled]="si===0">Subir sección {{si+1}}</button><button type="button" class="secondary" (click)="move(si,1)" [disabled]="si===content.sections.length-1">Bajar sección {{si+1}}</button><button type="button" class="secondary" (click)="removeSection(si)">Eliminar sección {{si+1}}</button></div>
+<label [for]="s.id+'-title'">Título de sección</label><input [id]="s.id+'-title'" [name]="s.id+'-title'" maxlength="160" [(ngModel)]="s.title" (ngModelChange)="changed()"/>
+<label [for]="s.id+'-content'">Contenido</label><textarea [id]="s.id+'-content'" [name]="s.id+'-content'" maxlength="2500" rows="5" [(ngModel)]="s.content" (ngModelChange)="changed()"></textarea>
+@for(e of s.exercises;track e.id;let ei=$index){<details class="exercise-editor" open><summary>Actividad {{ei+1}} · {{e.id}}</summary>
+<label [for]="e.id+'-objective'">Objetivo asociado</label><select [id]="e.id+'-objective'" [name]="e.id+'-objective'" [(ngModel)]="e.objectiveId" (ngModelChange)="changed()">@for(o of content.objectives;track o.id){<option [value]="o.id">{{o.text || o.id}}</option>}</select>
+<p class="note">Objetivo seleccionado: {{objectiveText(e.objectiveId)}}</p>
+<label [for]="e.id+'-kind'">Tipo</label><select [id]="e.id+'-kind'" [name]="e.id+'-kind'" [(ngModel)]="e.activity.kind" (ngModelChange)="changeKind(e)"><option value="MultipleChoice">Opción múltiple</option><option value="TrueFalse">Verdadero/falso</option><option value="ShortAnswer">Respuesta corta</option><option value="OpenResponse">Respuesta abierta</option><option value="Code">Código o SQL (sin ejecución)</option></select>
+<label [for]="e.id+'-required'"><input [id]="e.id+'-required'" [name]="e.id+'-required'" type="checkbox" [(ngModel)]="e.required" (ngModelChange)="changed()"/> Actividad obligatoria</label>
+<label [for]="e.id+'-prompt'">Consigna</label><textarea [id]="e.id+'-prompt'" [name]="e.id+'-prompt'" maxlength="1500" [(ngModel)]="e.activity.prompt" (ngModelChange)="changed()"></textarea>
+@if(e.activity.kind==='MultipleChoice'){<label [for]="e.id+'-options'">Opciones (una por línea, 2–5)</label><textarea [id]="e.id+'-options'" [name]="e.id+'-options'" [ngModel]="e.activity.options.join('\n')" (ngModelChange)="setOptions(e,$event)"></textarea>}
+@if(['MultipleChoice','TrueFalse','ShortAnswer'].includes(e.activity.kind)){<label [for]="e.id+'-answers'">Alternativas aceptadas privadas (una por línea)</label><textarea [id]="e.id+'-answers'" [name]="e.id+'-answers'" [ngModel]="e.activity.acceptedAnswers.join('\n')" (ngModelChange)="setAnswers(e,$event)"></textarea>}
+<label [for]="e.id+'-rubric'">Descripción de rúbrica</label><textarea [id]="e.id+'-rubric'" [name]="e.id+'-rubric'" maxlength="600" [(ngModel)]="e.activity.rubric" (ngModelChange)="changed()"></textarea>
+<label [for]="e.id+'-criteria'">Criterios privados (uno por línea, máximo 6)</label><textarea [id]="e.id+'-criteria'" [name]="e.id+'-criteria'" [ngModel]="e.rubric.criteria.join('\n')" (ngModelChange)="setCriteria(e,$event)"></textarea>
+<label [for]="e.id+'-reference'">Solución de referencia privada</label><textarea [id]="e.id+'-reference'" [name]="e.id+'-reference'" maxlength="1500" [(ngModel)]="e.rubric.referenceSolution" (ngModelChange)="changed()"></textarea>
+<label [for]="e.id+'-hints'">Reglas para ofrecer pistas</label><textarea [id]="e.id+'-hints'" [name]="e.id+'-hints'" maxlength="600" [(ngModel)]="e.rubric.hintRules" (ngModelChange)="changed()"></textarea>
+<button type="button" class="secondary" (click)="s.exercises.splice(ei,1);changed()">Eliminar actividad {{ei+1}}</button></details>}
+<button type="button" class="secondary" (click)="addExercise(si)" [disabled]="s.exercises.length>=8">Añadir actividad a sección {{si+1}}</button></article>}
+<button type="button" class="secondary" (click)="addSection()" [disabled]="content.sections.length>=12">Añadir sección</button>
+</fieldset>@if(editable()){<button type="submit" [disabled]="busy()||!dirty()">Guardar borrador</button>}</form>
+}
+@if(tab()==='design'){
+<section><h2>Conversación de diseño con IA</h2><p>Las respuestas son propuestas. Solo «Aplicar propuesta» cambia el borrador. El proveedor puede consumir cuota; cada solicitud es explícita.</p>
+<form (ngSubmit)="design()"><label for="design-action">Tipo de propuesta</label><select id="design-action" name="designAction" [(ngModel)]="designAction"><option value="Plan">Plan completo</option><option value="Content">Modificar contenidos</option><option value="Exercises">Proponer ejercicios</option><option value="Rubrics">Proponer rúbricas</option></select>
+<label for="design-prompt">Petición al asistente</label><textarea id="design-prompt" name="prompt" maxlength="2000" rows="4" [(ngModel)]="prompt" placeholder="Describe la clase o el ajuste que deseas"></textarea><button [disabled]="busy()||generating()||dirty()||!editable()||!prompt.trim()" type="submit">Solicitar propuesta</button></form>
+@for(o of l.operations;track o.requestId){<article><p><strong>Docente · {{actionLabel(o.action)}}</strong></p><app-safe-response [text]="o.text"/><p>{{state(o.state)}} · {{o.providerId}} / {{o.modelId}}</p>@if(o.reply){<app-safe-response [text]="o.reply"/>}@if(o.errorCode){<p class="notice warning">La solicitud no se completó ({{o.errorCode}}). El borrador está conservado.</p>}
+@if(o.state==='Failed'||o.errorCode==='Interrupted'){<button class="secondary" (click)="retry(o)" [disabled]="busy()||generating()||o.attempts>=3">Reintentar la misma solicitud</button>}
+@if(o.state==='Pending'||o.state==='Failed'){<button class="secondary" (click)="cancel(o)" [disabled]="busy()">Cancelar solicitud</button>}</article>}
+@for(p of l.proposals;track p.id){<article><h3>Propuesta · revisión {{p.draftRevision}}</h3><p>{{state(p.state)}}{{p.outdated&&p.state==='Pending'?' · Desactualizada respecto al borrador':''}}</p><app-safe-response [text]="p.explanation"/><details><summary>Revisar plan propuesto completo</summary><app-lesson-summary [content]="p.content"/></details>@if(p.state==='Pending'){<div class="actions"><button (click)="command('apply-proposal',p.id)" [disabled]="busy()||dirty()||p.outdated||!editable()">Aplicar propuesta</button><button class="secondary" (click)="command('discard-proposal',p.id)" [disabled]="busy()||dirty()">Descartar propuesta</button></div>}</article>}
+</section>}
+@if(tab()==='review'){
+<section><h2>Revisión docente</h2><p>La aprobación congela el contenido. Publicar requiere otra acción explícita; todavía no asigna la clase a grupos.</p>
+@for(e of l.validation.errors;track $index){<p class="notice warning">{{e}}</p>}@for(w of l.validation.warnings;track $index){<p class="note">{{w}}</p>}
+<div class="actions">@if(editable()){<button class="secondary" (click)="simulate()" [disabled]="busy()||dirty()">Simular como estudiante</button><button class="secondary" (click)="command('review')" [disabled]="busy()||dirty()||l.state==='InReview'">Pasar a revisión</button>}
+@if(l.state==='InReview'){<button (click)="command('approve')" [disabled]="busy()||dirty()||l.validation.errors.length>0">Confirmar aprobación de esta revisión</button>}
+@if(['Approved','Published','Archived'].includes(l.state)){<button class="secondary" (click)="command('new-draft')" [disabled]="busy()">Crear nuevo borrador</button>}
+@if(l.state!=='Archived'){<button class="secondary" (click)="command('archive')" [disabled]="busy()||dirty()">Archivar clase</button>}</div>
+<details open><summary>Resumen del plan guardado</summary><app-lesson-summary [content]="l.content"/></details>
+<h3>Simulaciones guardadas</h3>@for(s of l.simulations;track s.id){<p><a [routerLink]="['/teacher/lessons',l.id,'simulations',s.id]">Reabrir simulación de revisión {{s.draftRevision}}</a> · {{state(s.state)}}</p>}@empty{<p>No se ha iniciado una simulación. No es requisito completar una para aprobar.</p>}
+<h3>Versiones inmutables</h3>@for(v of l.versions;track v.id){<article><h4>Versión {{v.number}} · {{v.publishedAt?'Publicada':'Aprobada'}}{{v.archivedAt?' · Archivada':''}}</h4><p>Aprobada {{v.approvedAt|date:'dd/MM/yyyy HH:mm'}} · revisión {{v.draftRevision}}</p><button class="secondary" (click)="version.set(v)">Ver versión {{v.number}}</button>@if(!v.publishedAt&&l.state==='Approved'&&v.draftRevision===l.draftRevision){<button (click)="command('publish',v.id)" [disabled]="busy()||dirty()">Confirmar publicación de versión {{v.number}}</button>}</article>}
+@if(version();as v){<article><h3>Contenido congelado · versión {{v.number}}</h3><p class="note">Huella SHA-256: <code>{{v.contentHash}}</code></p><app-lesson-summary [content]="v.content"/></article>}
+</section>}
+} @else {<p role="status">{{busy()?'Cargando clase…':'Clase no disponible.'}}</p>}

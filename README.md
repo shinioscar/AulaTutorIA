@@ -1,11 +1,13 @@
 # AulaTutor IA
 
-Iteración 4: diagnóstico estructurado, planes personales ejecutables, ejercicios,
+Iteración 5: constructor docente, simulaciones aisladas y versiones inmutables,
+además de diagnóstico estructurado, planes personales ejecutables, ejercicios,
 intentos, reportes orientativos, refuerzo y compartición voluntaria mínima,
 además de proveedores IA, identidad, roles y grupos. Fuente de verdad:
 `AulaTutor_IA_Documento_Maestro_v1.0.md`, intacto. La base de Iteración 0 conserva
-Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. No hay clases ni
-evaluaciones oficiales. Groq, Gemini y Ollama tienen adaptadores REST; Mock es
+Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. Las clases todavía
+no se asignan a grupos ni se ejecutan por estudiantes. No hay evaluaciones oficiales.
+Groq, Gemini y Ollama tienen adaptadores REST; Mock es
 predeterminado sin configuración externa y obligatorio en pruebas. En el entorno
 local del usuario se conserva Groq, con diagnóstico real informado por él:
 openai/gpt-oss-20b, 555 ms, 97 tokens de entrada/77 de salida. El agente no ejecutó
@@ -236,6 +238,57 @@ real satisfactoria con Groq antes de 4; los nuevos prompts/planes/reportes con
 Groq/Gemini/Ollama requieren validación manual autorizada posterior. No se realizaron
 nuevas llamadas reales ni cambios a secretos durante esta iteración.
 
+## Constructor docente, simulación y publicación
+
+Entrar como Teacher aprobado y abrir «Mis clases». «Crear borrador» acepta datos
+incompletos. En Contenido puedes editar metadatos, objetivos, secciones, orden,
+actividades y criterios. Guarda antes de solicitar propuestas, simular o revisar.
+Las actividades cerradas necesitan alternativas privadas válidas; las abiertas/
+código conservan revisión humana y nunca ejecutan SQL. El editor muestra todas
+las soluciones/rúbricas únicamente a su docente propietario.
+
+«Diseñar con IA» admite plan completo, ajustes de contenidos, ejercicios o rúbricas.
+Cada solicitud produce una propuesta estructurada. Revísala y pulsa «Aplicar
+propuesta» o «Descartar». Un mensaje del asistente nunca cambia silenciosamente el
+borrador. Puedes seguir editando durante generación; una propuesta de una revisión
+anterior queda desactualizada y no puede sobrescribir esos cambios. Errores conservan
+el borrador y permiten consultar/reintentar la misma solicitud o cancelarla.
+
+En Revisión y versiones, «Simular como estudiante» guarda una copia de la revisión.
+«Comenzar enseñanza simulada» genera el primer turno con el motor existente.
+Prueba respuestas correctas/incorrectas, dudas, pistas, simplificación y avance.
+Cada respuesta queda registrada antes de orientación IA. Las actividades obligatorias
+exigen una respuesta para avanzar; el ensayo admite continuar tras errores y no
+certifica al profesor. Detener, volver al editor y reabrir conservan el recorrido;
+reanudar no llama IA. Cambiar el borrador no altera esa simulación.
+
+La simulación usa almacenamiento separado de tutorías/ejercicios/reportes de alumnos.
+No crea evaluaciones del docente, membresías, asignaciones ni estadísticas académicas,
+ni accede a conversaciones privadas. Su proyección excluye reglas/soluciones privadas.
+La futura experiencia estudiantil podrá compartir motor y versión, pero no se
+promete equivalencia exacta entre recorridos ni proveedores.
+
+«Pasar a revisión» muestra el resumen guardado y requisitos pendientes. «Confirmar
+aprobación» crea una LessonVersion inmutable con el contenido completo, fecha,
+responsable, número y SHA-256. «Confirmar publicación» es una acción independiente.
+Para modificar contenido aprobado/publicado, «Crear nuevo borrador»; la próxima
+aprobación/publicación crea otra versión sin cambiar las anteriores. Las versiones
+pueden consultarse y la clase puede archivarse conservando contenido. No se requiere
+completar una simulación por cada cambio. El docente conserva responsabilidad académica.
+
+Aplicar la migración aditiva TeacherLessons explícitamente con --migrate; las tres
+previas permanecen intactas. PostgreSQL protege versiones/revisiones frente a cambios
+directos. Solo propietario Teacher activo/aprobado: otros docentes, Student, Pending
+y Admin ordinario no reciben acceso. Contratos y límites en
+[LESSONS_HTTP](docs/architecture/LESSONS_HTTP.md), decisiones en
+[ADR-021](docs/decisions/ADR-021-clases-versiones-y-simulaciones.md), entrega en
+[ITERATION_5](docs/iterations/ITERATION_5.md).
+
+Todo QA usa Mock o proveedores controlados. Mock demuestra el flujo con guiones
+rotulados, sin comprensión semántica. Los nuevos prompts con Groq/Gemini/Ollama y
+la calidad curricular necesitan una prueba manual autorizada; no se consumió cuota
+externa ni se modificaron claves/.env. La Iteración 6 requiere otro encargo.
+
 ## Configurar IA
 
 En `.env` privado definir AI_PROVIDER=Mock, Groq, Gemini u Ollama. Para Groq:
@@ -275,10 +328,11 @@ script de verificación hace llamadas reales: todos fuerzan Mock o servidor simu
 ./scripts/Verify.ps1 -Smoke -Http
 ```
 
-Restaura locks, compila, ejecuta 68 pruebas unitarias y 55 de integración, verifica
+Restaura locks, compila, ejecuta 81 pruebas unitarias y 74 de integración, verifica
 consistencia de migración, npm ci/TypeScript/contraste de temas/Angular, Compose, Git y dos recorridos
 reales: smoke de fundaciones y HTTP de identidad/tutoría Mock sobre HTTPS/PostgreSQL.
-La verificación final de Iteración 4 aprobó 123 pruebas y 75 comprobaciones HTTP.
+La verificación de Iteración 5 añade recorridos docentes y conserva las 123 pruebas
+previas; el HTTP ampliado comprende 107 comprobaciones. Resultados en ITERATION_5.md.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
 omite pruebas sin PostgreSQL. Requiere credenciales locales con CREATE DATABASE.
 HTTP usa cuentas @example.invalid y contraseña aleatoria, sin sembrar usuarios en
@@ -297,8 +351,9 @@ En Windows detener la API antes de compilar para evitar bloqueo de DLL.
 ## Continuar el proyecto
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de
-iteraciones y las guías de docs/design. Iteraciones 0–4 y UI-0 completados. No avanzar a 5 sin nuevo encargo:
-el constructor docente deberá distinguir LessonVersion de los planes personales.
+iteraciones y las guías de docs/design. Iteraciones 0–5 y UI-0 completadas. No avanzar
+a 6 sin nuevo encargo: las asignaciones deberán referenciar LessonVersion concreta,
+conservando tutorías privadas y planes personales independientes.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
 políticas de retención/compartición. Antes de producción: TLS confiable, mismo

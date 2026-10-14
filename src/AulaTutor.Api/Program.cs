@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using AulaTutor.Api.Identity;
 using AulaTutor.Api.Ai;
 using AulaTutor.Api.Tutoring;
+using AulaTutor.Api.Lessons;
 using AulaTutor.Application.Ai;
 using AulaTutor.Application.Identity;
 using AulaTutor.Infrastructure;
@@ -35,6 +36,9 @@ if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("lessons", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.Identity?.Name ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("tutoring", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.Identity?.Name ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -84,6 +88,7 @@ app.MapGet("/api/health", async (IAiProvider provider, CancellationToken ct) =>
 app.MapIdentityEndpoints();
 app.MapAiEndpoints();
 app.MapTutoringEndpoints();
+app.MapLessonEndpoints();
 app.Run();
 
 public sealed record ApiHealthResponse(string Status, string Application, int Iteration, string AiProvider, string AiModel);

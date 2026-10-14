@@ -69,6 +69,7 @@ public sealed class LearningOrchestrator(IAiProvider provider)
     {
         if (type == typeof(string) || type == typeof(Guid)) return new { type = "string" };
         if (type == typeof(int)) return new { type = "integer" };
+        if (type == typeof(bool)) return new { type = "boolean" };
         if (type.IsArray) return new { type = "array", items = SchemaFor(type.GetElementType()!) };
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
         return new { type = "object", properties = properties.ToDictionary(p => JsonNamingPolicy.CamelCase.ConvertName(p.Name), p => SchemaFor(p.PropertyType)),

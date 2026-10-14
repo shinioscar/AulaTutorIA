@@ -49,7 +49,7 @@ public static class IdentityOpenApi
                     operation.Responses.TryAdd("401", new OpenApiResponse { Description = "Credenciales no aceptadas, sin enumerar cuentas." });
                 if (context.Description.RelativePath is "api/auth/register")
                 { operation.Responses.Remove("200"); operation.Responses.TryAdd("202", new OpenApiResponse { Description = "Solicitud recibida, respuesta uniforme." }); }
-                else if (context.Description.RelativePath?.StartsWith("api/tutoring-sessions", StringComparison.Ordinal) == true)
+                else if (context.Description.RelativePath?.StartsWith("api/tutoring-sessions", StringComparison.Ordinal) == true || context.Description.RelativePath?.StartsWith("api/lessons", StringComparison.Ordinal) == true)
                 { operation.Responses.TryAdd("429", new OpenApiResponse { Description = "Límite de generación o espera requerida por el proveedor." }); }
                 else if (context.Description.RelativePath == "api/admin/ai/test")
                 { operation.Responses.TryAdd("429", new OpenApiResponse { Description = "Máximo 3 pruebas por administrador por minuto." }); }

@@ -86,7 +86,7 @@ public sealed class TutoringTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Conflict,(await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/messages",Turn(session,"Message","Otro"))).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict,(await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/resume",new TutoringTransitionRequest(session.Revision))).StatusCode);
         Assert.Equal(HttpStatusCode.OK,(await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/complete",new TutoringTransitionRequest(0))).StatusCode);
-        await using var scope=factory.Services.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>();Assert.Equal(3,(await db.Database.GetAppliedMigrationsAsync()).Count());Assert.Empty(await db.Database.GetPendingMigrationsAsync());Assert.Equal(8,await db.TutoringMessages.CountAsync());
+        await using var scope=factory.Services.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>();Assert.Equal(4,(await db.Database.GetAppliedMigrationsAsync()).Count());Assert.Empty(await db.Database.GetPendingMigrationsAsync());Assert.Equal(8,await db.TutoringMessages.CountAsync());
         Assert.All(session.Messages.Where(m=>m.Role=="Tutor"),m=>{Assert.Equal("Mock",m.ProviderId);Assert.Equal("tutoring-v1",m.PromptVersion);Assert.Null(m.Usage);});
     }
 

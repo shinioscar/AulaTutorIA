@@ -1,5 +1,6 @@
 using AulaTutor.Domain.Identity;
 using AulaTutor.Domain.Tutoring;
+using AulaTutor.Domain.Lessons;
 using AulaTutor.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -23,12 +24,22 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
     public DbSet<LearningReport> LearningReports => Set<LearningReport>();
     public DbSet<LearningRecommendation> LearningRecommendations => Set<LearningRecommendation>();
     public DbSet<ReportShare> ReportShares => Set<ReportShare>();
+    public DbSet<Lesson> Lessons => Set<Lesson>();
+    public DbSet<LessonDraft> LessonDrafts => Set<LessonDraft>();
+    public DbSet<LessonDraftRevision> LessonDraftRevisions => Set<LessonDraftRevision>();
+    public DbSet<LessonVersion> LessonVersions => Set<LessonVersion>();
+    public DbSet<LessonPublication> LessonPublications => Set<LessonPublication>();
+    public DbSet<LessonProposal> LessonProposals => Set<LessonProposal>();
+    public DbSet<LessonSimulation> LessonSimulations => Set<LessonSimulation>();
+    public DbSet<LessonOperation> LessonOperations => Set<LessonOperation>();
+    public DbSet<LessonCommand> LessonCommands => Set<LessonCommand>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
         builder.ConfigureTutoring();
         builder.ConfigureLearning();
+        builder.ConfigureLessons();
         builder.Entity<Organization>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100);

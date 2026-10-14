@@ -150,7 +150,7 @@ public sealed class IdentityTests : IAsyncLifetime
         Assert.Contains("secure", cookie); Assert.Contains("httponly", cookie); Assert.Contains("samesite=strict", cookie);
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>();
-        Assert.Equal(3, (await db.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.Equal(4, (await db.Database.GetAppliedMigrationsAsync()).Count());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         var persisted = await db.Users.SingleAsync(x => x.Id == user.Id);
         Assert.NotEqual(password, persisted.PasswordHash);
@@ -228,7 +228,7 @@ public sealed class IdentityTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK,(await studentA.GetAsync($"/api/groups/{group.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound,(await studentB.GetAsync($"/api/groups/{group.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound,(await studentA.GetAsync($"/api/groups/{group.Id}/members")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound,(await admin.GetAsync("/api/lessons")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,(await admin.GetAsync("/api/lessons")).StatusCode);
     }
 
     [Fact]

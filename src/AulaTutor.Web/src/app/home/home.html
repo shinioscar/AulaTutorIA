@@ -5,7 +5,7 @@
     <p class="intro">Un espacio para hacer preguntas, comprender a tu ritmo y construir una ruta de aprendizaje con evidencias.</p>
     <div class="actions">
       @if(auth.hasRole('Student')) { <a class="button-link" routerLink="/tutoring">Ir a mis tutorías <span aria-hidden="true">→</span></a> }
-      @else if(auth.hasRole('Teacher')) { <a class="button-link" routerLink="/teacher/reports">Consultar reportes compartidos <span aria-hidden="true">→</span></a> }
+      @else if(auth.hasRole('Teacher')) { <a class="button-link" routerLink="/teacher/lessons">Diseñar mis clases <span aria-hidden="true">→</span></a> }
       @else if(auth.hasRole('Admin')) { <a class="button-link" routerLink="/admin/users">Administrar usuarios <span aria-hidden="true">→</span></a> }
       @else if(!auth.user()) { <a class="button-link" routerLink="/login">Iniciar sesión <span aria-hidden="true">→</span></a><a routerLink="/register">Crear una cuenta</a> }
     </div>
@@ -32,7 +32,7 @@
       @if(user.teacherApproval==='Rejected'){<p class="notice warning">Tu solicitud docente no fue aprobada. Consulta al administrador del piloto.</p>}
       <div class="workspace-links">
         @if(auth.hasRole('Student')){<a routerLink="/tutoring"><strong>Mis tutorías</strong><span>Diagnóstico, plan, conversación y resultados.</span><span aria-hidden="true">→</span></a>}
-        @if(auth.hasRole('Teacher')){<a routerLink="/teacher/reports"><strong>Reportes compartidos</strong><span>Versiones autorizadas por estudiantes relacionados.</span><span aria-hidden="true">→</span></a>}
+        @if(auth.hasRole('Teacher')){<a routerLink="/teacher/lessons"><strong>Mis clases</strong><span>Diseño, simulación y versiones aprobadas.</span><span aria-hidden="true">→</span></a><a routerLink="/teacher/reports"><strong>Reportes compartidos</strong><span>Versiones autorizadas por estudiantes relacionados.</span><span aria-hidden="true">→</span></a>}
         @if(user.roles.length){<a routerLink="/groups"><strong>{{auth.hasRole('Admin')?'Grupos del piloto':'Mis grupos'}}</strong><span>Consulta según tu relación académica.</span><span aria-hidden="true">→</span></a>}
         @if(auth.hasRole('Admin')){<a routerLink="/admin/users"><strong>Usuarios y aprobación docente</strong><span>Gestiona cuentas y permisos del piloto.</span><span aria-hidden="true">→</span></a><a routerLink="/admin/ai"><strong>Configuración IA</strong><span>Proveedor y diagnóstico administrativo.</span><span aria-hidden="true">→</span></a>}
       </div>

@@ -1,5 +1,6 @@
 using AulaTutor.Application.Ai;
 using AulaTutor.Application.Tutoring;
+using AulaTutor.Application.Lessons;
 using System.Text.Json;
 
 namespace AulaTutor.Infrastructure.Ai;
@@ -15,6 +16,22 @@ public sealed class MockAiProvider : IAiProvider
     {
         ct.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(request);
+        if (request.UseCase.StartsWith("lesson_", StringComparison.Ordinal) && request.ResponseContract.Format == "text")
+        {
+            using var context = JsonDocument.Parse(request.Messages.Last().Text);
+            var draft = LearningJson.Read<LessonContent>(context.RootElement.GetProperty("draft").GetRawText());
+            var content = draft with { Title = string.IsNullOrWhiteSpace(draft.Title) ? "Clase demostrativa Mock" : draft.Title,
+                Subject = string.IsNullOrWhiteSpace(draft.Subject) ? "Práctica formativa" : draft.Subject,
+                Level = string.IsNullOrWhiteSpace(draft.Level) ? "Básico" : draft.Level,
+                DurationMinutes = draft.DurationMinutes == 0 ? 45 : draft.DurationMinutes,
+                Methodology = "[Simulación Mock] Explicación breve, intento explícito y pistas graduadas; revisión docente.",
+                Objectives = [new("o1", "Distinguir una respuesta puntual de evidencia suficiente")],
+                Sections = [new("s1", "Introducción y práctica", "[Simulación Mock] Practicar y explicar el razonamiento aporta evidencia. Una sola respuesta no demuestra dominio. Este guion prueba el flujo y no comprende materias arbitrarias.",
+                    [new("e1", "o1", true, new("[Simulación Mock] ¿Una respuesta correcta demuestra dominio completo del tema?", "TrueFalse", ["Verdadero", "Falso"], ["Falso"], "Distinguir respuesta puntual y dominio."), new(["Explica la diferencia entre un acierto y evidencia suficiente."], "Falso: se necesitan evidencias variadas.", "Invitar a comparar un caso con varios ejemplos antes de dar la solución."))]),
+                    new("s2", "Reflexión", "[Simulación Mock] Describe qué necesitarías observar para revisar la comprensión.",
+                    [new("e2", "o1", false, new("Propón otra evidencia para el mismo objetivo.", "OpenResponse", [], [], "Proponer un ejemplo pertinente."), new(["Pertinencia del ejemplo."], "", "Invitar a proponer un contexto diferente."))])] };
+            return Task.FromResult(new AiChatResult(LearningJson.Write(new LessonPlanProposal("[Simulación Mock] Propuesta de demostración; revisa el contenido antes de aplicarlo. No es planificación semántica de un LLM.", content)), ProviderId, ModelId, null, null, "stop"));
+        }
         if (request.UseCase.StartsWith("learning_", StringComparison.Ordinal) && request.ResponseContract.Format == "text")
         {
             using var context = JsonDocument.Parse(request.Messages.Last().Text);
@@ -46,6 +63,23 @@ public sealed class MockAiProvider : IAiProvider
         }
         if (request.UseCase.StartsWith("tutoring_", StringComparison.Ordinal) && request.ResponseContract.Format == "text")
         {
+            if (request.Messages.Last().Text.StartsWith("{", StringComparison.Ordinal))
+            {
+                using var guidance = JsonDocument.Parse(request.Messages.Last().Text);
+                if (guidance.RootElement.TryGetProperty("simulation", out var flag) && flag.ValueKind == JsonValueKind.True)
+                {
+                    var g = guidance.RootElement;
+                    var simulated = g.GetProperty("action").GetString() switch
+                    {
+                        "Start" or "Next" => "[Simulación docente Mock] " + g.GetProperty("sectionContent").GetString() + "\n\n" + (g.GetProperty("exercise").ValueKind == JsonValueKind.Null ? "Recorrido trabajado; puedes detenerlo." : g.GetProperty("exercise").GetProperty("prompt").GetString()),
+                        "Hint" => "[Simulación docente Mock] Pista: " + g.GetProperty("hintRules").GetString(),
+                        "Simplify" => "[Simulación docente Mock] Retoma una idea a la vez y explica tu razonamiento. Se conserva la actividad actual.",
+                        "Answer" => "[Simulación docente Mock] Respuesta registrada. Resultado del comparador: " + g.GetProperty("outcome").GetString() + ". La orientación no cambia ese resultado ni certifica dominio.",
+                        _ => "[Simulación docente Mock] Duda registrada. Volvemos al contenido y a la actividad seleccionada; este guion no interpreta semánticamente tu mensaje."
+                    };
+                    return Task.FromResult(new AiChatResult(simulated, ProviderId, ModelId, null, null, "stop"));
+                }
+            }
             var count = request.Messages.Count(m => m.Role == "assistant");
             var text = request.UseCase switch
             {
