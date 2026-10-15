@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AulaTutor.Application.Ai;
 using AulaTutor.Domain.Tutoring;
+using AulaTutor.Application.Lessons;
 
 namespace AulaTutor.Application.Tutoring;
 
@@ -101,8 +102,9 @@ public sealed class LearningOrchestrator(IAiProvider provider)
         var contract = provider.Capabilities.JsonSchema ? new AiResponseContract("json-schema", schema, provider.Capabilities.StrictJsonSchema)
             : provider.Capabilities.Json ? new AiResponseContract("json") : new AiResponseContract("text");
         var request = new AiChatRequest("learning_" + turn.Action.ToString().ToLowerInvariant(),
-            [new("system", Policy + "\nEsquema de respuesta: " + schema), new("user", turn.ContextJson!)],
-            contract, turn.RequestId.ToString("N"), 2048, PromptVersion);
+            [new("system", Policy + (session.Mode == TutoringMode.AssignedClass ? "\n" + AssignedClassPolicy.Instructions : "") + "\nEsquema de respuesta: " + schema), new("user", turn.ContextJson!)],
+            contract, turn.RequestId.ToString("N"), 2048, session.Mode == TutoringMode.AssignedClass ? AssignedClassPolicy.Version : PromptVersion);
+        if (request.Messages.Sum(m => m.Text.Length) > 32000) throw new AiProviderException(AiErrorCode.InvalidRequest);
         var result = await provider.GenerateAsync(request, ct);
         if (result.ProviderId != session.ProviderId || result.ModelId != session.ModelId) throw new AiProviderException(AiErrorCode.Configuration);
         if (result.Text.Length > 24000) throw new AiProviderException(AiErrorCode.InvalidResponse);
@@ -118,6 +120,12 @@ public sealed class LearningOrchestrator(IAiProvider provider)
         }
         catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or NullReferenceException)
         { throw new AiProviderException(AiErrorCode.InvalidResponse); }
+    }
+    public static int ContextBudget(TutoringSession session, TutoringAction action)
+    {
+        var instructions = Policy + (session.Mode == TutoringMode.AssignedClass ? "\n" + AssignedClassPolicy.Instructions : "") +
+            "\nEsquema de respuesta: " + LearningJson.Write(SchemaFor(ResponseType(action)));
+        return Math.Min(28000, 32000 - instructions.Length);
     }
     private static void Require([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition) { if (!condition) throw new JsonException(); }
     private static void Text(string? value, int max) => Require(!string.IsNullOrWhiteSpace(value) && value.Length <= max && !value.Any(c => char.IsControl(c) && c is not ('\n' or '\r' or '\t')));

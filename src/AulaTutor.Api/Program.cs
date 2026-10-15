@@ -89,6 +89,7 @@ app.MapIdentityEndpoints();
 app.MapAiEndpoints();
 app.MapTutoringEndpoints();
 app.MapLessonEndpoints();
+app.MapAssignmentEndpoints();
 app.Run();
 
 public sealed record ApiHealthResponse(string Status, string Application, int Iteration, string AiProvider, string AiModel);

@@ -16,7 +16,9 @@ public sealed record ReportContent(string Summary, EvidenceObservation[] Observa
 public sealed record LearningStatistics(int Exercises, int Attempts, int CorrectWithoutHelp,
     int CorrectWithHelp, int Incorrect, int NeedsReview, int NotEvaluable, int Hints, string[]? WorkedObjectives = null);
 public sealed record ExerciseView(Guid Id, int Version, bool IsDiagnostic, string Kind, string Prompt,
-    string[] Options, string Rubric, int Hints, bool Completed, int ObjectiveOrder, int Order, int Simplifications);
+    string[] Options, string Rubric, int Hints, bool Completed, int ObjectiveOrder, int Order, int Simplifications,
+    Guid? LessonVersionId = null, string? ApprovedExerciseId = null, string? ApprovedObjectiveId = null,
+    bool Required = false, bool IsComplementary = false);
 public sealed record AttemptView(Guid Id, Guid RequestId, Guid ExerciseId, int ExerciseVersion, string Answer,
     int Number, int HintsUsed, string Outcome, string ValidationType, string Feedback,
     DateTimeOffset SubmittedAt, string? ProviderId, string? ModelId, int SimplificationsUsed);

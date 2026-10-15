@@ -1,4 +1,4 @@
-# Arquitectura del piloto (Iteraciones 0–5)
+# Arquitectura del piloto (Iteraciones 0–6)
 
 Monolito modular. Dependencias permitidas:
 
@@ -44,7 +44,14 @@ validado. LessonOrchestrator comparte TutoringOrchestrator y validadores de 4;
 no inserta tutorías ni evidencias estudiantiles. Aprobación congela contenido y
 publicación separada prepara referencia estable para 6. TeacherLessons es la cuarta
 migración, aditiva; triggers de inmutabilidad y contratos en LESSONS_HTTP.md / ADR-021.
-No asignaciones a grupos, ejecución estudiantil ni evaluaciones oficiales.
+AssignedClasses es la quinta migración: asignación explícita de publicación/versión,
+historial de cambios y vínculos de TutoringSession/LearningExercise. AssignedClassAccess
+centraliza relación y disponibilidad; AssignedClassWorkflow integra núcleo aprobado y
+progreso individual al motor de tutoría/evidencias, sin otro cliente IA. Triggers protegen
+origen de asignación/sesión/ejercicio e historial. Cada alumno tiene sesión independiente;
+refuerzo complementario no sustituye obligatorios. Cierre crea reporte local trazable,
+sin cuota ni nota. Contratos en ASSIGNMENTS_HTTP.md y decisiones en ADR-023.
+No supervisión docente avanzada ni acceso implícito a tutorías privadas.
 
 HTTPS local para cookies Secure, con certificados excluidos en .cache. HTTP 5080
 conserva salud y OpenAPI de desarrollo. Fuera de desarrollo se activa HTTPS/HSTS;

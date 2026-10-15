@@ -1,12 +1,14 @@
 # AulaTutor IA
 
-Iteración 5: constructor docente, simulaciones aisladas y versiones inmutables,
+Iteración 6: asignación de versiones publicadas a grupos y clases individuales,
+con núcleo aprobado común, progreso/evidencia propios y refuerzo complementario.
+Conserva constructor docente, simulaciones aisladas y versiones inmutables,
 además de diagnóstico estructurado, planes personales ejecutables, ejercicios,
 intentos, reportes orientativos, refuerzo y compartición voluntaria mínima,
 además de proveedores IA, identidad, roles y grupos. Fuente de verdad:
 `AulaTutor_IA_Documento_Maestro_v1.0.md`, intacto. La base de Iteración 0 conserva
-Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. Las clases todavía
-no se asignan a grupos ni se ejecutan por estudiantes. No hay evaluaciones oficiales.
+Mock, salud/OpenAPI, arquitectura modular, Compose y CI local. Las clases publicadas
+se asignan a grupos autorizados y se cursan por estudiantes. No hay evaluaciones oficiales.
 Groq, Gemini y Ollama tienen adaptadores REST; Mock es
 predeterminado sin configuración externa y obligatorio en pruebas. En el entorno
 local del usuario se conserva Groq, con diagnóstico real informado por él:
@@ -284,10 +286,48 @@ y Admin ordinario no reciben acceso. Contratos y límites en
 [ADR-021](docs/decisions/ADR-021-clases-versiones-y-simulaciones.md), entrega en
 [ITERATION_5](docs/iterations/ITERATION_5.md).
 
-Todo QA usa Mock o proveedores controlados. Mock demuestra el flujo con guiones
+El QA de Iteración 5 usó Mock o proveedores controlados. Mock demuestra el flujo con guiones
 rotulados, sin comprensión semántica. Los nuevos prompts con Groq/Gemini/Ollama y
 la calidad curricular necesitan una prueba manual autorizada; no se consumió cuota
-externa ni se modificaron claves/.env. La Iteración 6 requiere otro encargo.
+externa ni se modificaron claves/.env durante 5. La corrección posterior de Groq
+autorizada está documentada por separado en ADR-022/QA_GROQ_FIX.
+
+## Clases asignadas
+
+Teacher aprobado abre «Asignaciones» o «Asignar versión» desde el constructor.
+Selecciona la publicación concreta (también una versión anterior no archivada),
+su grupo autorizado y fechas opcionales; «Confirmar asignación» conserva versión,
+destino e historial. Fechas en horario local, guardadas en UTC. Desactivar permite
+reactivar; retirar es terminal. Otra publicación nunca cambia esa asignación.
+
+Student abre «Mis clases», consulta objetivos/versión/docente/grupo y pulsa «Iniciar
+clase». Se guarda una sola sesión por alumno/asignación, incluso con doble clic o
+otra clave. Dentro del chat, «Comenzar conversación» hace el primer turno explícito
+de IA. Crear, consultar, recargar y reanudar no generan. El chat y el motor son los
+mismos que en las tutorías, con reglas y modalidad explícitas de clase asignada.
+
+Las actividades obligatorias identifican su origen aprobado. Preguntas, pistas y
+simplificación conservan su posición; los refuerzos complementarios se consultan
+aparte y nunca sustituyen requisitos. El servidor exige coincidencia de reglas en
+cerrados o entrega NeedsReview en abiertos/código para avanzar lo obligatorio.
+No ejecuta SQL. Cerrar exige todas las entregas obligatorias y disponibilidad vigente;
+genera reporte local trazable a versión/hash/intentos, sin cuota ni nota oficial.
+Entregado no significa dominio verificado. Cada alumno conserva sus ayudas y ruta.
+
+Una asignación desactivada, retirada, vencida o con publicación archivada deja el
+trabajo existente en solo lectura. Retirar membresía Student/Teacher, archivar el
+grupo o revocar al docente bloquea las siguientes consultas con 404; no borra
+evidencia. Nuevos miembros pueden empezar si la relación/fechas siguen vigentes.
+Las tutorías autónomas y planes personales continúan privados y separados del
+listado de clases. La relación docente no abre chats ni evidencias en esta iteración;
+solo se conserva la compartición expresa de versiones de reporte de ADR-019.
+
+Aplicar explícitamente `AssignedClasses` con `--migrate`, como en Preparación.
+Las cuatro migraciones anteriores permanecen intactas. No cambia usuarios/hashes/
+grupos ni crea cuentas. Decisiones en [ADR-023](docs/decisions/ADR-023-asignaciones-y-sesiones-vinculadas.md),
+contratos en [ASSIGNMENTS_HTTP](docs/architecture/ASSIGNMENTS_HTTP.md) y entrega en
+[ITERATION_6](docs/iterations/ITERATION_6.md). Asignación individual preparada como
+extensión de la política central, sin interfaz ni permisos parciales en 6.
 
 ## Configurar IA
 
@@ -328,11 +368,13 @@ script de verificación hace llamadas reales: todos fuerzan Mock o servidor simu
 ./scripts/Verify.ps1 -Smoke -Http
 ```
 
-Restaura locks, compila, ejecuta 81 pruebas unitarias y 74 de integración, verifica
+Restaura locks, compila, ejecuta 102 pruebas unitarias y 112 de integración, verifica
 consistencia de migración, npm ci/TypeScript/contraste de temas/Angular, Compose, Git y dos recorridos
 reales: smoke de fundaciones y HTTP de identidad/tutoría Mock sobre HTTPS/PostgreSQL.
-La verificación de Iteración 5 añade recorridos docentes y conserva las 123 pruebas
-previas; el HTTP ampliado comprende 107 comprobaciones. Resultados en ITERATION_5.md.
+La verificación de Iteración 6 conserva las 174 pruebas anteriores y añade 40
+casos de asignación, progreso, integridad, contexto y recuperación. El HTTP conserva
+las 107 comprobaciones anteriores y añade 42 del recorrido de clases (149 en total);
+resultados en ITERATION_6.md.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
 omite pruebas sin PostgreSQL. Requiere credenciales locales con CREATE DATABASE.
 HTTP usa cuentas @example.invalid y contraseña aleatoria, sin sembrar usuarios en
@@ -362,9 +404,9 @@ Groq limita tanto peticiones como tokens; los límites exactos son por organizac
 ## Continuar el proyecto
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de
-iteraciones y las guías de docs/design. Iteraciones 0–5 y UI-0 completadas. No avanzar
-a 6 sin nuevo encargo: las asignaciones deberán referenciar LessonVersion concreta,
-conservando tutorías privadas y planes personales independientes.
+iteraciones y las guías de docs/design. Iteración 6 completada por encargo explícito;
+verificación y cierre en ITERATION_6.md. No avanzar a 7 sin nuevo encargo: la supervisión
+docente deberá mantener visibilidad por modalidad y relación académica vigente.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
 políticas de retención/compartición. Antes de producción: TLS confiable, mismo

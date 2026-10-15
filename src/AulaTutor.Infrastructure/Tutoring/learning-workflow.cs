@@ -10,7 +10,7 @@ namespace AulaTutor.Infrastructure.Tutoring;
 
 // All mutations run inside the same short owner-row transaction as TutoringService.
 public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator engine,
-    IOptions<LearningPolicy> policy, TimeProvider clock)
+    IOptions<LearningPolicy> policy, TimeProvider clock, AssignedClassWorkflow assigned)
 {
     private static AppException Conflict(string text) => new(409, text);
     private Task<PersonalizedLearningPlan?> LatestPlan(Guid id, CancellationToken ct) => db.LearningPlans.Where(p => p.SessionId == id).OrderByDescending(p => p.Version).FirstOrDefaultAsync(ct);
@@ -18,11 +18,14 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
     public async Task PrepareAsync(TutoringSession s, TutoringTurn turn, TutoringTurnRequest request, CancellationToken ct)
     {
         turn.ExerciseId = request.ExerciseId;
+        var assignedExercise = s.Mode == TutoringMode.AssignedClass ? await assigned.PrepareAsync(s, turn, request, ct) : null;
+        if (s.Mode == TutoringMode.AssignedClass && !LearningOrchestrator.IsLearning(turn.Action))
+            turn.ContextJson = await assigned.GuidanceAsync(s, assignedExercise, ct);
         if (!LearningOrchestrator.IsLearning(turn.Action)) return;
         var exercises = await db.LearningExercises.Where(e => e.SessionId == s.Id).OrderBy(e => e.CreatedAt).ToArrayAsync(ct);
         var plan = await LatestPlan(s.Id, ct);
         var diagnosis = await LatestDiagnosis(s.Id, ct);
-        LearningExercise? exercise = null;
+        LearningExercise? exercise = assignedExercise;
         switch (turn.Action)
         {
             case TutoringAction.DiagnosticQuestion:
@@ -46,6 +49,7 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
                 exercise = exercises.Single(e => e.PlanId == plan.Id && e.Order == 0);
                 break;
             case TutoringAction.NextActivity:
+                if (s.Mode == TutoringMode.AssignedClass) break;
                 if (plan?.State != LearningPlanState.Active) throw Conflict("No hay plan activo.");
                 var currentExercise = exercises.Single(e => e.PlanId == plan.Id && e.Order == plan.CurrentActivity);
                 var attempts = await db.ExerciseAttempts.Where(a => a.ExerciseId == currentExercise.Id).ToArrayAsync(ct);
@@ -68,11 +72,13 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
                 break;
             case TutoringAction.GenerateExercise:
                 if (plan?.State == LearningPlanState.Active) throw Conflict("La actividad del plan sigue vigente; puedes preguntar en el chat.");
-                if (exercises.Count(e => !e.IsDiagnostic && e.PlanId == null) >= 10) throw Conflict("Máximo diez ejercicios libres por sesión.");
+                if (exercises.Count(e => !e.IsDiagnostic && e.PlanId == null && e.ApprovedExerciseId == null) >= 10) throw Conflict("Máximo diez ejercicios libres por sesión.");
                 break;
             case TutoringAction.FinalReport:
                 if (await db.LearningReports.AnyAsync(r => r.SessionId == s.Id && r.EvidenceRevision == s.EvidenceRevision, ct)) throw Conflict("El reporte vigente ya existe; consultar no necesita regenerarlo.");
-                if (await db.LearningReports.CountAsync(r => r.SessionId == s.Id, ct) >= 10) throw Conflict("Máximo diez revisiones de reporte por sesión.");
+                var reportLimit = s.Mode == TutoringMode.AssignedClass ? 9 : 10; // Reserve the final local class report.
+                if (await db.LearningReports.CountAsync(r => r.SessionId == s.Id, ct) >= reportLimit)
+                    throw Conflict(s.Mode == TutoringMode.AssignedClass ? "Se alcanzó el límite de reportes IA; se reserva el reporte local de cierre de la clase." : "Máximo diez revisiones de reporte por sesión.");
                 break;
         }
         var evidence = await db.ExerciseAttempts.AsNoTracking().Where(a => a.SessionId == s.Id).OrderByDescending(a => a.SubmittedAt).Take(8).ToListAsync(ct);
@@ -80,22 +86,34 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
         // Diagnostic interpretations use only explicitly linked diagnostic answers.
         if (turn.Action is TutoringAction.AnalyzeDiagnosis or TutoringAction.GeneratePlan)
             evidence = evidence.Where(a => exercises.Any(e => e.Id == a.ExerciseId && e.IsDiagnostic)).ToList();
+        if (s.Mode == TutoringMode.AssignedClass) evidence = evidence.OrderBy(a => a.SubmittedAt).ThenBy(a => a.Number).ToList();
         evidence = evidence.TakeLast(8).ToList();
         var stats = await StatisticsAsync(s.Id, ct);
         var completedHistory = await db.TutoringMessages.AsNoTracking().Where(m => m.SessionId == s.Id &&
             db.TutoringTurns.Any(t => t.SessionId == s.Id && t.RequestId == m.RequestId && t.State == TutoringTurnState.Succeeded))
             .OrderByDescending(m => m.Sequence).Take(4).ToArrayAsync(ct);
-        var supplied = evidence.Select(a => new { a.Id, question = exercises.Single(e => e.Id == a.ExerciseId).Prompt[..Math.Min(exercises.Single(e => e.Id == a.ExerciseId).Prompt.Length, 350)],
-            answer = a.Answer[..Math.Min(a.Answer.Length, 650)], outcome = a.Outcome.ToString(), a.ValidationType, a.Feedback, a.HintsUsed }).ToArray();
-        turn.ContextJson = LearningJson.Write(new { s.Topic, s.Goal, s.Level, action = turn.Action.ToString(),
+        var supplied = evidence.Select(a => new { a.Id, exerciseId = a.ExerciseId, question = exercises.Single(e => e.Id == a.ExerciseId).Prompt[..Math.Min(exercises.Single(e => e.Id == a.ExerciseId).Prompt.Length, 350)],
+            answer = a.Answer[..Math.Min(a.Answer.Length, 650)], outcome = a.Outcome.ToString(), a.ValidationType,
+            feedback = s.Mode == TutoringMode.AssignedClass ? a.Feedback[..Math.Min(a.Feedback.Length, 650)] : a.Feedback, a.HintsUsed }).ToArray();
+        var history = completedHistory.Reverse().Select(m => m.Text[..Math.Min(m.Text.Length, 500)]).ToArray();
+        var academic = s.Mode == TutoringMode.AssignedClass ? await assigned.GuidanceAsync(s, exercise, ct) : null;
+        string Context() => LearningJson.Write(new { s.Topic, s.Goal, s.Level, action = turn.Action.ToString(),
             adjustment = request.Text, evidenceRevision = s.EvidenceRevision,
-            preliminary = evidence.Select(e => e.ExerciseId).Distinct().Count() < policy.Value.MinimumEvidence,
+            preliminary = supplied.Select(e => e.exerciseId).Distinct().Count() < policy.Value.MinimumEvidence,
             evidence = supplied, statistics = stats,
             diagnosis = diagnosis is null ? null : LearningJson.Read<AssessmentContent>(diagnosis.ContentJson),
             plan = plan is null ? null : PublicPlan(plan, exercises),
             exercise = exercise is null ? null : PublicExercise(exercise),
-            history = completedHistory.Reverse().Select(m => m.Text[..Math.Min(m.Text.Length, 500)]).ToArray() });
-        if (turn.ContextJson.Length > 28000) throw Conflict("El contexto de aprendizaje excede el límite del piloto.");
+            assignedClass = academic, history });
+        var budget = s.Mode == TutoringMode.AssignedClass ? LearningOrchestrator.ContextBudget(s, turn.Action) : 28000;
+        turn.ContextJson = Context();
+        // Academic material stays intact; shorten older secondary context, never persisted evidence.
+        while (s.Mode == TutoringMode.AssignedClass && turn.ContextJson.Length > budget && (history.Length > 0 || supplied.Length > 1))
+        {
+            if (history.Length > 0) history = history[1..]; else supplied = supplied[1..];
+            turn.ContextJson = Context();
+        }
+        if (turn.ContextJson.Length > budget) throw Conflict("El contexto de aprendizaje excede el límite del piloto.");
     }
     public Task<TutoringReply> GenerateAsync(TutoringSession s, TutoringTurn turn, CancellationToken ct) => engine.GenerateAsync(s, turn, ct);
     public async Task<string?> GuidanceAsync(Guid id, CancellationToken ct)
@@ -109,8 +127,10 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
     public async Task ApplyAsync(TutoringSession s, TutoringTurn turn, TutoringReply reply, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
+        if (s.Mode == TutoringMode.AssignedClass) await assigned.ApplyAsync(s, turn, ct);
         if (!LearningOrchestrator.IsLearning(turn.Action))
         {
+            if (s.Mode == TutoringMode.AssignedClass) return;
             if (turn.Action is TutoringAction.Hint or TutoringAction.Simplify)
             {
                 var plan = await LatestPlan(s.Id, ct);
@@ -127,7 +147,8 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
         {
             case TutoringAction.DiagnosticQuestion:
             case TutoringAction.GenerateExercise:
-                db.LearningExercises.Add(NewExercise(s.Id, turn.RequestId, LearningJson.Read<ExerciseProposal>(reply.LearningPayload!), turn.Action == TutoringAction.DiagnosticQuestion, now));
+                var generated = NewExercise(s.Id, turn.RequestId, LearningJson.Read<ExerciseProposal>(reply.LearningPayload!), turn.Action == TutoringAction.DiagnosticQuestion, now);
+                generated.IsComplementary = s.Mode == TutoringMode.AssignedClass; db.LearningExercises.Add(generated);
                 s.EvidenceRevision++; break;
             case TutoringAction.AnalyzeDiagnosis:
                 db.DiagnosticAssessments.Add(new DiagnosticAssessment { SessionId = s.Id, Version = (await LatestDiagnosis(s.Id, ct))?.Version + 1 ?? 1,
@@ -144,9 +165,11 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
                 { var exercise = NewExercise(s.Id, turn.RequestId, activity.Exercise, false, now); exercise.PlanId = plan.Id; exercise.ObjectiveOrder = i; exercise.Order = order++; exercise.IsPresented = false; db.LearningExercises.Add(exercise); }
                 break;
             case TutoringAction.ActivatePlan:
+                s.Mode = TutoringMode.Personalized;
                 var active = (await LatestPlan(s.Id, ct))!; active.State = LearningPlanState.Active; active.AcceptedAt = now;
                 (await db.LearningExercises.SingleAsync(e => e.PlanId == active.Id && e.Order == 0, ct)).IsPresented = true; s.EvidenceRevision++; break;
             case TutoringAction.NextActivity:
+                if (s.Mode == TutoringMode.AssignedClass) break;
                 var next = (await LatestPlan(s.Id, ct))!;
                 (await db.LearningExercises.SingleAsync(e => e.PlanId == next.Id && e.Order == next.CurrentActivity, ct)).Completed = true;
                 next.CurrentActivity++;
@@ -157,7 +180,7 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
             case TutoringAction.SubmitAttempt:
                 var attempt = await db.ExerciseAttempts.SingleAsync(a => a.SessionId == s.Id && a.RequestId == turn.RequestId, ct);
                 attempt.Feedback += "\n\nInterpretación IA (no verificada): " + reply.Text;
-                attempt.ProviderId = s.ProviderId; attempt.ModelId = s.ModelId; attempt.PromptVersion = LearningOrchestrator.PromptVersion;
+                attempt.ProviderId = s.ProviderId; attempt.ModelId = s.ModelId; attempt.PromptVersion = s.Mode == TutoringMode.AssignedClass ? AulaTutor.Application.Lessons.AssignedClassPolicy.Version : LearningOrchestrator.PromptVersion;
                 break;
             case TutoringAction.FinalReport:
                 var report = new LearningReport { SessionId = s.Id, Version = (await db.LearningReports.CountAsync(r => r.SessionId == s.Id, ct)) + 1,
@@ -182,6 +205,12 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
         var worked = plan is null ? [] : LearningJson.Read<PlanContent>(plan.ContentJson).Objectives
             .Where((_, i) => exercises.Any(e => e.PlanId == plan.Id && e.ObjectiveOrder == i && attempts.Any(a => a.ExerciseId == e.Id)))
             .Select(o => o.Title).ToArray();
+        var session = await db.TutoringSessions.AsNoTracking().SingleAsync(s => s.Id == id, ct);
+        if (session.Mode == TutoringMode.AssignedClass)
+        {
+            var content = LearningJson.Read<AulaTutor.Application.Lessons.LessonContent>((await db.LessonVersions.AsNoTracking().SingleAsync(v => v.Id == session.LessonVersionId, ct)).ContentJson);
+            worked = content.Objectives.Where(o => exercises.Any(e => e.ApprovedObjectiveId == o.Id && attempts.Any(a => a.ExerciseId == e.Id))).Select(o => o.Text).ToArray();
+        }
         // Counts of successful exercises, not counts of chat messages or repeated correct attempts.
         return new(exercises.Length, attempts.Length,
             attempts.Where(a => a.Outcome == AttemptOutcome.CorrectWithoutHelp).Select(a => a.ExerciseId).Distinct().Count(),
@@ -190,7 +219,8 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
             attempts.Count(a => a.Outcome == AttemptOutcome.NotEvaluable), exercises.Sum(e => e.HintCount), worked);
     }
     public static ExerciseView PublicExercise(LearningExercise e) => new(e.Id, e.Version, e.IsDiagnostic, e.Kind.ToString(), e.Prompt,
-        LearningJson.Read<string[]>(e.OptionsJson), e.Rubric, e.HintCount, e.Completed, e.ObjectiveOrder, e.Order, e.SimplificationCount);
+        LearningJson.Read<string[]>(e.OptionsJson), e.Rubric, e.HintCount, e.Completed, e.ObjectiveOrder, e.Order, e.SimplificationCount,
+        e.LessonVersionId, e.ApprovedExerciseId, e.ApprovedObjectiveId, e.Required, e.IsComplementary);
     public static PlanView PublicPlan(PersonalizedLearningPlan p, IReadOnlyList<LearningExercise> exercises)
     {
         var content = LearningJson.Read<PlanContent>(p.ContentJson);

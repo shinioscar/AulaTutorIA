@@ -4,17 +4,20 @@
 
 - Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **Iteración 5**, constructor docente, simulación y publicación;
+- Último encargo: **Iteración 6**, asignaciones de versiones publicadas a grupos y
+  ejecución individual, sin supervisión avanzada de 7. Iteración 5 conserva constructor,
+  simulación y publicación;
   UI-0 conserva guía visual oficial, tokens y temas Light/Dark,
   con Groq activo local y Mock en pruebas. No ejecutar cuota real sin autorización.
-  Iteraciones 0–5 y UI-0 completadas. No avanzar a 6 sin nuevo encargo.
-- Registros: docs/iterations/ITERATION_0.md a ITERATION_5.md; ADR en docs/.
+  Iteraciones 0–6 y UI-0 completadas; cierre en ITERATION_6.md.
+  No avanzar a 7 sin nuevo encargo.
+- Registros: docs/iterations/ITERATION_0.md a ITERATION_6.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
 - Corrección posterior a 5 autorizada: investigar rechazos Groq y revisar Student
   con pruebas reales ficticias espaciadas. ADR-022/QA_GROQ_FIX registran resultados.
   Verify/CI siguen Mock. Probe-Groq.ps1 exige -AllowRealCalls, máximo 10 por ejecución,
   65 s entre llamadas y parada al fallar; Cleanup-GroqProbe.ps1 limpia estado privado.
-  Esta autorización corresponde al encargo actual; no autoriza pruebas periódicas.
+  Esta autorización correspondió a esa corrección y no autoriza pruebas nuevas en 6.
 - En 4 se autorizan compartición mínima de reportes y validadores formativos cerrados,
   sin clases docentes, asignaciones, notas oficiales ni ejecución SQL/código de alumnos.
   Mock, salud y estructura de proveedores permanecen funcionales.
@@ -188,7 +191,7 @@
   posición. Trabajado no significa dominado. Pausa/reanudación conserva ruta.
 - Nuevas acciones en /messages usan el mismo lock/lease/revisión/retry de 3. ContextJson
   durable privado para retries, ExerciseId y RetryText en TurnView. Hasta ocho evidencias,
-  cuatro mensajes cortos, contexto 28k y salida 2048 tokens. Prompt learning-v1 y JSON
+  cuatro mensajes cortos, contexto 28k y salida 2048 tokens. Prompt learning-v2 y JSON
   validado incluso con proveedores de solo texto; fallo seguro sin fallback externo.
 - LearningReport conserva estadísticas PostgreSQL y observaciones IA trazables; máximo
   diez revisiones. EvidenceRevision marca desactualizados; sin regeneración al GET ni
@@ -219,7 +222,7 @@
   Publish explícito crea LessonPublication separada; archive cambia disponibilidad.
   Nuevo borrador conserva versiones previas. Triggers PostgreSQL impiden reescribir
   versiones/revisiones/origen de simulación. Sin endpoints de edición de versiones.
-- LessonOrchestrator/IAiProvider: Plan/Content/Exercises/Rubrics, lesson-design-v1,
+- LessonOrchestrator/IAiProvider: Plan/Content/Exercises/Rubrics, lesson-design-v2,
   objeto completo validado en todos los proveedores. LessonProposal no cambia draft;
   apply/discard explícitos. DraftRevision antigua impide aplicar propuesta tardía.
 - LessonOperation: contexto durable privado, requestId/hash, locks cortos de Lesson,
@@ -232,7 +235,8 @@
   Answer se guarda/valida antes de IA; dudas/ayudas no avanzan; Next exige respuesta en
   obligatorio. Ensayo permite avanzar tras respuesta incorrecta, no certifica al docente.
 - El constructor propietario recibe soluciones privadas; vista de simulación y modelo
-  conversacional excluyen claves y referencias. No endpoints estudiantiles de clases.
+  conversacional excluyen claves y referencias. El constructor privado sigue sin acceso
+  Student; 6 añade proyección segura exclusivamente mediante asignación vigente.
 - Límites: 100 clases/docente, 12 objetivos/secciones, 24 ejercicios, plan 20k caracteres,
   contexto 28k, 30 propuestas/20 versiones/20 simulaciones por clase, 50 turnos/10 respuestas
   por actividad/300 decisiones, seis solicitudes IA por minuto/docente/proceso.
@@ -240,6 +244,42 @@
   local hasta limpieza expresa; futura eliminación requiere decisión sobre triggers.
   Contratos en docs/architecture/LESSONS_HTTP.md; QA_5.md y evidencia de 5.
   Groq local intacto; pruebas Mock/controladas, cero nuevas llamadas reales.
+
+## Clases asignadas (Iteración 6 / ADR-023)
+
+- LessonAssignment propia Teacher aprobado: LessonVersion publicada concreta, grupo
+  con membresía Teacher, organización, fechas UTC y estado. Sin borradores ni elección
+  implícita de última versión. Grupo/versión/docente/origen inmutables. Historial
+  AssignmentChange con actor/fecha/estado/fechas; revisión y GUID/hash idempotentes.
+- Active/Inactive/Withdrawn terminal; rango [desde,hasta), extremos opcionales.
+  Índice único parcial grupo/versión Active, incluso programado/vencido. Nueva publicación
+  no cambia asignación. Hasta 300 asignaciones/docente y 100 cambios/asignación.
+- Cada alumno usa TutoringSession Mode=AssignedClass con AssignmentId/VersionId y
+  unicidad alumno/asignación. Mode Private/Personalized conserva privacidad; simulación
+  docente continúa aislada. Listado de tutorías privadas excluye clases asignadas.
+- Crear/consultar/recargar/reanudar no IA. Iniciar clase guarda sesión y copia ejercicios;
+  Comenzar conversación genera primer turno explícito en el chat/motor existentes.
+- LearningExercise liga versión/ApprovedExerciseId/ApprovedObjectiveId/Required/orden.
+  Ejercicios aprobados inmutables; refuerzos IsComplementary sin identidad aprobada ni
+  Required. Preguntas/ayudas no avanzan. Cerrados obligatorios requieren coincidencia;
+  abiertos/código entregados NeedsReview permiten seguir sin verificación ni SQL.
+- Cerrar exige todas las entregas obligatorias y disponibilidad. Reporte local trazable
+  Application/deterministic/assigned-summary-v1 sin IA ni nota oficial. Progreso distingue
+  entregado de coincidencia de regla/dominio; contexto approvedAcademic frente a respuestas
+  no confiables, política assigned-class-v1; no soluciones privadas al modelo/Angular.
+- AssignedClassAccess revalida membresía Student/Teacher, grupo activo y docente activo/
+  aprobado en cada ruta de sesión/evidencia/reporte, también antes de persistir IA. Retirar
+  relación/archivar grupo: 404 sin borrar evidencia. Inactive/Withdrawn/fuera de fecha/
+  publicación archivada: historial propio en solo lectura. Cancelar/pausar puede resolver
+  operación pendiente con relación vigente. Reincorporar conserva la misma sesión.
+- Mismo lock/revisión/idempotencia/lease cercado/retry/cancel del motor. Dos alumnos
+  independientes, ninguna transacción durante IA. Cambio de proveedor 409 sin fallback.
+- No acceso docente implícito a chat/evidencia en 6: supervisión en 7. Compartir reporte
+  sigue autorización expresa de ADR-019 y relación vigente. Asignación individual futura
+  extenderá política de destinatario central; no permisos parciales ni UI individual ahora.
+- AssignedClasses quinta migración aditiva; previas intactas. Triggers protegen fuente de
+  asignación/sesión/ejercicio e historial. Contratos ASSIGNMENTS_HTTP.md, QA_6.md.
+  Pruebas solo Mock/controladas, sin cuota real ni cambios a .env. No avanzar a 7.
 
 ## Operación y pruebas
 
@@ -251,8 +291,8 @@
 - PostgreSQL localhost:15432 (interno 5432) en proyecto Compose aulatutor-ia.
   API/web pueden seguir activos al entregar: inspeccionar puertos/procesos y detener
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
-- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 174
-  pruebas (100 unitarias/74 integración; conserva 155 previas), consistencia EF,
+- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 214
+  pruebas (102 unitarias/112 integración; conserva 174 previas), consistencia EF,
   npm ci/check/check:theme/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
   UI-0 repitió 123 pruebas/75 HTTP y añadió 70 comprobaciones de contraste y
   19 capturas por rol/viewport; QA_UI_0.md registra teclado/storage/responsive.
@@ -260,6 +300,7 @@
   Iteración 5: 155 pruebas/107 HTTP/70 contraste, 26 capturas en evidence-5 y QA_5.md;
   corrección Groq posterior: 174 pruebas, QA_GROQ_FIX.md y evidence-groq-fix;
   TeacherLessons aplicada localmente, Docker API compilada y QA temporal eliminado.
+  Iteración 6 añade 40 pruebas, 149 HTTP y 29 capturas en evidence-6; detalle QA_6.md.
   Histórico:
   91 pruebas y 48 comprobaciones HTTP de 3; revisión visual
   desktop/móvil registrada en QA_3.md. PrivateTutoring/LearningEvidence aplicadas en BD local;
@@ -272,7 +313,7 @@
   contraseña ficticia aleatoria/PID/base temporal. Limpiar proceso/base/archivo al
   terminar; no mantener el administrador de QA en la BD principal.
 - Pruebas con @example.invalid, claves aleatorias ficticias. Capturas versionadas
-  en docs/iterations/evidence-1/2/3/4, sin secretos. Caches/logs ignorados.
+  en docs/iterations/evidence-1/2/3/4/5/6, sin secretos. Caches/logs ignorados.
 - /api/health conserva iteration=1 por contrato heredado; liveness/configuración IA,
   sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1–4.
   Los endpoints nuevos deben exigir autorización; nunca diagnóstico IA público.
@@ -280,8 +321,8 @@
 
 ## Pendientes y continuidad
 
-- Iteración 6: asignaciones de LessonVersion a grupos; requiere encargo nuevo. Preservar
-  tutoría privada y planes personales como concepto diferente. No continuar automáticamente.
+- Iteración 7: supervisión docente autorizada; requiere encargo nuevo. Preservar tutoría
+  privada y planes personales como concepto diferente. No continuar automáticamente.
 - Pendientes documentados: confirmación email, recuperación/MFA, invitaciones,
   auditoría integral (8), retención institucional y borrado. Frontera Approved/Published
   resuelta en ADR-021: inmutable al aprobar, publicación explícita independiente.

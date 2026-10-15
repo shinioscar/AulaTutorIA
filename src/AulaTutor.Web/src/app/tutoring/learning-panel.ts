@@ -14,8 +14,10 @@ export class LearningPanel implements OnChanges {
   answer='';adjustment='';recipient='';consent=false;readonly recipients=signal<{id:string;displayName:string}[]|null>(null);
   private shareKey:string|null=null;private reinforcementKeys=new Map<string,string>();
   private previousExercise='';private previousAttempts=0;
+  readonly selectedComplement=signal<string|null>(null);private complements=0;private previousSession='';
   readonly exercise=computed(()=>{
     const l=this.session().learning;const plan=l.plan;
+    if(this.session().assignedClass){const selected=l.exercises.find(e=>e.id===this.selectedComplement()&&e.isComplementary);return selected??l.exercises.find(e=>e.id===this.session().assignedClass?.currentExerciseId);}
     if(plan?.state==='Active')return l.exercises.find(e=>!e.isDiagnostic&&e.order===plan.currentActivity&&!e.completed);
     return [...l.exercises].reverse().find(e=>!e.completed&&(!e.isDiagnostic||!l.diagnostic));
   });
@@ -23,7 +25,14 @@ export class LearningPanel implements OnChanges {
   readonly diagnosticCount=computed(()=>this.session().learning.exercises.filter(e=>e.isDiagnostic).length);
   readonly report=computed<Report|undefined>(()=>this.session().learning.reports[0]);
   emit(action:string,text?:string,exerciseId?:string):void {if(!this.disabled()&&!this.localBusy()){this.error.set('');this.action.emit({action,text,exerciseId});}}
-  ngOnChanges():void {const id=this.exercise()?.id??'';const count=this.attempts().length;if(id!==this.previousExercise||count>this.previousAttempts)this.answer='';this.previousExercise=id;this.previousAttempts=count;}
+  ngOnChanges():void {
+    const session=this.session();const complementary=session.learning.exercises.filter(e=>e.isComplementary);
+    if(session.id!==this.previousSession)this.selectedComplement.set(null);
+    else if(complementary.length>this.complements)this.selectedComplement.set(complementary.at(-1)?.id??null);
+    this.previousSession=session.id;this.complements=complementary.length;
+    const id=this.exercise()?.id??'';const count=this.attempts().length;
+    if(id!==this.previousExercise||count>this.previousAttempts)this.answer='';this.previousExercise=id;this.previousAttempts=count;
+  }
   submit():void {const e=this.exercise();if(e&&this.answer.trim())this.emit('SubmitAttempt',this.answer,e.id);}
   outcome(value:string):string{return ({CorrectWithoutHelp:'Correcto sin ayuda',CorrectWithHelp:'Correcto con ayuda',Incorrect:'Incorrecto',NeedsReview:'Requiere revisión · no verificado',NotEvaluable:'No evaluable'} as Record<string,string>)[value]??value;}
   async loadRecipients():Promise<void>{this.localBusy.set(true);try{this.recipients.set(await firstValueFrom(this.api.recipients(this.session().id)));}catch{this.error.set('No se pudieron consultar los docentes autorizados.');}finally{this.localBusy.set(false);}}

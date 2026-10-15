@@ -14,7 +14,7 @@ public static class TutoringEndpoints
         app.MapGet("/api/students/me/tutoring-sessions", async (int? page, ITutoringService service, CancellationToken ct) => TypedResults.Ok(await service.ListAsync(page ?? 1, ct)))
             .RequireAuthorization().WithSummary("Solo tutorías propias del estudiante, páginas de 50.");
         sessions.MapGet("/{id:guid}", async (Guid id, ITutoringService service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(id, ct)))
-            .WithSummary("Historial privado propio; otros estudiantes, Teacher y Admin sin acceso ordinario reciben 404.");
+            .WithSummary("Historial propio; clases asignadas exigen además relación académica vigente. Otros estudiantes, Teacher y Admin reciben 404.");
         sessions.MapPost("/{id:guid}/messages", async (Guid id, TutoringTurnRequest request, ITutoringService service, CancellationToken ct) =>
         {
             var view = await service.SendAsync(id, request, ct);

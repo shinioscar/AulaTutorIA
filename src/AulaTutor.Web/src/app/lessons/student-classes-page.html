@@ -1,0 +1,15 @@
+@if(detail();as c){
+  <a routerLink="/classes">← Mis clases asignadas</a><h1>{{c.title}}</h1><p>{{c.subject}} · Versión {{c.versionNumber}} · {{state(c.studentState)}}</p>
+  <section><h2>Tu clase asignada</h2><p>Docente: {{c.teacherName}} · Grupo: {{c.groupName}}</p><p>Actividades obligatorias entregadas: {{c.deliveredRequired}} / {{c.totalRequired}}. Coinciden con reglas cerradas: {{c.verifiedRequired}}.</p>
+    <p class="note">Entregado no significa dominio verificado. Las respuestas abiertas y código necesitan revisión humana; no se ejecuta SQL.</p>
+    <p>Disponibilidad: {{c.availableFrom?(c.availableFrom|date:'short'):'sin fecha inicial'}} — {{c.availableUntil?(c.availableUntil|date:'short'):'sin fecha final'}}</p>
+    @if(!c.available){<p class="notice warning">No disponible para comenzar o continuar. El progreso confirmado permanece conservado.</p>}
+    <button type="button" (click)="open(c)" [disabled]="busy()||(!c.available&&!c.sessionId)">{{c.sessionId?(c.available&&c.studentState!=='Completed'?'Continuar clase':'Consultar historial'):'Iniciar clase'}}</button>
+    <p class="note">Iniciar guarda una sesión única. «Comenzar conversación» envía el primer turno al proveedor dentro del chat. Consultar o recargar no genera IA.</p>
+  </section>
+  <section><h2>Objetivos comunes de esta versión</h2><ul>@for(o of c.objectives;track o.id){<li>{{o.text}} · {{o.delivered}} / {{o.required}} entregas obligatorias</li>}</ul><p>Conocimientos previos: {{c.prerequisites||'No especificados'}}</p><details><summary>Metodología y contenido aprobado</summary><app-safe-response [text]="c.methodology"/><app-safe-response [text]="c.instructions"/>@for(s of c.sections;track s.id){<h3>{{s.title}}</h3><app-safe-response [text]="s.content"/>}</details><p class="note">Versión fija {{c.lessonVersionId}} · SHA-256 {{c.contentHash}}</p></section>
+} @else {
+  <h1>Mis clases asignadas</h1><p>Clases de tus grupos vigentes, con una versión fija y progreso individual.</p>
+  @for(c of classes();track c.assignmentId){<article><h2><a [routerLink]="['/classes',c.assignmentId]">{{c.title}}</a></h2><p>{{c.subject}} · {{c.teacherName}} · {{c.groupName}}</p><p>Versión {{c.versionNumber}} · {{state(c.studentState)}}</p><p>Obligatorias entregadas: {{c.deliveredRequired}} / {{c.totalRequired}} · No certifica dominio.</p><ul>@for(o of c.objectives;track o.id){<li>{{o.text}}</li>}</ul><div class="actions"><a [routerLink]="['/classes',c.assignmentId]">Ver detalle de clase</a><button type="button" (click)="open(c)" [disabled]="busy()||(!c.available&&!c.sessionId)">{{c.sessionId?(c.available&&c.studentState!=='Completed'?'Continuar clase':'Consultar historial'):'Iniciar clase'}}</button></div></article>}@empty{@if(!busy()&&!error()){<p>No tienes clases asignadas en tus grupos vigentes.</p>}}
+}
+@if(error()){<p class="notice danger" role="alert">{{error()}}</p>}@if(busy()){<p role="status">Consultando tu clase…</p>}<button type="button" class="secondary" (click)="load()" [disabled]="busy()">Actualizar clases</button>

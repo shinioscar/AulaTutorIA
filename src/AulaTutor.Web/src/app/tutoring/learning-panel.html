@@ -1,8 +1,12 @@
 <div class="learning-panel">
   @let s=session(); @let l=s.learning;
   <p class="message" role="status">{{error()}}</p>
+  @if(s.assignedClass;as a){<details><summary>Objetivos y contenido aprobado · versión {{a.class.versionNumber}}</summary><ul>@for(o of a.class.objectives;track o.id){<li>{{o.text}} · {{o.delivered}} / {{o.required}} entregas obligatorias</li>}</ul><p class="note">El refuerzo no sustituye estas actividades. Entrega y coincidencia con reglas no certifican dominio.</p><app-safe-response [text]="a.class.methodology"/>@for(section of a.class.sections;track section.id){<h3>{{section.title}}</h3><app-safe-response [text]="section.content"/>}<p class="note">Origen {{a.class.lessonVersionId}} · SHA-256 {{a.class.contentHash}}</p></details><h3>{{a.sectionTitle}}</h3><app-safe-response [text]="a.sectionContent"/>
+    @if(selectedComplement()){<button type="button" class="secondary" (click)="selectedComplement.set(null);answer=''">Volver a actividad de la clase</button>}
+    <details><summary>Refuerzos complementarios guardados</summary>@for(e of l.exercises;track e.id){@if(e.isComplementary){<p>{{e.prompt}}</p><button type="button" class="secondary" (click)="selectedComplement.set(e.id);answer=''">Ver refuerzo complementario</button>}}</details>
+  }
   @if(s.state!=='Completed'&&s.state!=='Paused'){
-    @if(!l.diagnostic&&!free()&&!s.directReview){
+    @if(!s.assignedClass&&!l.diagnostic&&!free()&&!s.directReview){
       <div class="learning-heading"><strong>Diagnóstico breve</strong><span class="note">Hasta {{l.diagnosticQuestionLimit}} preguntas; puedes finalizar antes.</span></div>
       <div class="actions">
         @if((!exercise()?.isDiagnostic||attempts().length)&&diagnosticCount()<l.diagnosticQuestionLimit){<button type="button" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">{{diagnosticCount()?'Otra pregunta diagnóstica':'Comenzar diagnóstico estructurado'}}</button>}
@@ -38,7 +42,7 @@
   }
   @if(exercise();as e){
     @if(s.state==='Active'){
-      <section class="exercise-card" aria-label="Ejercicio actual"><h3>{{e.isDiagnostic?'Pregunta diagnóstica':'Actividad actual'}}</h3>
+      <section class="exercise-card" aria-label="Ejercicio actual"><h3>{{e.isComplementary?'Refuerzo complementario':e.approvedExerciseId?(e.required?'Actividad obligatoria aprobada':'Actividad aprobada opcional'):e.isDiagnostic?'Pregunta diagnóstica':'Actividad actual'}}</h3>@if(e.approvedExerciseId){<p class="note">Ejercicio aprobado {{e.approvedExerciseId}} · Versión de clase {{s.assignedClass?.class?.versionNumber}}</p>}
         @if(l.plan?.state==='Active'){@for(o of l.plan?.content?.objectives??[];track $index){@if($index===e.objectiveOrder){@for(a of o.activities;track $index){<p>{{a.explanation}}</p>}}}}
         <app-safe-response [text]="e.prompt"/><p class="note">Criterios: {{e.rubric}} · Pistas recibidas: {{e.hints}} · Explicaciones adicionales: {{e.simplifications}}</p>
         <form (ngSubmit)="submit()"><label [for]="'answer-'+e.id">Respuesta de este ejercicio</label>
@@ -46,6 +50,7 @@
           @else{<textarea [id]="'answer-'+e.id" name="exercise-answer" [(ngModel)]="answer" maxlength="2000" rows="2" [disabled]="disabled()"></textarea>}
           <div class="actions"><button [disabled]="disabled()||!answer.trim()">Registrar respuesta</button>
             @if(l.plan?.state==='Active'&&attempts().length){<button type="button" class="secondary" (click)="emit('NextActivity')" [disabled]="disabled()">Continuar ruta</button>}
+            @if(s.assignedClass&&!e.isComplementary){<button type="button" class="secondary" (click)="emit('NextActivity')" [disabled]="disabled()||(e.required&&!attempts().length)">Continuar clase</button>}
             @if(e.isDiagnostic&&attempts().length&&diagnosticCount()<l.diagnosticQuestionLimit){<button type="button" class="secondary" (click)="emit('DiagnosticQuestion')" [disabled]="disabled()">Otra pregunta</button>}
           </div>
         </form>
@@ -53,7 +58,7 @@
       </section>
     }
   }
-  @if(s.state==='Active'&&l.plan?.state!=='Active'){<button type="button" class="secondary" (click)="emit('GenerateExercise')" [disabled]="disabled()">Proponer ejercicio de práctica libre</button>}
+  @if(s.state==='Active'&&l.plan?.state!=='Active'){<button type="button" class="secondary" (click)="emit('GenerateExercise')" [disabled]="disabled()">{{s.assignedClass?'Proponer refuerzo complementario':'Proponer ejercicio de práctica libre'}}</button>}
   @if(l.attempts.length){<details><summary>Evidencias registradas · {{l.attempts.length}} intentos</summary>@for(a of l.attempts;track a.id){<article [id]="'evidence-'+a.id"><strong>Intento {{a.number}} · {{outcome(a.outcome)}}</strong><p>{{a.answer}}</p><p class="feedback">{{a.feedback}}</p><small>Evidencia {{a.id}} · Ejercicio {{a.exerciseId}}</small></article>}</details>}
   @if(s.state==='Completed'||report()){
     @if(report();as r){<details open><summary>Resultados y recomendaciones</summary><app-report-card [report]="r" /></details>

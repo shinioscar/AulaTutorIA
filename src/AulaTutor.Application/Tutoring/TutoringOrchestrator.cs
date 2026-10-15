@@ -2,6 +2,7 @@ using System.Text.Json;
 using AulaTutor.Application.Ai;
 using AulaTutor.Application.Identity;
 using AulaTutor.Domain.Tutoring;
+using AulaTutor.Application.Lessons;
 
 namespace AulaTutor.Application.Tutoring;
 
@@ -29,7 +30,7 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         """;
     private const string Schema = """{"type":"object","properties":{"text":{"type":"string"},"activity":{"type":"string","enum":["Diagnosis","Explanation","Exercise","Feedback","Hint"]},"focus":{"type":"string"}},"required":["text","activity","focus"],"additionalProperties":false}""";
 
-    public AiChatRequest BuildRequest(TutoringSession session, IReadOnlyList<TutoringMessage> context, TutoringAction action, Guid requestId)
+    public AiChatRequest BuildRequest(TutoringSession session, IReadOnlyList<TutoringMessage> context, TutoringAction action, Guid requestId, int historyBudget = 12000)
     {
         if (session.PolicyVersion != PolicyVersion) throw new AppException(409, "La política de esta sesión requiere una versión compatible del servicio.");
         var data = JsonSerializer.Serialize(new { session.Topic, session.Goal, session.Level,
@@ -40,6 +41,7 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         var contract = provider.Capabilities.Json ? new AiResponseContract("json") :
             provider.Capabilities.JsonSchema ? new AiResponseContract("json-schema", Schema, provider.Capabilities.StrictJsonSchema) : new AiResponseContract("text");
         var instructions = SystemPolicy;
+        if (session.Mode == TutoringMode.AssignedClass) instructions += "\n" + AssignedClassPolicy.Instructions;
         if (contract.Format != "text")
             instructions += "\nDevuelve exclusivamente un objeto JSON, sin Markdown alrededor: " +
                 "{\"text\":\"Orientación breve\",\"activity\":\"Hint\",\"focus\":\"Foco breve\"}. " +
@@ -47,7 +49,7 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
                 "focus máximo 200 caracteres. Usa la actividad correspondiente a la acción. Esquema: " + Schema;
         var messages = new List<AiMessage> { new("system", instructions), new("user", data) };
         // Latest confirmed pairs plus current attempt; no extra summarization calls or full history replay.
-        var recent = new List<TutoringMessage>(); var remaining = 12000;
+        var recent = new List<TutoringMessage>(); var remaining = Math.Clamp(historyBudget, 0, 12000);
         foreach (var message in context.Reverse().Take(11))
         {
             if (message.Text.Length > remaining) break;
@@ -58,12 +60,20 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         if (recent.Count > 0 && recent[0].Role == TutoringMessageRole.Tutor) recent.RemoveAt(0);
         messages.AddRange(recent.Select(m => new AiMessage(m.Role == TutoringMessageRole.Student ? "user" : "assistant", m.Text)));
         var useCase = action == TutoringAction.Start && session.DirectReview ? "review" : action.ToString().ToLowerInvariant();
-        return new("tutoring_" + useCase, messages, contract, requestId.ToString("N"), 1024, PolicyVersion);
+        return new("tutoring_" + useCase, messages, contract, requestId.ToString("N"), 1024,
+            session.Mode == TutoringMode.AssignedClass ? AssignedClassPolicy.Version : PolicyVersion);
     }
     public async Task<TutoringReply> GenerateAsync(TutoringSession session, IReadOnlyList<TutoringMessage> context, TutoringAction action, Guid requestId, CancellationToken ct, string? guidance = null)
     {
         var request = BuildRequest(session, context, action, requestId);
-        if (guidance is not null) request = request with { Messages = request.Messages.Append(new AiMessage("user", guidance)).ToArray() };
+        if (guidance is not null)
+        {
+            // Reserve space for the fixed academic context before selecting recent dialogue.
+            var reserved = request.Messages.Take(2).Sum(m => m.Text.Length) + guidance.Length;
+            if (reserved > 32000) throw new AiProviderException(AiErrorCode.InvalidRequest);
+            request = BuildRequest(session, context, action, requestId, 32000 - reserved);
+            request = request with { Messages = request.Messages.Append(new AiMessage("user", guidance)).ToArray() };
+        }
         var result = await provider.GenerateAsync(request, ct);
         if (result.ProviderId != session.ProviderId || result.ModelId != session.ModelId) throw new AiProviderException(AiErrorCode.Configuration);
         string text = result.Text, activity = action switch

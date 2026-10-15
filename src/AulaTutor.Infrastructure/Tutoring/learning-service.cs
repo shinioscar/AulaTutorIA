@@ -3,21 +3,23 @@ using AulaTutor.Application.Tutoring;
 using AulaTutor.Domain.Identity;
 using AulaTutor.Domain.Tutoring;
 using AulaTutor.Infrastructure.Persistence;
+using AulaTutor.Infrastructure.Lessons;
 using Microsoft.EntityFrameworkCore;
 
 namespace AulaTutor.Infrastructure.Tutoring;
 
 public sealed class LearningService(AulaTutorDbContext db, ICurrentActor current,
-    ITutoringService tutoring, TimeProvider clock) : ILearningService
+    ITutoringService tutoring, TimeProvider clock, AssignedClassAccess assignedAccess) : ILearningService
 {
     private static AppException Hidden() => new(404, "Reporte o tutoría no disponible.");
     private async Task<TutoringSession> OwnedAsync(Guid id, bool locked, CancellationToken ct)
     {
         var actor = await current.GetAsync(); if (!actor.IsStudent) throw Hidden();
-        return await (locked
+        var session = await (locked
             ? db.TutoringSessions.FromSqlInterpolated($"SELECT * FROM \"TutoringSessions\" WHERE \"Id\"={id} AND \"StudentId\"={actor.Id} AND \"OrganizationId\"={actor.OrganizationId} FOR UPDATE")
             : db.TutoringSessions.AsNoTracking().Where(s => s.Id == id && s.StudentId == actor.Id && s.OrganizationId == actor.OrganizationId))
             .SingleOrDefaultAsync(ct) ?? throw Hidden();
+        await assignedAccess.RequireReadAsync(session, ct); return session;
     }
     private IQueryable<Infrastructure.Identity.AppUser> Recipients(TutoringSession s) => db.Users.Where(u =>
         u.OrganizationId == s.OrganizationId && u.IsActive && u.TeacherApproval == TeacherApproval.Approved &&
@@ -60,6 +62,7 @@ public sealed class LearningService(AulaTutorDbContext db, ICurrentActor current
         var actor = await current.GetAsync(); if (!actor.IsTeacher) throw Hidden();
         var report = await db.LearningReports.AsNoTracking().SingleOrDefaultAsync(r => r.Id == reportId, ct) ?? throw Hidden();
         var s = await db.TutoringSessions.AsNoTracking().SingleAsync(s => s.Id == report.SessionId, ct);
+        await assignedAccess.RequireReadAsync(s, ct);
         if (s.OrganizationId != actor.OrganizationId || !await db.ReportShares.AnyAsync(sh => sh.ReportId == reportId && sh.RecipientId == actor.Id && sh.RevokedAt == null, ct)
             || !await Recipients(s).AnyAsync(u => u.Id == actor.Id, ct)) throw Hidden();
         return (report, s);

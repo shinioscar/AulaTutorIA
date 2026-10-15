@@ -1,17 +1,17 @@
-<a routerLink="/tutoring">← Mis tutorías</a>
+<a [routerLink]="session()?.assignedClass?'/classes':'/tutoring'">← {{session()?.assignedClass?'Mis clases asignadas':'Mis tutorías'}}</a>
 <p class="message" role="status">{{message()}}</p>
 @if(session();as session){
-  <div class="conversation-heading"><div><p class="eyebrow">TUTORÍA PRIVADA</p><h1>{{session.topic}}</h1><p class="goal">{{session.goal}}</p></div><span class="state-badge">{{label(session.state)}}</span></div>
+  <div class="conversation-heading"><div><p class="eyebrow">{{session.assignedClass?'CLASE ASIGNADA':session.mode==='Personalized'?'TUTORÍA PERSONALIZADA PRIVADA':'TUTORÍA PRIVADA'}}</p><h1>{{session.topic}}</h1><p class="goal">{{session.goal}}</p>@if(session.assignedClass;as a){<p>Versión {{a.class.versionNumber}} · {{a.class.teacherName}} · {{a.class.groupName}}</p>}</div><span class="state-badge">{{label(session.state)}}</span></div>
   <div class="tutoring-layout">
-    <aside class="session-details"><h2>Tu espacio de aprendizaje</h2><p><strong>Historial privado:</strong> solo tú. Puedes autorizar por separado una versión de tu reporte para un docente relacionado.</p><p class="note">{{session.providerId}} · {{session.modelId}}</p><p class="note">El tutor usa contexto reciente acotado. Tu historial completo permanece aquí. Usa datos ficticios y no escribas secretos.</p><p class="notice">Las interpretaciones de la IA son orientativas. Los resultados de ejercicios cerrados se contrastan con reglas; no son calificaciones oficiales.</p>
+    <aside class="session-details"><h2>Tu espacio de aprendizaje</h2>@if(session.assignedClass;as a){<p><strong>Clase y evidencias vinculadas:</strong> {{a.class.teacherName}} · {{a.class.groupName}}. Solo tú puedes leer esta conversación. Puedes autorizar por separado una versión de tu reporte.</p><p>Entregadas {{a.class.deliveredRequired}} / {{a.class.totalRequired}} obligatorias. Coinciden con reglas cerradas: {{a.class.verifiedRequired}}.</p>@if(a.unavailableReason){<p class="notice warning">{{a.unavailableReason}}</p>}}@else{<p><strong>Historial privado:</strong> solo tú. Puedes autorizar por separado una versión de tu reporte para un docente relacionado.</p>}<p class="note">{{session.providerId}} · {{session.modelId}}</p><p class="note">El tutor usa contexto reciente acotado. Tu historial completo permanece aquí. Usa datos ficticios y no escribas secretos.</p><p class="notice">Las interpretaciones de la IA son orientativas. Los resultados de ejercicios cerrados se contrastan con reglas; no son calificaciones oficiales.</p>
       @if(session.currentFocus){<p>Foco sugerido: {{session.currentFocus}}</p>}
       <button type="button" class="secondary" (click)="refresh()">Actualizar estado</button>
       @if(session.state==='Active'){<button type="button" class="secondary" (click)="transition('pause')" [disabled]="busy()||pending?.isGenerating">Pausar tutoría</button>}
-      @if(session.state==='Paused'){<button type="button" (click)="transition('resume')" [disabled]="busy()">Reanudar tutoría</button>}
-      @if(session.state!=='Completed'){<button type="button" class="secondary" (click)="transition('complete')" [disabled]="busy()||pending?.isGenerating">Finalizar tutoría</button>}
+      @if(session.state==='Paused'){<button type="button" (click)="transition('resume')" [disabled]="busy()||(session.assignedClass&&!session.assignedClass.class.available)">Reanudar tutoría</button>}
+      @if(session.state!=='Completed'){<button type="button" class="secondary" (click)="transition('complete')" [disabled]="busy()||pending?.isGenerating||(session.assignedClass&&!session.assignedClass.canComplete)">{{session.assignedClass?'Finalizar clase':'Finalizar tutoría'}}</button>@if(session.assignedClass&&!session.assignedClass.canComplete){<p class="note">La finalización requiere entregar todas las actividades obligatorias y disponibilidad vigente.</p>}}
     </aside>
     <div class="conversation">
-      <app-learning-panel [session]="session" [disabled]="busy()||!!session.pendingRequestId||!!uncertain()" (action)="learningAction($event)" (changed)="refresh()" />
+      <app-learning-panel [session]="session" [disabled]="busy()||!!session.pendingRequestId||!!uncertain()||(!!session.assignedClass&&!session.assignedClass.class.available)" (action)="learningAction($event)" (changed)="refresh()" />
       <div #thread class="thread" aria-label="Historial de la tutoría" aria-live="polite">
         @for(item of session.messages;track item.id){
           <article class="bubble" [class.student]="item.role==='Student'"><div class="bubble-meta"><strong>{{item.role==='Student'?'Tú':'Tutor IA'}}</strong><time>{{item.createdAt|date:'shortTime'}}</time></div><app-safe-response [text]="item.text" />
@@ -29,7 +29,7 @@
         </div>
       }
       @if(uncertain()&&!pending&&!busy()){<div class="turn-status"><p>El envío no está confirmado. Actualiza el estado o recupera la misma solicitud.</p><button type="button" (click)="recover()">Recuperar envío</button></div>}
-      @if(session.state==='Created'){<div class="composer"><p>Comenzar enviará tu tema y objetivo al proveedor {{session.providerId}}. Crear y consultar la sesión no consume IA.</p><button type="button" (click)="send('Start')" [disabled]="busy()||!!session.pendingRequestId">Comenzar conversación</button></div>}
+      @if(session.state==='Created'){<div class="composer"><p>Comenzar enviará tu tema y objetivo al proveedor {{session.providerId}}. Crear y consultar la sesión no consume IA.</p><button type="button" (click)="send('Start')" [disabled]="busy()||!!session.pendingRequestId||(session.assignedClass&&!session.assignedClass.class.available)">Comenzar conversación</button></div>}
       @if(session.state==='Active'){
         <form class="composer" #form="ngForm" (ngSubmit)="send('Message')">
           <div class="quick-actions"><button type="button" class="secondary" (click)="send('Hint')" [disabled]="!canSend">Necesito una pista</button><button type="button" class="secondary" (click)="send('Simplify')" [disabled]="!canSend">Explícalo más sencillo</button></div>
@@ -38,7 +38,7 @@
         </form>
       }
       @if(session.state==='Paused'){<p class="notice">Tu tutoría está pausada. Reanúdala cuando quieras continuar; el historial permanece guardado.</p>}
-      @if(session.state==='Completed'){<section aria-labelledby="summary-title"><h2 id="summary-title">Resumen de tu tutoría</h2><app-safe-response [text]="session.summary??''" /><p class="note">Conversación cerrada y privada. Puedes volver a leerla desde Mis tutorías.</p></section>}
+      @if(session.state==='Completed'){<section aria-labelledby="summary-title"><h2 id="summary-title">Resumen de {{session.assignedClass?'tu clase':'tu tutoría'}}</h2><app-safe-response [text]="session.summary??''" /><p class="note">Conversación cerrada. Puedes volver a leerla desde {{session.assignedClass?'Mis clases asignadas':'Mis tutorías'}} mientras tengas acceso.</p></section>}
     </div>
   </div>
 } @else if(!message()) {<p role="status">Cargando tu tutoría privada…</p>}

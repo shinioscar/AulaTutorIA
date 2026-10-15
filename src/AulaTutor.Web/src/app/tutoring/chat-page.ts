@@ -20,7 +20,7 @@ export class ChatPage implements OnDestroy {
     this.id=params.get('id')??'';this.session.set(null);this.busy.set(false);this.message.set('');this.uncertain.set(null);this.draft='';void this.refresh();
   });
   get pending():Turn|undefined {const session=this.session();return session?.turns.find(turn=>turn.requestId===session.pendingRequestId);}
-  get canSend():boolean {return !this.busy()&&!this.uncertain()&&this.session()?.state==='Active'&&!this.session()?.pendingRequestId;}
+  get canSend():boolean {return !this.busy()&&!this.uncertain()&&this.session()?.state==='Active'&&!this.session()?.pendingRequestId&&(this.session()?.assignedClass?.class.available??true);}
   label(state:string):string {return ({Created:'Por iniciar',Active:'Activa',Paused:'Pausada',Completed:'Finalizada'} as Record<string,string>)[state]??state;}
   async refresh():Promise<void> {
     if(this.destroyed)return;
@@ -87,7 +87,7 @@ export class ChatPage implements OnDestroy {
     const targetId=this.id;
     this.busy.set(true);this.message.set('');
     try{this.adopt(await firstValueFrom(this.api.transition(targetId,action,session.revision)));}
-    catch(error:unknown){if(targetId===this.id){this.message.set('No se pudo cambiar el estado. Actualiza la tutoría para comprobar la revisión y el turno pendiente.');await this.refresh();}}
+    catch(error:unknown){if(targetId===this.id){this.message.set((error as {error?:{title?:string}})?.error?.title??'No se pudo cambiar el estado. Actualiza la tutoría para comprobar la revisión y el turno pendiente.');await this.refresh();}}
     finally{if(targetId===this.id){this.busy.set(false);this.schedulePoll();}}
   }
   async cancel():Promise<void> {

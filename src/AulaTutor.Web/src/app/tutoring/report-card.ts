@@ -5,7 +5,7 @@ import { SafeResponse } from './safe-response';
   @if(report();as r){
     <h3>Reporte orientativo · revisión {{r.version}}</h3>
     <p><strong>{{r.topic}}</strong> · {{r.goal}}</p>
-    <p class="note">{{r.providerId}} · {{r.modelId}} · {{r.promptVersion}}. Interpretación IA sujeta a revisión, sin nota oficial.</p>
+    <p class="note">{{r.providerId}} · {{r.modelId}} · {{r.promptVersion}}. {{r.providerId==='Application'?'Reporte local de entregas, sin llamada IA.':'Interpretación IA sujeta a revisión.'}} Sin nota oficial.</p>
     @if(r.outdated){<p class="notice">Desactualizado: hay cambios en las evidencias después de esta revisión.</p>}
     <app-safe-response [text]="r.content.summary" />
     <dl class="statistics"><div><dt>Ejercicios presentados</dt><dd>{{r.statistics.exercises}}</dd></div><div><dt>Intentos registrados</dt><dd>{{r.statistics.attempts}}</dd></div><div><dt>Correctos sin ayuda</dt><dd>{{r.statistics.correctWithoutHelp}}</dd></div><div><dt>Correctos con ayuda</dt><dd>{{r.statistics.correctWithHelp}}</dd></div><div><dt>Intentos incorrectos</dt><dd>{{r.statistics.incorrect}}</dd></div><div><dt>Pendientes de revisión</dt><dd>{{r.statistics.needsReview}}</dd></div><div><dt>No evaluables</dt><dd>{{r.statistics.notEvaluable}}</dd></div><div><dt>Pistas recibidas</dt><dd>{{r.statistics.hints}}</dd></div></dl>

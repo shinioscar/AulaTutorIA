@@ -8,6 +8,7 @@ using AulaTutor.Domain.Identity;
 using AulaTutor.Domain.Tutoring;
 using AulaTutor.Infrastructure.Ai;
 using AulaTutor.Infrastructure.Persistence;
+using AulaTutor.Infrastructure.Lessons;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +17,8 @@ namespace AulaTutor.Infrastructure.Tutoring;
 
 public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current,
     IAiProvider provider, TutoringOrchestrator orchestrator, TimeProvider clock,
-    IOptions<AiProviderOptions> options, ILogger<TutoringService> logger, LearningWorkflow learning) : ITutoringService
+    IOptions<AiProviderOptions> options, ILogger<TutoringService> logger, LearningWorkflow learning,
+    AssignedClassAccess assignedAccess, AssignedClassWorkflow assigned) : ITutoringService
 {
     private static AppException Conflict(string message = "La sesión cambió. Actualiza su estado antes de continuar.") => new(409, message);
     private static AppException Hidden() => new(404, "La tutoría no está disponible.");
@@ -35,7 +37,8 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
     {
         var query = locked ? db.TutoringSessions.FromSqlInterpolated($"SELECT * FROM \"TutoringSessions\" WHERE \"Id\"={id} AND \"StudentId\"={actor.Id} AND \"OrganizationId\"={actor.OrganizationId} FOR UPDATE")
             : db.TutoringSessions.AsNoTracking().Where(s => s.Id == id && s.StudentId == actor.Id && s.OrganizationId == actor.OrganizationId);
-        return await query.SingleOrDefaultAsync(ct) ?? throw Hidden();
+        var session = await query.SingleOrDefaultAsync(ct) ?? throw Hidden();
+        await assignedAccess.RequireReadAsync(session, ct); return session;
     }
     public async Task<TutoringSessionView> CreateAsync(CreateTutoringRequest request, CancellationToken ct)
     {
@@ -47,6 +50,7 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
         var existing = await db.TutoringSessions.SingleOrDefaultAsync(s => s.StudentId == actor.Id && s.CreationKey == request.RequestId, ct);
         if (existing is not null)
         {
+            if (existing.Mode == TutoringMode.AssignedClass) throw Conflict("Esta clave pertenece al inicio de una clase asignada.");
             if (existing.Topic != request.Topic.Trim() || existing.Goal != request.Goal.Trim() || existing.Level != request.Level || existing.DirectReview != request.DirectReview || existing.SourceRecommendationId != request.SourceRecommendationId) throw Conflict("La clave de creación ya se usó con otros datos.");
             await tx.CommitAsync(ct); return await ViewAsync(existing, ct);
         }
@@ -57,6 +61,7 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
         {
             source = await db.LearningRecommendations.SingleOrDefaultAsync(r => r.Id == sourceId && db.TutoringSessions.Any(s => s.Id == r.SessionId && s.StudentId == actor.Id && s.OrganizationId == actor.OrganizationId), ct) ?? throw Hidden();
             var origin = await db.TutoringSessions.SingleAsync(s => s.Id == source.SessionId, ct);
+                await assignedAccess.RequireReadAsync(origin, ct);
             if (origin.State != TutoringState.Completed || request.Goal.Trim() != source.Goal || request.Topic.Trim() != origin.Topic) throw Conflict("La recomendación no corresponde a los datos de la nueva tutoría.");
         }
         var session = new TutoringSession { StudentId = actor.Id, OrganizationId = actor.OrganizationId,
@@ -71,7 +76,7 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
     {
         var actor = await StudentAsync();
         if (page is < 1 or > 10000) throw new AppException(400, "Página no válida.");
-        return await db.TutoringSessions.AsNoTracking().Where(s => s.StudentId == actor.Id && s.OrganizationId == actor.OrganizationId)
+        return await db.TutoringSessions.AsNoTracking().Where(s => s.StudentId == actor.Id && s.OrganizationId == actor.OrganizationId && s.Mode != TutoringMode.AssignedClass)
             .OrderByDescending(s => s.LastActivityAt).ThenBy(s => s.Id).Skip((page - 1) * 50).Take(50)
             .Select(s => new TutoringSessionItem(s.Id, s.Topic, s.Goal, s.State.ToString(), s.CreatedAt, s.LastActivityAt, s.CompletedAt, s.ProviderId, s.ModelId)).ToArrayAsync(ct);
     }
@@ -110,6 +115,7 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
         await using (var tx = await db.Database.BeginTransactionAsync(ct))
         {
             session = await OwnedAsync(id, actor, true, ct);
+            await assignedAccess.RequireWorkAsync(session, ct);
             var input = InputText(request, session);
             var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Action + "\n" + input + (request.ExerciseId is null ? "" : "\n" + request.ExerciseId))));
             turn = (await db.TutoringTurns.SingleOrDefaultAsync(t => t.SessionId == id && t.RequestId == request.RequestId, ct))!;
@@ -156,7 +162,7 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
             var reply = await (LearningOrchestrator.IsLearning(turn.Action)
                 ? learning.GenerateAsync(session, turn, generationDeadline.Token)
                 : orchestrator.GenerateAsync(session, context, turn.Action, request.RequestId, generationDeadline.Token,
-                    await learning.GuidanceAsync(id, generationDeadline.Token))).WaitAsync(generationDeadline.Token);
+                    session.Mode == TutoringMode.AssignedClass ? turn.ContextJson : await learning.GuidanceAsync(id, generationDeadline.Token))).WaitAsync(generationDeadline.Token);
             using var persistenceDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await FinishAsync(id, request.RequestId, actor, lease, reply, null, null, timer.ElapsedMilliseconds, persistenceDeadline.Token);
         }
@@ -184,13 +190,16 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
     {
         db.ChangeTracker.Clear();
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var session = await OwnedAsync(id, actor, true, ct);
+        // Finish must cancel durably even when the student's group relationship was revoked.
+        var session = await db.TutoringSessions.FromSqlInterpolated($"SELECT * FROM \"TutoringSessions\" WHERE \"Id\"={id} AND \"StudentId\"={actor.Id} AND \"OrganizationId\"={actor.OrganizationId} FOR UPDATE").SingleOrDefaultAsync(ct) ?? throw Hidden();
         var turn = await db.TutoringTurns.SingleAsync(t => t.SessionId == id && t.RequestId == requestId, ct);
         if (turn.LeaseToken != lease || turn.State != TutoringTurnState.Pending || session.PendingRequestId != requestId || turn.LeaseExpiresAt <= clock.GetUtcNow())
         { await tx.CommitAsync(ct); return; } // Fencing discards late results after cancel/recovery.
         var allowed = await db.Users.AnyAsync(u => u.Id == actor.Id && u.IsActive && u.OrganizationId == actor.OrganizationId, ct)
             && await db.UserRoles.AnyAsync(u => u.UserId == actor.Id && db.Roles.Any(r => r.Id == u.RoleId && r.Name == RoleNames.Student), ct);
         turn.DurationMs = duration;
+        var academicAllowed = await assignedAccess.CanWorkAsync(session, ct);
+        var accountAllowed = allowed; allowed = allowed && academicAllowed;
         if (!allowed) { turn.State = TutoringTurnState.Cancelled; turn.ErrorCode = "Canceled"; session.PendingRequestId = null; }
         else if (reply is null)
         {
@@ -208,14 +217,15 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
                 db.TutoringMessages.Add(new TutoringMessage { SessionId = id, RequestId = requestId,
                     Sequence = session.NextSequence++, Role = TutoringMessageRole.Tutor, Text = reply.Text,
                     CreatedAt = clock.GetUtcNow(), ProviderId = reply.Result.ProviderId, ModelId = reply.Result.ModelId,
-                    PromptVersion = LearningOrchestrator.IsLearning(turn.Action) ? LearningOrchestrator.PromptVersion : session.PolicyVersion, InputTokens = reply.Result.Usage?.InputTokens, OutputTokens = reply.Result.Usage?.OutputTokens });
+                    PromptVersion = session.Mode == TutoringMode.AssignedClass ? AulaTutor.Application.Lessons.AssignedClassPolicy.Version : LearningOrchestrator.IsLearning(turn.Action) ? LearningOrchestrator.PromptVersion : session.PolicyVersion, InputTokens = reply.Result.Usage?.InputTokens, OutputTokens = reply.Result.Usage?.OutputTokens });
             turn.State = TutoringTurnState.Succeeded; turn.InputTokens = reply.Result.Usage?.InputTokens; turn.OutputTokens = reply.Result.Usage?.OutputTokens;
             session.PendingRequestId = null; if (turn.Action != TutoringAction.FinalReport) { session.Activity = reply.Activity; session.CurrentFocus = reply.Focus; }
         }
         Touch(session); await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         logger.LogInformation("Tutoring call {SessionId} {RequestId} {Provider} {Model} {PolicyVersion} {DurationMs}ms {State} {InputTokens} {OutputTokens}",
-            id, requestId, session.ProviderId, session.ModelId, LearningOrchestrator.IsLearning(turn.Action) ? LearningOrchestrator.PromptVersion : session.PolicyVersion, duration, turn.State, turn.InputTokens, turn.OutputTokens);
-        if (!allowed) throw new AppException(401, "La cuenta ya no tiene acceso activo de estudiante.");
+            id, requestId, session.ProviderId, session.ModelId, session.Mode == TutoringMode.AssignedClass ? AulaTutor.Application.Lessons.AssignedClassPolicy.Version : LearningOrchestrator.IsLearning(turn.Action) ? LearningOrchestrator.PromptVersion : session.PolicyVersion, duration, turn.State, turn.InputTokens, turn.OutputTokens);
+        if (!accountAllowed) throw new AppException(401, "La cuenta ya no tiene acceso activo de estudiante.");
+        if (!academicAllowed) throw new AppException(409, "La relación o disponibilidad de la clase cambió. Se descartó la respuesta tardía y se conserva el intento.");
     }
     public async Task<TutoringSessionView> TransitionAsync(Guid id, string action, long revision, CancellationToken ct)
     {
@@ -223,9 +233,11 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
         if (action is not ("pause" or "resume" or "complete") || revision < 0) throw new AppException(400, "Transición no válida.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var session = await OwnedAsync(id, actor, true, ct);
+        if (action != "pause") await assignedAccess.RequireWorkAsync(session, ct);
         var target = action switch { "pause" => TutoringState.Paused, "resume" => TutoringState.Active, _ => TutoringState.Completed };
         if (session.State == target) { await tx.CommitAsync(ct); return await ViewAsync(session, ct); }
         if (session.State == TutoringState.Completed || session.Revision != revision) throw Conflict();
+        if (action == "complete" && session.Mode == TutoringMode.AssignedClass) await assigned.EnsureCompleteAsync(session, ct);
         if (action == "resume" && session.State != TutoringState.Paused || action == "pause" && session.State != TutoringState.Active) throw Conflict("Esta transición no está permitida en el estado actual.");
         if (session.PendingRequestId is { } pending)
         {
@@ -238,6 +250,20 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
         {
             session.CompletedAt = clock.GetUtcNow();
             session.Summary = TutoringOrchestrator.Summarize(session, await db.TutoringTurns.Where(t => t.SessionId == id).ToArrayAsync(ct));
+            if (session.Mode == TutoringMode.AssignedClass)
+            {
+                var v = await db.LessonVersions.AsNoTracking().SingleAsync(v => v.Id == session.LessonVersionId, ct);
+                var stats = await learning.StatisticsAsync(id, ct);
+                var summary = $"Clase entregada: {session.Topic}. Versión {v.Number} ({v.Id}). Huella SHA-256: {v.ContentHash}. " +
+                    $"Se registraron {stats.Attempts} intentos. {stats.NeedsReview} respuestas requieren revisión humana. " +
+                    "Las actividades obligatorias cumplen la regla de entrega del servidor; esto no verifica dominio ni produce una nota oficial.";
+                session.Summary = summary;
+                db.LearningReports.Add(new() { SessionId = id, Version = await db.LearningReports.CountAsync(r => r.SessionId == id, ct) + 1,
+                    EvidenceRevision = session.EvidenceRevision, StatisticsJson = LearningJson.Write(stats),
+                    ContentJson = LearningJson.Write(new ReportContent(summary, [], ["Dominio académico y respuestas abiertas no verificados."],
+                        [new RecommendationProposal("Revisa tus intentos y consulta al docente si necesitas contraste académico.", [])])),
+                    ProviderId = "Application", ModelId = "deterministic", PromptVersion = "assigned-summary-v1", GeneratedAt = clock.GetUtcNow() });
+            }
         }
         Touch(session); await db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return await ViewAsync(session, ct);
     }
@@ -256,6 +282,7 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
     {
         var messages = await db.TutoringMessages.AsNoTracking().Where(m => m.SessionId == s.Id).OrderBy(m => m.Sequence).ToArrayAsync(ct);
         var turns = await db.TutoringTurns.AsNoTracking().Where(t => t.SessionId == s.Id).OrderBy(t => t.CreatedAt).ThenBy(t => t.RequestId).ToArrayAsync(ct);
+        var assignedView = await assigned.ViewAsync(s, ct);
         return new(s.Id, s.Topic, s.Goal, s.Level, s.DirectReview, s.State.ToString(), s.Revision, s.CreatedAt, s.LastActivityAt, s.CompletedAt,
             s.ProviderId, s.ModelId, s.PolicyVersion, s.Activity, s.CurrentFocus,
             messages.Select(m => new TutoringMessageView(m.Id, m.RequestId, m.Sequence, m.Role.ToString(), m.Text, m.CreatedAt,
@@ -269,8 +296,8 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
                     _ => "No se completó la respuesta. El intento está guardado." };
                 return new TutoringTurnView(t.RequestId, t.Action.ToString(), t.State.ToString(), t.Attempts,
                     t.State == TutoringTurnState.Pending && !expired,
-                    (t.State == TutoringTurnState.Failed || expired) && t.Attempts < 3 && (s.State == TutoringState.Active || s.State == TutoringState.Completed && t.Action == TutoringAction.FinalReport) && t.RetryNotBefore.GetValueOrDefault() <= clock.GetUtcNow(),
+                    (t.State == TutoringTurnState.Failed || expired) && t.Attempts < 3 && (s.State == TutoringState.Active || s.State == TutoringState.Completed && t.Action == TutoringAction.FinalReport) && t.RetryNotBefore.GetValueOrDefault() <= clock.GetUtcNow() && (assignedView?.Class.Available ?? true),
                     code, error, t.RetryNotBefore, t.DurationMs, t.ExerciseId, t.RequestText);
-            }).ToArray(), s.PendingRequestId, s.Summary, await learning.ViewAsync(s, ct));
+            }).ToArray(), s.PendingRequestId, s.Summary, await learning.ViewAsync(s, ct), s.Mode.ToString(), assignedView);
     }
 }

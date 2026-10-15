@@ -6,6 +6,7 @@ public enum TutoringState { Created, Active, Paused, Completed }
 public enum TutoringAction { Start, Message, Hint, Simplify, DiagnosticQuestion, AnalyzeDiagnosis, GeneratePlan, ActivatePlan, SubmitAttempt, NextActivity, GenerateExercise, FinalReport }
 public enum TutoringTurnState { Pending, Succeeded, Failed, Cancelled }
 public enum TutoringMessageRole { Student, Tutor }
+public enum TutoringMode { Private, Personalized, AssignedClass }
 
 public sealed class TutoringSession
 {
@@ -33,6 +34,10 @@ public sealed class TutoringSession
     public long EvidenceRevision { get; set; }
     public Guid? SourceRecommendationId { get; set; }
     public Guid? SourceReportId { get; set; }
+    public TutoringMode Mode { get; set; }
+    public Guid? AssignmentId { get; set; }
+    public Guid? LessonVersionId { get; set; }
+    public int AssignedActivity { get; set; }
 }
 
 public sealed class TutoringTurn

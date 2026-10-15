@@ -2,6 +2,10 @@
 
 Contrato heredado conservado. La Iteración 4 amplía acciones, LearningView,
 reportes/compartición y refuerzo según [LEARNING_HTTP.md](LEARNING_HTTP.md).
+Iteración 6 reutiliza estas rutas para Mode=AssignedClass, con vínculo a versión y
+validación adicional de relación/disponibilidad. El listado privado excluye clases;
+detalle en [ASSIGNMENTS_HTTP.md](ASSIGNMENTS_HTTP.md). Sus requisitos obligatorios
+y reporte local de cierre no cambian el contrato de la tutoría privada.
 
 Base: `/api`, HTTPS y cookies del mismo origen. Todas las rutas exigen sesión
 activa; todas las escrituras exigen `X-XSRF-TOKEN` obtenido de `/api/auth/csrf`.

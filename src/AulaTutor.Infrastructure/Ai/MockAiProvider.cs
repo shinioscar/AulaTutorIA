@@ -66,6 +66,19 @@ public sealed class MockAiProvider : IAiProvider
             if (request.Messages.Last().Text.StartsWith("{", StringComparison.Ordinal))
             {
                 using var guidance = JsonDocument.Parse(request.Messages.Last().Text);
+                if (guidance.RootElement.TryGetProperty("approvedAcademic", out var academic))
+                {
+                    var exercise = academic.GetProperty("exercise");
+                    var prompt = exercise.ValueKind == JsonValueKind.Null ? "Actividades recorridas; revisa tus entregas antes de finalizar." : exercise.GetProperty("prompt").GetString();
+                    var assignedText = request.UseCase switch
+                    {
+                        "tutoring_start" or "tutoring_review" => "[Clase asignada Mock, sin comprensión semántica]\n\n" + academic.GetProperty("sectionContent").GetString() + "\n\n" + prompt + "\n\nResponde en la tarjeta de actividad aprobada.",
+                        "tutoring_hint" => "[Clase asignada Mock] Pista de demostración: compara un caso con varios ejemplos y explica tu razonamiento. Conservamos la consigna aprobada; este guion no deduce la respuesta.",
+                        "tutoring_simplify" => "[Clase asignada Mock] Trabaja una idea cada vez. Lee la sección y vuelve a esta consigna: " + prompt,
+                        _ => "[Clase asignada Mock] Duda registrada. La actividad aprobada sigue siendo: " + prompt + " Este guion conserva el flujo; no interpreta tu respuesta ni modifica la clase."
+                    };
+                    return Task.FromResult(new AiChatResult(assignedText, ProviderId, ModelId, null, null, "stop"));
+                }
                 if (guidance.RootElement.TryGetProperty("simulation", out var flag) && flag.ValueKind == JsonValueKind.True)
                 {
                     var g = guidance.RootElement;

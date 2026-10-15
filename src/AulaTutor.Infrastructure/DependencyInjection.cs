@@ -46,6 +46,9 @@ public static class DependencyInjection
         services.AddScoped<ITutoringService, TutoringService>();
         services.AddScoped<LessonOrchestrator>();
         services.AddScoped<ILessonService, LessonService>();
+        services.AddScoped<AssignedClassAccess>();
+        services.AddScoped<AssignedClassWorkflow>();
+        services.AddScoped<IAssignmentService, AssignmentService>();
         return services;
     }
 }

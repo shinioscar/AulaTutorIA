@@ -24,6 +24,11 @@ public sealed class LearningExercise
     public bool Completed { get; set; }
     public Guid OriginRequestId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public Guid? LessonVersionId { get; set; }
+    public string? ApprovedExerciseId { get; set; }
+    public string? ApprovedObjectiveId { get; set; }
+    public bool Required { get; set; }
+    public bool IsComplementary { get; set; }
 }
 
 public sealed class ExerciseAttempt

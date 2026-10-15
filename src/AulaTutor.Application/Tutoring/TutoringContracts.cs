@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using AulaTutor.Application.Ai;
+using AulaTutor.Application.Lessons;
 
 namespace AulaTutor.Application.Tutoring;
 
@@ -26,7 +27,7 @@ public sealed record TutoringSessionView(Guid Id, string Topic, string Goal, str
     DateTimeOffset LastActivityAt, DateTimeOffset? CompletedAt, string ProviderId,
     string ModelId, string PolicyVersion, string Activity, string CurrentFocus,
     TutoringMessageView[] Messages, TutoringTurnView[] Turns, Guid? PendingRequestId,
-    string? Summary, LearningView? Learning = null);
+    string? Summary, LearningView? Learning = null, string Mode = "Private", AssignedSessionView? AssignedClass = null);
 public sealed record TutoringReply(string Text, string Activity, string Focus, AiChatResult Result, string? LearningPayload = null);
 public interface ITutoringService
 {

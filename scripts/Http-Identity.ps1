@@ -212,6 +212,7 @@ try {
     Assert-Status $reinforceReplay 200 'Learning reinforcement replay'
     if (($reinforceResponse.Content | ConvertFrom-Json).id -ne ($reinforceReplay.Content | ConvertFrom-Json).id) { throw 'Reinforcement duplicated session.' }
     . "$PSScriptRoot/Http-Lessons.ps1"
+    . "$PSScriptRoot/Http-Assignments.ps1"
     Assert-Status (Invoke-Api $student.Session POST '/api/auth/logout' @{}) 204 'Logout'
     Assert-Status (Invoke-Api $student.Session GET '/api/me') 401 'Logged-out access denied'
     }

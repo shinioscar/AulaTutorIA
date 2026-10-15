@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { LessonService, LessonItem, emptyLesson, lessonState } from './lesson.service';
 @Component({selector:'app-lessons-page',imports:[FormsModule,RouterLink,DatePipe],styleUrl:'./lessons.css',template:`
-<section><h1>Mis clases</h1><p>Diseña, prueba y revisa tu contenido antes de aprobar una versión. La asignación a grupos estará disponible en una iteración posterior.</p>
+<section><h1>Mis clases</h1><p>Diseña, prueba y revisa tu contenido antes de aprobar una versión.</p><a routerLink="/teacher/assignments">Asignar clases publicadas a mis grupos</a>
 @if(error()){<p role="alert" class="notice danger">{{error()}}</p>}
 <form (ngSubmit)="create()"><h2>Crear clase</h2><p class="note">Puedes guardar un borrador incompleto y continuar después.</p>
 <label for="new-title">Título</label><input id="new-title" name="title" [(ngModel)]="title" maxlength="160"/>

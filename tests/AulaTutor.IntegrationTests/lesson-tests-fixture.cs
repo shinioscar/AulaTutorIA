@@ -34,7 +34,7 @@ public sealed partial class LessonTests : IAsyncLifetime
         public string ProviderId=>mock.ProviderId;public AiCapabilities Capabilities=>mock.Capabilities;
         public Task<AiHealthResult> CheckHealthAsync(CancellationToken ct)=>Task.FromResult(new AiHealthResult(true,"Mock",HealthModel));
         public async Task<AiChatResult> GenerateAsync(AiChatRequest request,CancellationToken ct)
-        {Interlocked.Increment(ref Calls);Requests.Add(request);var hold=Hold;var failure=Failure;Started.TrySetResult();if(hold)await Release.Task.WaitAsync(ct);if(failure is not null)throw failure;return ResponseOverride is null ? await mock.GenerateAsync(request,ct) : new AiChatResult(ResponseOverride,ProviderId,MockAiProvider.ModelId,null,null,"stop");}
+        {Interlocked.Increment(ref Calls);lock(Requests)Requests.Add(request);var hold=Hold;var failure=Failure;Started.TrySetResult();if(hold)await Release.Task.WaitAsync(ct);if(failure is not null)throw failure;return ResponseOverride is null ? await mock.GenerateAsync(request,ct) : new AiChatResult(ResponseOverride,ProviderId,MockAiProvider.ModelId,null,null,"stop");}
     }
     public async Task InitializeAsync()
     {
