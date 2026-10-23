@@ -476,3 +476,23 @@ Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio
 políticas de retención/compartición. Antes de producción: TLS confiable, mismo
 origen/proxy definido, cifrado de claves Linux en reposo y usuario PostgreSQL de
 mínimo privilegio. El piloto sigue usando datos ficticios.
+
+## UI-1 — Creación docente
+
+La biblioteca `/teacher/lessons` ofrece entradas independientes:
+`/teacher/lessons/new/manual` y `/teacher/lessons/new/ai`.
+Ambas conservan el constructor, las propuestas, simulaciones y versiones existentes.
+La búsqueda y el filtro se aplican a la página de hasta 50 clases cargada;
+no representan una búsqueda global ni contadores de toda la biblioteca.
+
+La creación manual guarda información incompleta; la IA guarda primero el borrador
+y sus indicaciones y después solicita una propuesta explícita. Un fallo de generación
+permite consultar el borrador conservado. Aplicar, aprobar y publicar siguen siendo
+acciones separadas. QA y evidencias: [UI_1](docs/iterations/UI_1.md).
+
+Antes de publicar código, ejecutar `node scripts/check-publish-safety.mjs` desde
+la raíz: revisa rutas versionadas, exclusión de `.env`, secretos configurados y
+objetos de texto del historial completo. No muestra coincidencias sensibles.
+No versionar `.env`, certificados, copias de base de datos, logs ni estados privados.
+`.env.example` es la plantilla pública; configurar valores privados solo localmente.
+El repositorio indicado es [AulaTutorIA](https://github.com/shinioscar/AulaTutorIA).

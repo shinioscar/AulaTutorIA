@@ -9,6 +9,8 @@ export const routes: Routes = [
   {path:'classes/:id',canActivate:[studentGuard],loadComponent:()=>import('./lessons/student-classes-page').then(m=>m.StudentClassesPage)},
   {path:'classes',canActivate:[studentGuard],loadComponent:()=>import('./lessons/student-classes-page').then(m=>m.StudentClassesPage)},
   {path:'teacher/lessons/:id/simulations/:simulationId',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lesson-simulation').then(m=>m.LessonSimulation)},
+  {path:'teacher/lessons/new/manual',canActivate:[teacherGuard],data:{mode:'manual'},loadComponent:()=>import('./lessons/lesson-create').then(m=>m.LessonCreate)},
+  {path:'teacher/lessons/new/ai',canActivate:[teacherGuard],data:{mode:'ai'},loadComponent:()=>import('./lessons/lesson-create').then(m=>m.LessonCreate)},
   {path:'teacher/lessons/:id',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lesson-editor').then(m=>m.LessonEditor)},
   {path:'teacher/lessons',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lessons-page').then(m=>m.LessonsPage)},
   {path:'teacher/reports',canActivate:[signedInGuard],loadComponent:()=>import('./tutoring/shared-reports-page').then(m=>m.SharedReportsPage)},

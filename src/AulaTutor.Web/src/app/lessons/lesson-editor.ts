@@ -11,16 +11,17 @@ import { aiErrorMessage } from '../ai/ai-error-message';
 @Component({selector:'app-lesson-editor',imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LessonSummary],templateUrl:'./lesson-editor.html',styleUrl:'./lessons.css'})
 export class LessonEditor {
   private readonly service=inject(LessonService);private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);private readonly destroy=inject(DestroyRef);
-  readonly lesson=signal<LessonView|null>(null);readonly busy=signal(false);readonly error=signal('');readonly notice=signal('');readonly dirty=signal(false);readonly tab=signal('content');readonly version=signal<LessonVersion|null>(null);readonly state=lessonState;
+  readonly lesson=signal<LessonView|null>(null);readonly busy=signal(false);readonly error=signal('');readonly notice=signal('');readonly dirty=signal(false);readonly tab=signal('basic');readonly version=signal<LessonVersion|null>(null);readonly state=lessonState;
   content:LessonContent=emptyLesson();prompt='';designAction='Plan';private id='';private polling=false;private readonly timer:ReturnType<typeof setInterval>;
   readonly generating=signal(false);private designRequest:Subscription|null=null;
+  readonly generationNotice=signal(this.route.snapshot.queryParamMap.get('generation')==='check');
   private mutationEpoch=0;
   readonly actionLabel=lessonAction;
   readonly aiError=aiErrorMessage;readonly now=signal(Date.now());
-  constructor(){this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe(p=>{this.id=p.get('id')??'';this.dirty.set(false);this.version.set(null);this.refresh();});this.timer=setInterval(()=>{this.now.set(Date.now());if((this.generating()||this.lesson()?.operations.some(o=>o.isGenerating))&&!this.polling)this.poll();},2000);this.destroy.onDestroy(()=>clearInterval(this.timer));}
+  constructor(){if(this.route.snapshot.queryParamMap.get('mode')==='ai')this.tab.set('design');this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe(p=>{this.id=p.get('id')??'';this.dirty.set(false);this.version.set(null);this.refresh();});this.timer=setInterval(()=>{this.now.set(Date.now());if((this.generating()||this.lesson()?.operations.some(o=>o.isGenerating))&&!this.polling)this.poll();},2000);this.destroy.onDestroy(()=>clearInterval(this.timer));}
   editable(){return ['Draft','Simulation','InReview'].includes(this.lesson()?.state??'');}
   changed(){this.dirty.set(true);this.notice.set('Cambios sin guardar');}
-  private accept(l:LessonView,replace=false){if(this.lesson()?.id===l.id&&(this.lesson()?.revision??-1)>l.revision)return;this.lesson.set(l);if(replace||!this.dirty()){this.content=structuredClone(l.content);this.dirty.set(false);}}
+  private accept(l:LessonView,replace=false){if(this.lesson()?.id===l.id&&(this.lesson()?.revision??-1)>l.revision)return;if(!this.lesson()&&this.route.snapshot.queryParamMap.get('mode')==='ai')this.prompt=l.content.instructions;this.lesson.set(l);if(replace||!this.dirty()){this.content=structuredClone(l.content);this.dirty.set(false);}}
   private run(obs:Observable<LessonView>,notice:string,replace=false,mutation=true){if(this.busy())return;const epoch=mutation?++this.mutationEpoch:this.mutationEpoch;this.busy.set(true);this.error.set('');obs.pipe(takeUntilDestroyed(this.destroy)).subscribe({next:l=>{if(mutation){this.mutationEpoch++;this.accept(l,replace);}else if(epoch===this.mutationEpoch)this.accept(l,replace);this.busy.set(false);this.notice.set(notice);},error:e=>{if(mutation)this.mutationEpoch++;this.busy.set(false);this.error.set(e.error?.title??'No se completó la operación. Conservamos tus cambios; consulta el estado guardado.');}});}
   refresh(){this.run(this.service.get(this.id),'Estado guardado actualizado.',false,false);}
   discardLocal(){this.dirty.set(false);this.refresh();}

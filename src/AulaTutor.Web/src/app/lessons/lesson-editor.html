@@ -1,41 +1,43 @@
 <a routerLink="/teacher/lessons">← Mis clases</a>
 @if(error()){<p role="alert" class="notice danger">{{error()}}</p>}
 <p role="status">{{busy()?'Procesando…':notice()}}</p>
+@if(generationNotice()){<p role="status" class="notice warning">La generación no se confirmó. Tu borrador y las indicaciones están guardados. Revisa el estado antes de volver a solicitar. <button class="secondary" (click)="generationNotice.set(false)">Entendido</button></p>}
 @if(lesson();as l){
 <section class="lesson-header"><div><h1>{{l.content.title || 'Borrador sin título'}}</h1><p>{{state(l.state)}} · Revisión {{l.draftRevision}}</p></div><div class="actions"><button class="secondary" (click)="refresh()" [disabled]="busy()">Consultar estado</button>@if(editable()){<button (click)="save()" [disabled]="busy()||!dirty()">Guardar borrador</button>}</div></section>
 @if(dirty()){<p class="notice warning">Tienes cambios sin guardar. Guarda antes de diseñar, simular o revisar. <button type="button" class="secondary" (click)="discardLocal()" [disabled]="busy()">Descartar cambios locales y recargar</button></p>}
-<nav aria-label="Constructor de clase" class="actions"><button class="secondary" (click)="tab.set('content')" [attr.aria-pressed]="tab()==='content'">Contenido</button><button class="secondary" (click)="tab.set('design')" [attr.aria-pressed]="tab()==='design'">Diseñar con IA</button><button class="secondary" (click)="tab.set('review')" [attr.aria-pressed]="tab()==='review'">Revisión y versiones</button></nav>
-@if(tab()==='content'){
-<form (ngSubmit)="save()"><fieldset [disabled]="!editable()||busy()"><legend>Datos generales</legend><div class="field-grid">
+<nav aria-label="Pasos del editor" class="actions editor-steps"><button class="secondary" (click)="tab.set('basic')" [attr.aria-current]="tab()==='basic'?'step':null">1. Información básica</button><button class="secondary" (click)="tab.set('content')" [attr.aria-current]="tab()==='content'?'step':null">2. Contenido</button><button class="secondary" (click)="tab.set('review')" [attr.aria-current]="tab()==='review'?'step':null">3. Revisar y publicar</button></nav>
+<details class="ai-adjustments"><summary>Ajustes con inteligencia artificial</summary><p>Refina el plan, los ejercicios o las rúbricas de tu borrador.</p><button class="secondary" (click)="tab.set('design')" [attr.aria-pressed]="tab()==='design'">Diseñar con IA</button></details>
+@if(tab()==='basic'||tab()==='content'){
+<form (ngSubmit)="save()"><fieldset [disabled]="!editable()||busy()"><legend>Tu borrador</legend>@if(tab()==='basic'){<div class="field-grid">
 <div><label for="title">Título</label><input id="title" name="title" maxlength="160" [(ngModel)]="content.title" (ngModelChange)="changed()"/></div>
 <div><label for="subject">Asignatura o tema</label><input id="subject" name="subject" maxlength="160" [(ngModel)]="content.subject" (ngModelChange)="changed()"/></div>
-<div><label for="level">Nivel académico</label><input id="level" name="level" maxlength="100" [(ngModel)]="content.level" (ngModelChange)="changed()"/></div>
-<div><label for="duration">Duración orientativa (minutos)</label><input id="duration" name="duration" type="number" min="0" max="480" [(ngModel)]="content.durationMinutes" (ngModelChange)="changed()"/></div></div>
+</div>
 <label for="description">Descripción</label><textarea id="description" name="description" maxlength="1000" [(ngModel)]="content.description" (ngModelChange)="changed()"></textarea>
-<label for="prerequisites">Conocimientos previos recomendados</label><textarea id="prerequisites" name="prerequisites" maxlength="1000" [(ngModel)]="content.prerequisites" (ngModelChange)="changed()"></textarea>
+<details><summary>Más opciones</summary><div><label for="level">Nivel académico</label><input id="level" name="level" maxlength="100" [(ngModel)]="content.level" (ngModelChange)="changed()"/></div>
+<div><label for="duration">Duración orientativa (minutos)</label><input id="duration" name="duration" type="number" min="0" max="480" [(ngModel)]="content.durationMinutes" (ngModelChange)="changed()"/></div><label for="prerequisites">Conocimientos previos recomendados</label><textarea id="prerequisites" name="prerequisites" maxlength="1000" [(ngModel)]="content.prerequisites" (ngModelChange)="changed()"></textarea>
 <label for="methodology">Metodología y reglas pedagógicas</label><textarea id="methodology" name="methodology" maxlength="1500" [(ngModel)]="content.methodology" (ngModelChange)="changed()"></textarea>
 <label for="instructions">Instrucciones adicionales</label><textarea id="instructions" name="instructions" maxlength="1500" [(ngModel)]="content.instructions" (ngModelChange)="changed()"></textarea>
-<h2>Objetivos de aprendizaje</h2>@for(o of content.objectives;track o.id){<label [for]="o.id">Objetivo {{ $index+1 }} · {{o.id}}</label><textarea [id]="o.id" [name]="o.id" maxlength="500" [(ngModel)]="o.text" (ngModelChange)="changed()"></textarea><button type="button" class="secondary" (click)="removeObjective(o.id)">Eliminar objetivo {{$index+1}}</button>}
+</details>}@if(tab()==='content'){<h2>Objetivos de aprendizaje</h2>@for(o of content.objectives;track o.id){<label [for]="o.id">Objetivo {{ $index+1 }}</label><textarea [id]="o.id" [name]="o.id" maxlength="500" [(ngModel)]="o.text" (ngModelChange)="changed()"></textarea><button type="button" class="secondary" (click)="removeObjective(o.id)">Eliminar objetivo {{$index+1}}</button>}
 <button type="button" class="secondary" (click)="addObjective()" [disabled]="content.objectives.length>=12">Añadir objetivo</button>
 <h2>Secciones y actividades</h2>@for(s of content.sections;track s.id;let si=$index){<article class="section-editor"><h3>Sección {{si+1}}</h3><div class="actions"><button type="button" class="secondary" (click)="move(si,-1)" [disabled]="si===0">Subir sección {{si+1}}</button><button type="button" class="secondary" (click)="move(si,1)" [disabled]="si===content.sections.length-1">Bajar sección {{si+1}}</button><button type="button" class="secondary" (click)="removeSection(si)">Eliminar sección {{si+1}}</button></div>
 <label [for]="s.id+'-title'">Título de sección</label><input [id]="s.id+'-title'" [name]="s.id+'-title'" maxlength="160" [(ngModel)]="s.title" (ngModelChange)="changed()"/>
 <label [for]="s.id+'-content'">Contenido</label><textarea [id]="s.id+'-content'" [name]="s.id+'-content'" maxlength="2500" rows="5" [(ngModel)]="s.content" (ngModelChange)="changed()"></textarea>
-@for(e of s.exercises;track e.id;let ei=$index){<details class="exercise-editor" open><summary>Actividad {{ei+1}} · {{e.id}}</summary>
-<label [for]="e.id+'-objective'">Objetivo asociado</label><select [id]="e.id+'-objective'" [name]="e.id+'-objective'" [(ngModel)]="e.objectiveId" (ngModelChange)="changed()">@for(o of content.objectives;track o.id){<option [value]="o.id">{{o.text || o.id}}</option>}</select>
+@for(e of s.exercises;track e.id;let ei=$index){<details class="exercise-editor"><summary>Actividad {{ei+1}}</summary>
+<label [for]="e.id+'-objective'">Objetivo asociado</label><select [id]="e.id+'-objective'" [name]="e.id+'-objective'" [(ngModel)]="e.objectiveId" (ngModelChange)="changed()">@for(o of content.objectives;track o.id){<option [value]="o.id">{{o.text || 'Objetivo sin descripción'}}</option>}</select>
 <p class="note">Objetivo seleccionado: {{objectiveText(e.objectiveId)}}</p>
 <label [for]="e.id+'-kind'">Tipo</label><select [id]="e.id+'-kind'" [name]="e.id+'-kind'" [(ngModel)]="e.activity.kind" (ngModelChange)="changeKind(e)"><option value="MultipleChoice">Opción múltiple</option><option value="TrueFalse">Verdadero/falso</option><option value="ShortAnswer">Respuesta corta</option><option value="OpenResponse">Respuesta abierta</option><option value="Code">Código o SQL (sin ejecución)</option></select>
 <label [for]="e.id+'-required'"><input [id]="e.id+'-required'" [name]="e.id+'-required'" type="checkbox" [(ngModel)]="e.required" (ngModelChange)="changed()"/> Actividad obligatoria</label>
 <label [for]="e.id+'-prompt'">Consigna</label><textarea [id]="e.id+'-prompt'" [name]="e.id+'-prompt'" maxlength="1500" [(ngModel)]="e.activity.prompt" (ngModelChange)="changed()"></textarea>
 @if(e.activity.kind==='MultipleChoice'){<label [for]="e.id+'-options'">Opciones (una por línea, 2–5)</label><textarea [id]="e.id+'-options'" [name]="e.id+'-options'" [ngModel]="e.activity.options.join('\n')" (ngModelChange)="setOptions(e,$event)"></textarea>}
 @if(['MultipleChoice','TrueFalse','ShortAnswer'].includes(e.activity.kind)){<label [for]="e.id+'-answers'">Alternativas aceptadas privadas (una por línea)</label><textarea [id]="e.id+'-answers'" [name]="e.id+'-answers'" [ngModel]="e.activity.acceptedAnswers.join('\n')" (ngModelChange)="setAnswers(e,$event)"></textarea>}
-<label [for]="e.id+'-rubric'">Descripción de rúbrica</label><textarea [id]="e.id+'-rubric'" [name]="e.id+'-rubric'" maxlength="600" [(ngModel)]="e.activity.rubric" (ngModelChange)="changed()"></textarea>
+<details><summary>Rúbrica, solución y pistas</summary><label [for]="e.id+'-rubric'">Descripción de rúbrica</label><textarea [id]="e.id+'-rubric'" [name]="e.id+'-rubric'" maxlength="600" [(ngModel)]="e.activity.rubric" (ngModelChange)="changed()"></textarea>
 <label [for]="e.id+'-criteria'">Criterios privados (uno por línea, máximo 6)</label><textarea [id]="e.id+'-criteria'" [name]="e.id+'-criteria'" [ngModel]="e.rubric.criteria.join('\n')" (ngModelChange)="setCriteria(e,$event)"></textarea>
 <label [for]="e.id+'-reference'">Solución de referencia privada</label><textarea [id]="e.id+'-reference'" [name]="e.id+'-reference'" maxlength="1500" [(ngModel)]="e.rubric.referenceSolution" (ngModelChange)="changed()"></textarea>
 <label [for]="e.id+'-hints'">Reglas para ofrecer pistas</label><textarea [id]="e.id+'-hints'" [name]="e.id+'-hints'" maxlength="600" [(ngModel)]="e.rubric.hintRules" (ngModelChange)="changed()"></textarea>
-<button type="button" class="secondary" (click)="s.exercises.splice(ei,1);changed()">Eliminar actividad {{ei+1}}</button></details>}
+</details><button type="button" class="secondary" (click)="s.exercises.splice(ei,1);changed()">Eliminar actividad {{ei+1}}</button></details>}
 <button type="button" class="secondary" (click)="addExercise(si)" [disabled]="s.exercises.length>=8">Añadir actividad a sección {{si+1}}</button></article>}
 <button type="button" class="secondary" (click)="addSection()" [disabled]="content.sections.length>=12">Añadir sección</button>
-</fieldset>@if(editable()){<button type="submit" [disabled]="busy()||!dirty()">Guardar borrador</button>}</form>
+}</fieldset>@if(editable()){<button type="submit" [disabled]="busy()||!dirty()">Guardar cambios</button>}</form>
 }
 @if(tab()==='design'){
 <section><h2>Conversación de diseño con IA</h2><p>Las respuestas son propuestas. Solo «Aplicar propuesta» cambia el borrador. El proveedor puede consumir cuota; cada solicitud es explícita.</p>

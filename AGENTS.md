@@ -4,9 +4,11 @@
 
 - Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **Iteración 8**, autorizada por encargo explícito: resiliencia,
+- Último encargo: **UI-1**, UX docente y creación simplificada, autorizado por nuevo
+  documento. Completada: UI_1.md; 290 pruebas/191 HTTP/25 E2E. GitHub autorizado, sin secretos.
+- Iteración 8, autorizada por encargo explícito: resiliencia,
   cuotas persistentes, auditoría, seguridad, concurrencia y pruebas integrales.
-  Completada y verificada; cierre en ITERATION_8.md. No avanzar a 9 ni UI-1.
+  Completada y verificada; cierre en ITERATION_8.md. UI-1 autorizada por nuevo encargo; no avanzar a 9 ni IA-1.
   Cero llamadas reales a proveedores durante QA; contraseña mínima cinco intacta.
 - Cierre previo: **Iteración 7**, supervisión docente de clases asignadas, revisión
   de evidencias, feedback e historial humano, métricas y atención explicable.
@@ -397,12 +399,13 @@
 - /api/health conserva iteration=1 por contrato heredado; liveness/configuración IA,
   sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1–4.
   Los endpoints nuevos deben exigir autorización; nunca diagnóstico IA público.
-- Git main, sin remoto. Commit solo al pasar verificaciones; no push sin autorización.
+- Git main, origin https://github.com/shinioscar/AulaTutorIA.git. Commit solo tras
+  verificaciones; publicación inicial autorizada en UI-1, sin secretos.
 
 ## Pendientes y continuidad
 
 - Iteración 8 completada (ITERATION_8.md); preservar tutoría privada y
-  planes personales. No avanzar a 9/UI-1 ni declarar preparado el piloto real.
+  planes personales. UI-1 autorizada por nuevo encargo; no avanzar a 9/IA-1 ni declarar preparado el piloto real.
 - Remediación de intentos agotados, revisión curricular, resumen grupal IA con
   anonimización y paginación/medición con grupos grandes siguen pendientes explícitos.
 - Pendientes documentados: confirmación email, recuperación/MFA, invitaciones,

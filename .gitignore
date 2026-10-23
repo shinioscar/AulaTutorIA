@@ -28,3 +28,15 @@ coverage/
 *.suo
 Thumbs.db
 .DS_Store
+
+# Private backups, exports and signing material
+*.dump
+*.backup
+*.p12
+*.p8
+*.jks
+*.keystore
+*.bak
+backups/
+.pgpass
+.pg_service.conf
