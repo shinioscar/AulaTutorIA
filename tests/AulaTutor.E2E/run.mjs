@@ -3,6 +3,9 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import { academicPilot } from './academic-pilot.mjs';
+const suiteStarted=performance.now();
+const requestMetrics=[];
 const root = path.resolve(import.meta.dirname, '../..');
 const temporary = path.join(root, '.cache/e2e-temp'); await fs.mkdir(temporary, { recursive: true });
 process.env.TEMP = temporary; process.env.TMP = temporary;
@@ -11,16 +14,18 @@ const { chromium } = require(process.env.AULATUTOR_PLAYWRIGHT_MODULE || 'playwri
 const qa = JSON.parse(await fs.readFile(path.join(root, '.cache/http-qa.json'), 'utf8'));
 assert.match(qa.database, /^aulatutor_http_[a-f0-9]{32}$/);
 const origin = 'https://localhost:4200';
-const evidence = path.join(root, 'docs/iterations/evidence-ia-2'); await fs.mkdir(evidence, { recursive: true });
+const evidence = path.join(root, 'docs/iterations/evidence-9'); await fs.mkdir(evidence, { recursive: true });
 const results = []; const pageErrors = []; let step = 'startup'; let browser, lastPage;
-await fs.writeFile(path.join(root, 'artifacts/ia-2-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
+await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
 const generationTimes = new WeakMap();
 async function rateLimit(page) {
   const times = (generationTimes.get(page) || []).filter(t => Date.now() - t < 61000);
   if (times.length >= 5) await new Promise(resolve => setTimeout(resolve, Math.max(0, times[0] + 61000 - Date.now())));
   generationTimes.set(page, [...times.filter(t => Date.now() - t < 61000), Date.now()]);
 }
-async function check(name, action) { step = name; console.log('E2E: ' + name); await action(); results.push({ name, passed: true }); }
+async function check(name, action) { step = name; console.log('E2E: ' + name); const started=performance.now();await action(); results.push({ name, passed: true, elapsedMs:performance.now()-started }); }
+function metric(method,url,status,started){requestMetrics.push({method,route:new URL(url,origin).pathname.replace(/[a-f0-9-]{36}/g,'{id}'),status,elapsedMs:performance.now()-started});}
+function measuredRequests(){const groups=new Map();for(const r of requestMetrics){const key=r.method+' '+r.route;groups.set(key,[...(groups.get(key)||[]),r]);}return [...groups].map(([route,rows])=>{const times=rows.map(r=>r.elapsedMs).sort((a,b)=>a-b),p=q=>times[Math.ceil(q*times.length)-1];return {route,n:rows.length,success:rows.filter(r=>r.status<400).length,errors:rows.filter(r=>r.status>=400).length,p50Ms:rows.length>=20?p(.5):null,p95Ms:rows.length>=20?p(.95):null,minMs:times[0],maxMs:times.at(-1)};});}
 async function login(email) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage(); page.setDefaultTimeout(20000); page.on('dialog', d => d.accept());
@@ -32,16 +37,19 @@ async function login(email) {
 }
 async function api(context, method, url, data) {
   const csrf = await (await context.request.get(origin + '/api/auth/csrf')).json();
+  const started=performance.now();
   const response = await context.request.fetch(origin + url, { method, data, headers: { 'X-XSRF-TOKEN': csrf.requestToken } });
+  metric(method,url,response.status(),started);
   assert.ok(response.ok(), `${method} ${url.replace(/[a-f0-9-]{36}/g,'{id}')} status ${response.status()}`);
-  return response.status() === 204 ? null : response.json();
+  const body=await response.text();return body?JSON.parse(body):null;
 }
 async function mutation(page, name, pattern) {
   lastPage = page;
   if (pattern.test('/messages')) await rateLimit(page);
+  const started=performance.now();
   const [r] = await Promise.all([page.waitForResponse(r => r.request().method() !== 'GET' && pattern.test(r.url())),
     page.getByRole('button', { name, exact: true }).click()]);
-  assert.ok(r.ok(), `${name}: ${r.status()}`); return r.json().catch(() => null);
+  metric(r.request().method(),r.url(),r.status(),started);assert.ok(r.ok(), `${name}: ${r.status()}`); return r.json().catch(() => null);
 }
 async function capture(page, name, width = 1440, dark = false, focus = null) {
   await page.setViewportSize({ width, height: width < 600 ? 900 : 1000 });
@@ -371,12 +379,13 @@ try {
     await teacher.page.getByLabel('Comentario para el estudiante').fill('Revisión humana IA-2 independiente de la evaluación preliminar.');await mutation(teacher.page,'Guardar decisión docente',/\/reviews$/);
     const reviewed=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.deepEqual(reviewed.learning.attempts,after.learning.attempts);
   });
+  const pilot=await academicPilot({api,login,mutation,capture,check,qa,origin,root,browser,admin,student});
   assert.equal(pageErrors.length, 0);
-  await fs.writeFile(path.join(root, 'artifacts/ia-2-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, preloadedSessionId:preloadedSession, scope: 'Prior 34 checks retained; preloaded teacher/cards/grouped evaluation/human review, ordinary actions with AI route blocked. 429 and response loss explicitly staged; pedagogy not validated.' }, null, 2));
+  await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, preloadedSessionId:preloadedSession, pilot,elapsedMs:performance.now()-suiteStarted,requestMetrics:measuredRequests(),requestMetricScope:'api helper requests exclude CSRF setup; mutation timings include click/render until response. Raw negative-security calls and staged-error clicks outside helpers excluded. Per-route percentiles only for n>=20, nearest rank. Not provider latency.',scope: 'Prior 45 checks retained plus authored SQL pilot. Mock proves workflow, not pedagogy; 429/503 and lost responses explicitly staged.' }, null, 2));
   console.log(`E2E passed: ${results.length} checks; Mock only.`);
 } catch (error) {
   const safe = String(error.message).split(qa.password).join('[redacted]');
-  await fs.writeFile(path.join(root, 'artifacts/ia-2-e2e.json'), JSON.stringify({ status: 'failed', step, message: safe, checks: results }, null, 2));
-  if (lastPage && !lastPage.isClosed()) await lastPage.screenshot({ path: path.join(root, 'artifacts/ia-2-e2e-failure.png'), animations: 'disabled' }).catch(() => {});
+  await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'failed', step, message: safe, checks: results }, null, 2));
+  if (lastPage && !lastPage.isClosed()) await lastPage.screenshot({ path: path.join(root, 'artifacts/iteration-9-e2e-failure.png'), animations: 'disabled' }).catch(() => {});
   console.error(`E2E failed at ${step}: ${safe}`); process.exitCode = 1;
 } finally { if (browser) { for (const c of browser.contexts()) await c.clearCookies(); await browser.close(); } }

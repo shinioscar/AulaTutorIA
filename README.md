@@ -1,5 +1,11 @@
 # AulaTutor IA
 
+Iteración 9 completada como [piloto SQL interno con datos ficticios](docs/pilot/README.md):
+338 pruebas .NET, 191 HTTP y 60 comprobaciones E2E aprobadas, sin cuota IA real.
+[Resultados y límites](docs/iterations/ITERATION_9.md),
+guías de demostración y [criterios pendientes antes de usuarios reales](docs/pilot/READINESS.md).
+No autoriza despliegue real ni consumo externo durante QA.
+
 IA-2 completada: clases precargadas con tarjetas, pistas y explicaciones locales,
 importación V2 compatible con V1 y evaluación IA final agrupada opcional. El tutor
 conversacional permanece disponible. Verificación: 335 pruebas .NET, 191 HTTP y
@@ -474,8 +480,8 @@ en el informe. API y Angular locales restauradas con Groq, sin consumir cuota re
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md, el plan de
 iteraciones y las guías de docs/design. Iteración 7 completada por nuevo encargo;
-su verificación se registra en ITERATION_7.md. Las iteraciones 0–8 y UI-1 están cerradas;
-IA-1 también está cerrada y documentada al final. No avanzar a 9 ni IA-2.
+su verificación se registra en ITERATION_7.md. Las iteraciones 0–9, UI-1, IA-1 e
+IA-2 están cerradas con sus alcances autorizados. No avanzar a nuevas integraciones.
 Conservar privacidad por modalidad, relación académica vigente e historial humano.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y

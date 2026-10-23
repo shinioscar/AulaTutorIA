@@ -44,6 +44,10 @@ public sealed class AdmissionTransportTests
         using var response = await t.SendAsync(Request, "Groq", "fake", CancellationToken.None);
         Assert.Equal(2, h.Calls); Assert.Equal(2, a.Reserved); Assert.Equal("Failed", a.Results[0].State); Assert.Equal(TimeSpan.Zero, a.Results[0].Retry);
         Assert.Equal("Succeeded", a.Results[1].State); Assert.Equal(new AiTokenUsage(7, 3, false), a.Results[1].Usage);
+        Directory.CreateDirectory(Path.Combine(TestHost.Root, "artifacts"));
+        await File.WriteAllTextAsync(Path.Combine(TestHost.Root, "artifacts", "iteration-9-http-retry.json"),
+            System.Text.Json.JsonSerializer.Serialize(new { status = "passed", logicalTransportSends = 1, simulatedHttpSendAttempts = h.Calls,
+                reservations = a.Reserved, actualNetworkRequests = 0, note = "HttpMessageHandler simulation, not Groq, TCP or billing measurement." }));
     }
     [Theory][InlineData(401)][InlineData(403)][InlineData(500)][InlineData(429)]
     public async Task RejectionsRemainChargedAndDoNotAutomaticallyRetry(int status)

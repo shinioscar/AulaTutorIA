@@ -22,9 +22,17 @@ function Invoke-Recovery([string]$method, [string]$route, $body = $null) {
 }
 $null = Invoke-Recovery POST '/api/auth/login' @{email=$taskState.studentEmail;password=$taskState.password}
 $taskBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskState.completedTutoringId)"
-$taskCardsReport = Get-Content "$taskRoot/artifacts/ia-2-e2e.json" -Raw | ConvertFrom-Json
+$taskCardsReport = Get-Content "$taskRoot/artifacts/iteration-9-e2e.json" -Raw | ConvertFrom-Json
 if($taskCardsReport.status -ne 'passed' -or $taskCardsReport.preloadedSessionId -notmatch '^[a-f0-9-]{36}$'){throw 'The passed preloaded E2E session is required for restart verification.'}
 $taskCardsBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskCardsReport.preloadedSessionId)"
+$taskAcademicBefore=@{}
+foreach($taskId in $taskCardsReport.pilot.sessions){
+    if($taskId -notmatch '^[a-f0-9-]{36}$'){throw 'Invalid academic recovery target.'}
+    # Student B has a separate owner cookie; the owner is selected from the private fixture.
+    $null=Invoke-Recovery POST '/api/auth/login' @{email=$(if($taskAcademicBefore.Count -eq 0){$taskState.studentEmail}else{$taskState.tutoringOwnerEmail});password=$taskState.password}
+    $taskAcademicBefore[$taskId]=Invoke-Recovery GET "/api/tutoring-sessions/$taskId"
+}
+$null=Invoke-Recovery POST '/api/auth/login' @{email=$taskState.studentEmail;password=$taskState.password}
 # Respect the retained QA account's previous rate window; never weaken server policy.
 Start-Sleep -Seconds 60
 $taskNew = Invoke-Recovery POST '/api/tutoring-sessions/' @{ requestId=[Guid]::NewGuid().ToString(); topic='Reinicio ficticio'; goal='Recuperar sin duplicar'; level='Beginner';directReview=$true }
@@ -51,5 +59,15 @@ if($taskCardsAfter.policyVersion -ne 'preloaded-class-v1' -or $taskCardsAfter.st
 if($taskAfter.messages.Count -ne $taskBefore.messages.Count -or $taskAfter.turns.Count -ne $taskBefore.turns.Count -or $taskAfter.summary -ne $taskBefore.summary){throw 'Committed history changed across restart.'}
 $taskReplay = Invoke-Recovery POST "/api/tutoring-sessions/$($taskNew.id)/messages" $taskRequest
 if($taskReplay.turns.Count -ne 1 -or $taskReplay.messages.Count -ne $taskStarted.messages.Count){throw 'Replay duplicated the durable turn after restart.'}
-@{status='passed';provider='Mock';cookieSurvived=$true;historyPreserved=$true;preloadedEvidencePreserved=$true;replayedTurns=1;duplicateTurns=0;database='isolated-http'} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/ia-2-restart.json" -Encoding utf8
+$taskAcademicCount=0
+foreach($taskId in $taskCardsReport.pilot.sessions){
+    $null=Invoke-Recovery POST '/api/auth/login' @{email=$(if($taskAcademicCount -eq 0){$taskState.studentEmail}else{$taskState.tutoringOwnerEmail});password=$taskState.password}
+    $taskAcademicAfter=Invoke-Recovery GET "/api/tutoring-sessions/$taskId"
+    if($taskAcademicAfter.state -ne 'Completed' -or
+        ($taskAcademicBefore[$taskId].learning | ConvertTo-Json -Depth 32 -Compress) -ne ($taskAcademicAfter.learning | ConvertTo-Json -Depth 32 -Compress) -or
+        ($taskAcademicBefore[$taskId].turns | ConvertTo-Json -Depth 32 -Compress) -ne ($taskAcademicAfter.turns | ConvertTo-Json -Depth 32 -Compress)){throw 'Academic SQL evidence changed across restart.'}
+    $taskAcademicCount++
+}
+if($taskAcademicCount -ne 2){throw 'Two independent academic recovery targets required.'}
+@{status='passed';provider='Mock';cookieSurvived=$true;historyPreserved=$true;preloadedEvidencePreserved=$true;academicSessionsPreserved=$taskAcademicCount;replayedTurns=1;duplicateTurns=0;database='isolated-http'} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/iteration-9-restart.json" -Encoding utf8
 Write-Output 'Controlled API restart passed: cookie, committed history and idempotent replay preserved; Mock only.'

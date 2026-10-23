@@ -25,6 +25,12 @@ sobre los límites históricos de un ADR; no autorizan encargos nuevos.
 
 ## Alcance, pendientes e históricos — solo cuando aporten al encargo
 
+Piloto interno ficticio Iteración 9: [escenario y guías](../pilot/README.md),
+[resultados](../iterations/ITERATION_9.md), [matriz para reales](../pilot/READINESS.md)
+y [plantilla pedagógica](../pilot/PEDAGOGICAL_VALIDATION.md). Completado como ensayo ficticio;
+no autoriza datos/personas reales ni cuota externa. Consultar los contratos
+académicos y operativos de las filas anteriores; no sustituye sus permisos.
+
 Clases precargadas IA-2: [ADR-028](../decisions/ADR-028-clases-precargadas-y-evaluacion-agrupada.md),
 [contrato/guía](../architecture/PRELOADED_CLASSES.md),
 [estado/verificación](../iterations/IA_2.md). Consultar también clases, asignaciones,
