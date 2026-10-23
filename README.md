@@ -469,7 +469,8 @@ en el informe. API y Angular locales restauradas con Groq, sin consumir cuota re
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md, el plan de
 iteraciones y las guías de docs/design. Iteración 7 completada por nuevo encargo;
-su verificación se registra en ITERATION_7.md. Las iteraciones 0–8 y UI-1 están cerradas; no avanzar a 9 ni IA-1.
+su verificación se registra en ITERATION_7.md. Las iteraciones 0–8 y UI-1 están cerradas;
+IA-1 también está cerrada y documentada al final. No avanzar a 9 ni IA-2.
 Conservar privacidad por modalidad, relación académica vigente e historial humano.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
@@ -503,3 +504,16 @@ Leer [AGENTS.md](AGENTS.md) siempre y elegir la documentación del subsistema en
 [índice de contexto](docs/development/CONTEXT_INDEX.md). Consultar históricos solo
 por una decisión o regresión concreta; ampliar revisión en cambios críticos.
 Clasificación, preservación y medidas de OPT-1: [informe](docs/iterations/OPT_1.md).
+
+## IA-1 — Clases mediante herramientas externas
+
+En «Crear con apoyo de IA», «Usar ChatGPT» prepara un prompt personalizado sin
+llamadas a proveedores. Pega la respuesta o selecciona su archivo .json, valida,
+revisa y guarda un borrador editable. Simulación, aprobación, publicación y
+asignación conservan los controles existentes. La generación integrada continúa
+como alternativa. No requiere API key para la modalidad externa ni transmite datos
+automáticamente a ChatGPT. No cambia el tutor estudiantil ni implementa IA-2.
+
+[Guía docente y contrato](docs/architecture/LESSON_IMPORT.md),
+[ADR-027](docs/decisions/ADR-027-importacion-externa-de-clases.md),
+[informe IA-1](docs/iterations/IA_1.md).

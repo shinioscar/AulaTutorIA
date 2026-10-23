@@ -9,7 +9,7 @@ foreach($taskPort in 4200,5080,7080){if(Get-NetTCPConnection -State Listen -Loca
 $taskWeb=$null
 $taskOriginalModule=$env:AULATUTOR_PLAYWRIGHT_MODULE
 $taskOriginalProvider=$env:Ai__Provider; $taskOriginalGroq=$env:Ai__Groq__ApiKey; $taskOriginalGemini=$env:Ai__Gemini__ApiKey
-@{status='preparing';checks=@()} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/ui-1-e2e.json" -Encoding utf8
+@{status='preparing';checks=@()} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/ia-1-e2e.json" -Encoding utf8
 try {
     & "$PSScriptRoot/Prepare-Local.ps1"
     & "$PSScriptRoot/Http-Identity.ps1" -KeepRunning

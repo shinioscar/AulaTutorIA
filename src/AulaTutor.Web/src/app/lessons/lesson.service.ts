@@ -7,6 +7,8 @@ export interface LessonOperation {requestId:string;simulationId:string|null;acti
 export interface LessonVersion {id:string;number:number;draftRevision:number;content:LessonContent;contentHash:string;approvedBy:string;approvedAt:string;publishedAt:string|null;archivedAt:string|null;}
 export interface LessonView {id:string;state:string;revision:number;draftRevision:number;content:LessonContent;validation:{errors:string[];warnings:string[]};proposals:{id:string;draftRevision:number;state:string;explanation:string;content:LessonContent;outdated:boolean}[];versions:LessonVersion[];operations:LessonOperation[];simulations:{id:string;draftRevision:number;state:string;revision:number}[];}
 export interface LessonItem {id:string;title:string;state:string;revision:number;updatedAt:string;}
+export interface LessonExternalOptions {topic:string;subject:string;level:string;goals:string;exerciseCount:number;difficulty:string;activityTypes:string;hintCount:number;durationMinutes:number;notes:string;rules:string;}
+export interface LessonImportPreview {content:LessonContent|null;errors:string[];warnings:string[];correctionInstructions:string;}
 export interface SimulationView {id:string;lessonId:string;draftRevision:number;state:string;revision:number;title:string;sectionTitle:string;sectionContent:string;exercise:{id:string;kind:string;prompt:string;options:string[]}|null;sectionIndex:number;sectionCount:number;hints:number;answered:boolean;operations:LessonOperation[];}
 export const emptyLesson = ():LessonContent => ({title:'',subject:'',description:'',prerequisites:'',level:'',durationMinutes:0,methodology:'',instructions:'',objectives:[],sections:[]});
 export const lessonState = (state:string):string => ({Draft:'Borrador',Simulation:'En simulación',InReview:'En revisión',Approved:'Aprobada',Published:'Publicada',Archived:'Archivada',Active:'Activa',Stopped:'Detenida',Pending:'Pendiente',Succeeded:'Completada',Failed:'Fallida',Cancelled:'Cancelada',Applied:'Aplicada',Discarded:'Descartada'}[state]??state);
@@ -16,6 +18,9 @@ export const lessonAction = (action:string):string => ({Start:'Inicio',Next:'Ava
 @Injectable({providedIn:'root'})
 export class LessonService {
   private readonly http=inject(HttpClient);
+  externalPrompt(options:LessonExternalOptions){return this.http.post<{prompt:string}>('/api/lessons/external-prompt',options);}
+  previewImport(json:string){return this.http.post<LessonImportPreview>('/api/lessons/import/preview',{json});}
+  importLesson(json:string,requestId:string){return this.http.post<LessonView>('/api/lessons/import',{json,requestId});}
   list(page=1){return this.http.get<LessonItem[]>('/api/lessons/?page='+page);}
   create(content:LessonContent,requestId:string){return this.http.post<LessonView>('/api/lessons/',{requestId,content});}
   get(id:string){return this.http.get<LessonView>('/api/lessons/'+id);}

@@ -23,7 +23,10 @@ public sealed partial class LessonService(AulaTutorDbContext db, ICurrentActor c
     private async Task<Actor> TeacherAsync(bool hide = false)
     {
         var actor = await current.GetAsync();
-        if (!actor.IsTeacher) throw hide ? Hidden() : new AppException(403, "Se requiere un docente aprobado y activo.");
+        if (!actor.IsTeacher || !await db.Users.AnyAsync(u => u.Id == actor.Id && u.OrganizationId == actor.OrganizationId &&
+            u.IsActive && u.TeacherApproval == TeacherApproval.Approved && db.UserRoles.Any(ur => ur.UserId == u.Id &&
+                db.Roles.Any(r => r.Id == ur.RoleId && r.Name == RoleNames.Teacher))))
+            throw hide ? Hidden() : new AppException(403, "Se requiere un docente aprobado y activo.");
         return actor;
     }
     private async Task<Lesson> OwnedAsync(Guid id, Actor actor, bool locked, CancellationToken ct) =>
@@ -38,11 +41,13 @@ public sealed partial class LessonService(AulaTutorDbContext db, ICurrentActor c
         db.LessonDraftRevisions.Add(new() { LessonId = lesson.Id, Revision = draft.Revision, ContentJson = draft.ContentJson, SavedAt = clock.GetUtcNow() });
         lesson.State = LessonState.Draft; Touch(lesson);
     }
-    public async Task<LessonView> CreateAsync(CreateLessonRequest request, CancellationToken ct)
+    public Task<LessonView> CreateAsync(CreateLessonRequest request, CancellationToken ct) => CreateCoreAsync(request, false, ct);
+    private async Task<LessonView> CreateCoreAsync(CreateLessonRequest request, bool imported, CancellationToken ct)
     {
         var actor = await TeacherAsync(); Key(request.RequestId, 0); LessonValidationRules.ValidateDraft(request.Content);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({actor.Id.ToString()}, 0))", ct);
+        actor = await TeacherAsync();
         var json = LearningJson.Write(request.Content);
         var lesson = await db.Lessons.SingleOrDefaultAsync(l => l.TeacherId == actor.Id && l.CreationKey == request.RequestId, ct);
         if (lesson is not null)
@@ -56,6 +61,8 @@ public sealed partial class LessonService(AulaTutorDbContext db, ICurrentActor c
             lesson = new() { TeacherId = actor.Id, OrganizationId = actor.OrganizationId, CreationKey = request.RequestId, CreatedAt = clock.GetUtcNow(), UpdatedAt = clock.GetUtcNow() };
             db.Lessons.Add(lesson); db.LessonDrafts.Add(new() { LessonId = lesson.Id, ContentJson = json });
             db.LessonDraftRevisions.Add(new() { LessonId = lesson.Id, ContentJson = json, SavedAt = clock.GetUtcNow() });
+            if (imported) db.AuditEvents.Add(new() { ActorId = actor.Id, CreatedAt = clock.GetUtcNow(), Type = "LessonImported",
+                ResourceId = lesson.Id.ToString(), CorrelationId = Guid.NewGuid().ToString("N"), Change = "Added" });
             await db.SaveChangesAsync(ct);
         }
         await tx.CommitAsync(ct); return await GetAsync(lesson.Id, ct);

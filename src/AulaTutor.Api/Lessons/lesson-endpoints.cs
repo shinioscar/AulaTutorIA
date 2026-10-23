@@ -8,6 +8,9 @@ public static class LessonEndpoints
     public static void MapLessonEndpoints(this WebApplication app)
     {
         var lessons = app.MapGroup("/api/lessons").RequireAuthorization().AddEndpointFilter<IdentityValidationFilter>();
+        lessons.MapPost("/external-prompt", async (LessonExternalOptions r, ILessonService service, CancellationToken ct) => TypedResults.Ok(new { prompt = await service.ExternalPromptAsync(r, ct) }));
+        lessons.MapPost("/import/preview", async (LessonImportInput r, ILessonService service, CancellationToken ct) => TypedResults.Ok(await service.PreviewImportAsync(r, ct)));
+        lessons.MapPost("/import", async (CreateImportedLessonRequest r, ILessonService service, CancellationToken ct) => { var view = await service.ImportAsync(r, ct); return TypedResults.Created($"/api/lessons/{view.Id}", view); });
         lessons.MapGet("/", async (int? page, ILessonService service, CancellationToken ct) => TypedResults.Ok(await service.ListAsync(page ?? 1, ct)));
         lessons.MapPost("/", async (CreateLessonRequest r, ILessonService service, CancellationToken ct) => { var view = await service.CreateAsync(r, ct); return TypedResults.Created($"/api/lessons/{view.Id}", view); });
         lessons.MapGet("/{id:guid}", async (Guid id, ILessonService service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(id, ct)));

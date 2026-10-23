@@ -11,9 +11,9 @@ const { chromium } = require(process.env.AULATUTOR_PLAYWRIGHT_MODULE || 'playwri
 const qa = JSON.parse(await fs.readFile(path.join(root, '.cache/http-qa.json'), 'utf8'));
 assert.match(qa.database, /^aulatutor_http_[a-f0-9]{32}$/);
 const origin = 'https://localhost:4200';
-const evidence = path.join(root, 'docs/iterations/evidence-ui-1'); await fs.mkdir(evidence, { recursive: true });
+const evidence = path.join(root, 'docs/iterations/evidence-ia-1'); await fs.mkdir(evidence, { recursive: true });
 const results = []; const pageErrors = []; let step = 'startup'; let browser, lastPage;
-await fs.writeFile(path.join(root, 'artifacts/ui-1-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
+await fs.writeFile(path.join(root, 'artifacts/ia-1-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
 const generationTimes = new WeakMap();
 async function rateLimit(page) {
   const times = (generationTimes.get(page) || []).filter(t => Date.now() - t < 61000);
@@ -136,7 +136,7 @@ try {
     await p.getByLabel('Tema de la clase',{exact:true}).fill('Borrador recuperable UI-1');
     await p.getByLabel('Indicaciones adicionales (opcional)',{exact:true}).fill('Conservar estas indicaciones ficticias');
     await p.route('**/api/lessons/*/design',route=>route.fulfill({status:429,contentType:'application/problem+json',body:JSON.stringify({title:'Cuota simulada UI-1'})}),{times:1});
-    await p.getByRole('button',{name:'Generar con IA',exact:true}).click();
+    await p.getByRole('button',{name:'Generar con IA integrada',exact:true}).click();
     await p.waitForURL(/generation=check/);
     await p.getByText('La generación no se confirmó.',{exact:false}).waitFor();
     assert.ok((await p.getByLabel('Petición al asistente').inputValue()).includes('Conservar estas indicaciones ficticias'));
@@ -147,7 +147,7 @@ try {
     await capture(p,'ai-light',1440,false); await capture(p,'ai-dark-390',390,true);
     await p.getByLabel('Tema de la clase',{exact:true}).fill('Clase E2E UI-1');
     await p.getByLabel('Indicaciones adicionales (opcional)',{exact:true}).fill('SQL ficticio para comprobar el flujo.');
-    await p.getByRole('button',{name:'Generar con IA',exact:true}).click();
+    await p.getByRole('button',{name:'Generar con IA integrada',exact:true}).click();
     await p.waitForURL(/\/teacher\/lessons\/[a-f0-9-]{36}\?mode=ai$/);
     lessonId=new URL(p.url()).pathname.split('/').at(-1);
     await mutation(p,'Descartar propuesta',/\/discard-proposal$/);
@@ -166,6 +166,71 @@ try {
     await p.getByRole('button', { name: '3. Revisar y publicar', exact: true }).click();
     await mutation(p, 'Pasar a revisión', /\/review$/); await mutation(p, 'Confirmar aprobación de esta revisión', /\/approve$/);
     await mutation(p, 'Confirmar publicación de versión 1', /\/publish$/); await capture(p, 'teacher-published-light', 1440, false, p.getByRole('heading', { name: 'Versiones inmutables', exact: true }));
+  });
+  await check('IA-1: shared options, copy, safe correction, preview, imported edit/simulation/publication', async () => {
+    const p=teacher.page;
+    const previous=await api(teacher.context,'GET','/api/lessons/'+lessonId);
+    const c=previous.content;
+    const wire={format:'aulatutor-lesson-v1',lesson:{explanation:'Ejemplo ficticio importado para QA',
+      title:'Clase importada IA-1',subject:c.subject,description:c.description,prerequisites:c.prerequisites,
+      level:c.level,durationMinutes:c.durationMinutes,methodology:c.methodology,instructions:c.instructions,
+      objectives:c.objectives,sections:c.sections.map(s=>({id:s.id,title:s.title,body:s.content})),
+      exercises:c.sections.flatMap(s=>s.exercises.map(e=>({id:e.id,sectionId:s.id,objectiveId:e.objectiveId,
+        required:e.required,kind:e.activity.kind,prompt:e.activity.prompt,options:e.activity.options,
+        acceptedAnswers:e.activity.acceptedAnswers,publicRubric:e.activity.rubric,criteria:e.rubric.criteria,
+        referenceSolution:e.rubric.referenceSolution||'Referencia privada ficticia IA-1',hintRules:e.rubric.hintRules})))}};
+    await p.goto(origin+'/teacher/lessons/new/ai');
+    // Use the same UI-1 form and retain values on the return journey.
+    if(await p.getByRole('heading',{name:'Prepara tu clase con IA',exact:true}).count()===0){
+      await p.goto(origin+'/teacher/lessons');await p.getByRole('link',{name:/Crear con apoyo de IA/}).click();
+    }
+    await p.getByLabel('Tema de la clase',{exact:true}).fill('Fracciones ficticias IA-1');
+    await p.getByRole('button',{name:'Usar ChatGPT',exact:true}).click();
+    await p.getByRole('heading',{name:'Crear con ChatGPT',exact:true}).waitFor();
+    const prompt=await p.getByLabel('Instrucciones para la herramienta externa').inputValue();
+    assert.ok(prompt.includes('Fracciones ficticias IA-1'));assert.ok(prompt.includes('aulatutor-lesson-v1'));
+    assert.equal(await p.getByRole('link',{name:'Abrir ChatGPT ↗',exact:true}).getAttribute('href'),'https://chatgpt.com/');
+    await teacher.context.grantPermissions(['clipboard-read','clipboard-write']);
+    await p.getByRole('button',{name:'Copiar prompt',exact:true}).click();
+    // Windows clipboard uses CRLF; textarea values use LF. Preserve all content.
+    assert.equal((await p.evaluate(()=>navigator.clipboard.readText())).replace(/\r\n/g,'\n'),prompt.replace(/\r\n/g,'\n'));
+    for(const width of [320,390,1440])for(const dark of [false,true])await capture(p,`external-${width}-${dark?'dark':'light'}`,width,dark);
+    await p.getByRole('button',{name:'Regresar a editar opciones',exact:true}).click();
+    assert.equal(await p.getByLabel('Tema de la clase',{exact:true}).inputValue(),'Fracciones ficticias IA-1');
+    await p.getByRole('button',{name:'Usar ChatGPT',exact:true}).click();
+    await p.getByLabel('Clase generada',{exact:true}).fill('```json\n{}');
+    await mutation(p,'Validar y revisar',/\/import\/preview$/);
+    await p.getByText('No se pudo reconocer el formato de la clase.',{exact:false}).waitFor();
+    await p.getByRole('button',{name:'Copiar instrucciones de corrección',exact:true}).click();
+    assert.ok((await p.evaluate(()=>navigator.clipboard.readText())).includes('conservando'));
+    await capture(p,'import-correction-dark-390',390,true);
+    await p.getByLabel('O selecciona un archivo .json (máximo 128 KiB)',{exact:true}).setInputFiles({name:'clase-ficticia.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(wire))});
+    await p.waitForFunction(()=>document.querySelector('#external-json')?.value.includes('Clase importada IA-1'));
+    await mutation(p,'Validar y revisar',/\/import\/preview$/);
+    await p.getByRole('heading',{name:'3. Revisar la clase',exact:true}).waitFor();
+    await capture(p,'import-preview-light-1440',1440,false,p.getByRole('heading',{name:'3. Revisar la clase',exact:true}));
+    await p.route('**/api/lessons/import',async route=>{const response=await route.fetch();assert.equal(response.status(),201);await route.abort('failed');},{times:1});
+    await p.getByRole('button',{name:'Guardar borrador y abrir constructor',exact:true}).click();
+    await p.getByText('No se confirmó el guardado.',{exact:false}).waitFor();
+    await mutation(p,'Guardar borrador y abrir constructor',/\/api\/lessons\/import$/);
+    await p.waitForURL(/\/teacher\/lessons\/[a-f0-9-]{36}$/);lessonId=p.url().split('/').at(-1);
+    assert.equal((await api(teacher.context,'GET','/api/lessons/?page=1')).filter(l=>l.title==='Clase importada IA-1').length,1);
+    await p.getByLabel('Título',{exact:true}).fill('Clase importada IA-1 revisada');await mutation(p,'Guardar borrador',/\/draft$/);
+    await p.getByRole('button',{name:'3. Revisar y publicar',exact:true}).click();
+    await mutation(p,'Simular como estudiante',/\/simulations$/);await p.waitForURL(/\/simulations\//);
+    await mutation(p,'Comenzar enseñanza simulada',/\/messages$/);await mutation(p,'Detener simulación',/\/stop$/);
+    await p.getByRole('link',{name:'← Volver al editor',exact:true}).click();
+    await p.getByRole('button',{name:'3. Revisar y publicar',exact:true}).click();
+    await mutation(p,'Pasar a revisión',/\/review$/);await mutation(p,'Confirmar aprobación de esta revisión',/\/approve$/);
+    await mutation(p,'Confirmar publicación de versión 1',/\/publish$/);
+    assert.deepEqual((await api(teacher.context,'GET','/api/lessons/'+previous.id)).versions,previous.versions);
+    for(const actor of [student,secondTeacher]){
+      assert.equal((await actor.context.request.get(origin+'/api/lessons/'+lessonId)).status(),404);
+      const csrf=await (await actor.context.request.get(origin+'/api/auth/csrf')).json();
+      assert.equal((await actor.context.request.post(origin+`/api/lessons/${lessonId}/publish`,{data:{requestId:crypto.randomUUID(),revision:0},headers:{'X-XSRF-TOKEN':csrf.requestToken}})).status(),404);
+    }
+    assert.equal((await student.context.request.post(origin+'/api/lessons/import',{data:{requestId:crypto.randomUUID(),json:JSON.stringify(wire)}})).status(),400);
+    await p.evaluate(()=>navigator.clipboard.writeText(''));
   });
   await check('B: browser assigns exact published version to authorized group', async () => {
     const p = teacher.page; await p.getByRole('link', { name: 'Asignar versión 1 a un grupo', exact: true }).click();
@@ -187,6 +252,9 @@ try {
   await check('C: browser starts class; staged 429 preserves input; successful recovery, pause/resume and completion', async () => {
     const p = student.page; await p.goto(origin + '/classes/' + assignment.id); await p.getByRole('button', { name: 'Iniciar clase', exact: true }).click();
     await p.waitForURL(/\/tutoring\/[a-f0-9-]{36}$/); sessionId = p.url().split('/').at(-1);
+    const publicSession=await api(student.context,'GET','/api/tutoring-sessions/'+sessionId);
+    for(const section of (await api(teacher.context,'GET','/api/lessons/'+lessonId)).content.sections)
+      for(const exercise of section.exercises)if(exercise.rubric.referenceSolution)assert.ok(!JSON.stringify(publicSession).includes(exercise.rubric.referenceSolution));
     await mutation(p, 'Comenzar conversación', /\/messages$/);
     const input = p.getByLabel('Tu intento o pregunta'); await input.fill('Pregunta ficticia conservada ante cuota');
     await p.route('**/api/tutoring-sessions/*/messages', route => route.fulfill({ status: 429, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Cuota simulada para QA' }) }), { times: 1 });
@@ -251,11 +319,11 @@ try {
     assert.ok(observed.keys.every(k => k === 'aulatutor.theme.v1')); assert.equal(observed.sessionKeys.length, 0); assert.notEqual(observed.outline, 'none'); assert.ok(observed.width >= 2); assert.ok(observed.reduced);
   });
   assert.equal(pageErrors.length, 0);
-  await fs.writeFile(path.join(root, 'artifacts/ui-1-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, scope: 'Browser A/B/C/D and privacy/recovery; E diagnosis/plan/report covered by reproducible HTTPS harness and integration suite, then privacy in browser; 429 and response loss explicitly staged.' }, null, 2));
+  await fs.writeFile(path.join(root, 'artifacts/ia-1-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, scope: 'Browser A/B/C/D and privacy/recovery; E diagnosis/plan/report covered by reproducible HTTPS harness and integration suite, then privacy in browser; 429 and response loss explicitly staged.' }, null, 2));
   console.log(`E2E passed: ${results.length} checks; Mock only.`);
 } catch (error) {
   const safe = String(error.message).split(qa.password).join('[redacted]');
-  await fs.writeFile(path.join(root, 'artifacts/ui-1-e2e.json'), JSON.stringify({ status: 'failed', step, message: safe, checks: results }, null, 2));
-  if (lastPage && !lastPage.isClosed()) await lastPage.screenshot({ path: path.join(root, 'artifacts/ui-1-e2e-failure.png'), animations: 'disabled' }).catch(() => {});
+  await fs.writeFile(path.join(root, 'artifacts/ia-1-e2e.json'), JSON.stringify({ status: 'failed', step, message: safe, checks: results }, null, 2));
+  if (lastPage && !lastPage.isClosed()) await lastPage.screenshot({ path: path.join(root, 'artifacts/ia-1-e2e-failure.png'), animations: 'disabled' }).catch(() => {});
   console.error(`E2E failed at ${step}: ${safe}`); process.exitCode = 1;
 } finally { if (browser) { for (const c of browser.contexts()) await c.clearCookies(); await browser.close(); } }

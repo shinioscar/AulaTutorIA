@@ -1,0 +1,28 @@
+{
+  "format": "aulatutor-lesson-v1",
+  "lesson": {
+    "explanation": "Ejemplo ficticio para revisión docente, sin validación curricular.",
+    "title": "Comparar fracciones",
+    "subject": "Matemáticas",
+    "description": "Introducción mediante equivalencias sencillas.",
+    "prerequisites": "Reconocer numerador y denominador.",
+    "level": "Principiante",
+    "durationMinutes": 40,
+    "methodology": "Explicar, representar y practicar con pistas graduales.",
+    "instructions": "Justifica las comparaciones con dibujos.",
+    "objectives": [{"id": "o1", "text": "Reconocer fracciones equivalentes."}],
+    "sections": [
+      {"id": "s1", "title": "Representar", "body": "Una mitad puede dividirse en dos cuartos."},
+      {"id": "s2", "title": "Practicar", "body": "Compara las partes de dos dibujos del mismo tamaño."}
+    ],
+    "exercises": [{
+      "id": "e1", "sectionId": "s2", "objectiveId": "o1", "required": true,
+      "kind": "TrueFalse", "prompt": "¿1/2 equivale a 2/4?",
+      "options": ["Verdadero", "Falso"], "acceptedAnswers": ["Verdadero"],
+      "publicRubric": "Justifica comparando las partes representadas.",
+      "criteria": ["Reconoce que ambas representan la misma proporción."],
+      "referenceSolution": "Verdadero: multiplicar numerador y denominador por dos conserva la proporción.",
+      "hintRules": "Primero sugiere dibujar; después dividir cada mitad en dos. No anticipar la solución."
+    }]
+  }
+}

@@ -80,3 +80,9 @@ UI-0: temas globales en ThemeService/ThemeToggle y CSS custom properties,
 sin acoplarse a identidad o HTTP. Light inicial, Dark explícito; solo preferencia
 visual en localStorage y aplicación temprana (ADR-020). Guías oficiales y evidencia
 en docs/design. Inicio demuestra la composición; los demás flujos conservan layout.
+
+IA-1/ADR-027: generación determinista de prompt externo y validación estricta de
+LessonImportV1, reutilizando LessonDesignPayload/LessonContent y creación normal.
+Vista previa sin persistencia; guardado explícito crea una clase nueva idempotente,
+con evento mínimo LessonImported. Sin API externa ni otro motor académico.
+Contrato, ejemplo y guía en [LESSON_IMPORT.md](LESSON_IMPORT.md).

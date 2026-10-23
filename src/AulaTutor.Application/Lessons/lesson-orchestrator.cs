@@ -60,7 +60,7 @@ public sealed class LessonOrchestrator(IAiProvider provider, TutoringOrchestrato
     }
     private static void Check(AiChatResult result, LessonOperation op)
     { if (result.ProviderId != op.ProviderId || result.ModelId != op.ModelId) throw new AiProviderException(AiErrorCode.Configuration); }
-    private static void ValidateShape(JsonElement value, JsonElement schema)
+    public static void ValidateShape(JsonElement value, JsonElement schema)
     {
         switch (schema.GetProperty("type").GetString())
         {

@@ -3,8 +3,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LessonService, emptyLesson } from './lesson.service';
-@Component({selector:'app-lesson-create',imports:[FormsModule,RouterLink],styleUrl:'./lessons.css',template:`
+import { LessonExternal } from './lesson-external';
+@Component({selector:'app-lesson-create',imports:[FormsModule,RouterLink,LessonExternal],styleUrl:'./lessons.css',template:`
 <a routerLink="/teacher/lessons">← Mis clases</a>
+@if(externalPrompt()){<app-lesson-external [prompt]="externalPrompt()" (back)="externalPrompt.set('')"/>}@else{
 <section class="creation-form"><p class="eyebrow">{{ai?'Con apoyo de IA':'Creación manual'}}</p><h1>{{ai?'Prepara tu clase con IA':'Comienza con una idea'}}</h1><p>{{ai?'Cuéntanos qué quieres enseñar. Podrás revisar y editar la propuesta.':'Guarda lo básico y añade el contenido a tu ritmo.'}}</p>
 @if(error()){<p class="notice danger" role="alert">{{error()}}</p>}
 <form #creationForm="ngForm" (ngSubmit)="create()"><fieldset [disabled]="busy()"><legend>Información básica</legend>
@@ -17,10 +19,14 @@ import { LessonService, emptyLesson } from './lesson.service';
 @if(ai){<label for="new-goals">Objetivos deseados</label><textarea id="new-goals" name="goals" maxlength="200" [(ngModel)]="goals"></textarea><label for="new-types">Tipos de actividades</label><select id="new-types" name="types" [(ngModel)]="types"><option>Variados</option><option>Opción múltiple</option><option>Respuesta abierta</option><option>Código o SQL sin ejecución</option></select><label for="new-difficulty">Dificultad</label><select id="new-difficulty" name="difficulty" [(ngModel)]="difficulty"><option>Gradual</option><option>Básica</option><option>Desafiante</option></select><label for="new-hints">Cantidad orientativa de pistas por ejercicio</label><input id="new-hints" name="hints" required type="number" min="0" max="5" [(ngModel)]="hints"/><label for="new-rules">Reglas pedagógicas adicionales</label><textarea id="new-rules" name="rules" maxlength="200" [(ngModel)]="rules"></textarea>}
 </details></fieldset>
 <p class="note">{{ai?'Generar utiliza el proveedor configurado. La propuesta requiere tu revisión y aplicación.':'Puedes guardar un borrador incompleto y continuar después.'}}</p>
-@if(creationForm.invalid&&creationForm.dirty){<p class="notice warning" role="status">Revisa los campos: tema obligatorio para IA, 1–24 ejercicios, 0–480 minutos y 0–5 pistas.</p>}<button type="submit" [disabled]="busy()||creationForm.invalid">{{busy()?'Guardando…':ai?'Generar con IA':'Crear borrador'}}</button><p role="status">{{status()}}</p></form></section>`})
+@if(creationForm.invalid&&creationForm.dirty){<p class="notice warning" role="status">Revisa los campos: tema obligatorio para IA, 1–24 ejercicios, 0–480 minutos y 0–5 pistas.</p>}<button type="submit" [disabled]="busy()||creationForm.invalid">{{busy()?'Guardando…':ai?'Generar con IA integrada':'Crear borrador'}}</button>
+@if(ai){<button type="button" class="secondary" [disabled]="busy()||creationForm.invalid" (click)="external()">Usar ChatGPT</button>}
+<p role="status">{{status()}}</p></form></section>}`})
 export class LessonCreate {
  private readonly service=inject(LessonService);private readonly router=inject(Router);private readonly destroy=inject(DestroyRef);
  readonly ai=inject(ActivatedRoute).snapshot.data['mode']==='ai';readonly busy=signal(false);readonly error=signal('');readonly status=signal('');
+ readonly externalPrompt=signal('');
+ external(){if(this.busy())return;this.busy.set(true);this.error.set('');this.service.externalPrompt({topic:this.title,subject:this.subject||this.title,level:this.level,goals:this.goals,exerciseCount:this.count,difficulty:this.difficulty,activityTypes:this.types,hintCount:this.hints,durationMinutes:this.duration,notes:this.notes,rules:this.rules}).pipe(takeUntilDestroyed(this.destroy)).subscribe({next:r=>{this.externalPrompt.set(r.prompt);this.busy.set(false);},error:e=>{this.error.set(e.error?.title??'No se pudieron preparar las instrucciones. Conservamos tus opciones.');this.busy.set(false);}});}
  title='';subject='';description='';level=this.ai?'Principiante':'';count=3;notes='';duration=40;goals='';types='Variados';difficulty='Gradual';hints=2;rules='';private readonly requestId=crypto.randomUUID();
  create(){if(this.busy())return;if(!Number.isInteger(this.duration)||this.duration<0||this.duration>480||(this.ai&&(!this.title.trim()||!Number.isInteger(this.count)||this.count<1||this.count>24||!Number.isInteger(this.hints)||this.hints<0||this.hints>5))){this.error.set('Completa el tema y usa valores enteros: 1–24 ejercicios, 0–480 minutos y 0–5 pistas.');return;}this.busy.set(true);this.error.set(''); const prompt='Prepara una clase sobre '+this.title+'. Nivel: '+this.level+'. Aproximadamente '+this.count+' ejercicios. Duración: '+this.duration+' minutos. Dificultad: '+this.difficulty+'. Actividades: '+this.types+'. Pistas orientativas: '+this.hints+'. Objetivos: '+this.goals+'. Indicaciones: '+this.notes+'. Reglas: '+this.rules;const content={...emptyLesson(),title:this.title,subject:this.subject||this.title,description:this.description,level:this.level,durationMinutes:this.duration,instructions:this.ai?prompt:''};
  this.service.create(content,this.requestId).pipe(takeUntilDestroyed(this.destroy)).subscribe({next:l=>{

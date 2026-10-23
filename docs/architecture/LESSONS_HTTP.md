@@ -56,3 +56,7 @@ operación fallida bloquea la siguiente hasta retry/cancel; edición manual sigu
 
 Referencias: ADR-021, TUTORING_HTTP.md y LEARNING_HTTP.md. No assignments ni
 endpoint de ejecución estudiantil; no actualización directa de versiones.
+
+Ampliación IA-1: [contrato externo y rutas de importación](LESSON_IMPORT.md),
+ADR-027. Crea exclusivamente clases nuevas tras vista previa; el ciclo anterior
+permanece intacto. Asignaciones posteriores siguen ADR-023.

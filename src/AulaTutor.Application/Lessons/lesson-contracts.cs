@@ -35,6 +35,9 @@ public sealed record LessonSimulationView(Guid Id, Guid LessonId, long DraftRevi
     bool Answered, LessonOperationView[] Operations);
 public interface ILessonService
 {
+    Task<string> ExternalPromptAsync(LessonExternalOptions options, CancellationToken ct);
+    Task<LessonImportPreview> PreviewImportAsync(LessonImportInput input, CancellationToken ct);
+    Task<LessonView> ImportAsync(CreateImportedLessonRequest request, CancellationToken ct);
     Task<LessonItem[]> ListAsync(int page, CancellationToken ct);
     Task<LessonView> CreateAsync(CreateLessonRequest request, CancellationToken ct);
     Task<LessonView> GetAsync(Guid id, CancellationToken ct);
