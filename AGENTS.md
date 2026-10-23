@@ -4,20 +4,21 @@
 
 - Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **Iteración 6**, asignaciones de versiones publicadas a grupos y
-  ejecución individual, sin supervisión avanzada de 7. Iteración 5 conserva constructor,
+- Último encargo: **Iteración 7**, supervisión docente de clases asignadas, revisión
+  de evidencias, feedback e historial humano, métricas y atención explicable.
+  Completada y verificada. Iteración 5 conserva constructor,
   simulación y publicación;
   UI-0 conserva guía visual oficial, tokens y temas Light/Dark,
   con Groq activo local y Mock en pruebas. No ejecutar cuota real sin autorización.
-  Iteraciones 0–6 y UI-0 completadas; cierre en ITERATION_6.md.
-  No avanzar a 7 sin nuevo encargo.
-- Registros: docs/iterations/ITERATION_0.md a ITERATION_6.md; ADR en docs/.
+  Iteraciones 0–7 y UI-0 completadas; cierre de 7 en ITERATION_7.md.
+  No avanzar a 8 sin nuevo encargo.
+- Registros: docs/iterations/ITERATION_0.md a ITERATION_7.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
 - Corrección posterior a 5 autorizada: investigar rechazos Groq y revisar Student
   con pruebas reales ficticias espaciadas. ADR-022/QA_GROQ_FIX registran resultados.
   Verify/CI siguen Mock. Probe-Groq.ps1 exige -AllowRealCalls, máximo 10 por ejecución,
   65 s entre llamadas y parada al fallar; Cleanup-GroqProbe.ps1 limpia estado privado.
-  Esta autorización correspondió a esa corrección y no autoriza pruebas nuevas en 6.
+  Esta autorización correspondió a esa corrección y no autoriza pruebas nuevas en 6/7.
 - En 4 se autorizan compartición mínima de reportes y validadores formativos cerrados,
   sin clases docentes, asignaciones, notas oficiales ni ejecución SQL/código de alumnos.
   Mock, salud y estructura de proveedores permanecen funcionales.
@@ -30,6 +31,8 @@
 - SDK .NET 10.0.302 / net10.0; EF Core e Identity 10.0.10, Npgsql EF 10.0.3.
   dotnet-ef 10.0.10 local en dotnet-tools.json. NuGet locks y package-lock versionados.
 - Angular standalone 21.2.25 con router/forms, TS estricto, signals y HttpClient.
+  CLI/build 21.2.28: parche compatible de herramientas por auditoría al cerrar 7;
+  compiler-cli y runtime permanecen 21.2.25. Sin nuevas dependencias directas.
   Texto/documentación español; tipos/código inglés, nombres de archivos kebab-case.
 - C# PascalCase, namespaces AulaTutor.*; endpoints finos, lógica en servicios.
   DTO distintos de entidades de persistencia. UTF-8/LF, PowerShell CRLF.
@@ -202,7 +205,8 @@
 - ReportShare solo versión revisada/autorizada expresamente: Teacher activo/aprobado,
   mismo grupo vigente Student/Teacher, verificado en cada consulta. Revocación o retirada
   de relación impide nuevas consultas; no elimina copias previas. Teacher/Admin no leen
-  chat/intentos/diagnóstico/plan ajenos. Vista docente mínima de reportes, sin supervisión.
+  chat/intentos/diagnóstico/plan de tutorías autónomas ajenas. En 7, evidencia de
+  clase asignada tiene proyección y permisos separados (ADR-024), sin chat completo.
 - Migración aditiva LearningEvidence después de PrivateTutoring. Las dos previas intactas.
   Retención real, consentimiento institucional, borrado/exportación y auditoría siguen pendientes.
 - El usuario informó una tutoría Groq real satisfactoria antes de 4. El agente no repite
@@ -279,7 +283,45 @@
   extenderá política de destinatario central; no permisos parciales ni UI individual ahora.
 - AssignedClasses quinta migración aditiva; previas intactas. Triggers protegen fuente de
   asignación/sesión/ejercicio e historial. Contratos ASSIGNMENTS_HTTP.md, QA_6.md.
-  Pruebas solo Mock/controladas, sin cuota real ni cambios a .env. No avanzar a 7.
+  Pruebas solo Mock/controladas, sin cuota real ni cambios a .env. Supervisión en 7
+  por nuevo encargo explícito, sin ampliar acceso a tutorías autónomas.
+
+## Supervisión y revisión humana (Iteración 7 / ADR-024)
+
+- ISupervisionService/SupervisionService proyectan evidencia AssignedClass de una
+  asignación/versión exacta. Solo Teacher responsable, activo/aprobado y miembro
+  docente de grupo no archivado. Co-docentes/Admin sin esa responsabilidad: 404.
+  Cohorte actual: Student activo con rol y membresía; exmiembros excluidos de todos
+  los denominadores. Anónimo 401, listar sin Teacher 403, recursos no autorizados 404.
+- Withdrawn termina supervisión; Inactive/plazos/publicación archivada permiten
+  revisión histórica con relación vigente. Membresía retirada/grupo archivado/rol
+  revocado ocultan historial sin borrarlo. Reincorporar recupera registros conforme
+  a la relación. Feedback propio sigue AssignedClassAccess, incluso retirado.
+- TeacherReview por sesión/actividad; TeacherReviewEntry y ReviewEvidence inmutables
+  conservan autor/fecha, comentario, observación, recomendación, resultado humano,
+  estado de revisión y atención, referencias y EvidenceRevision. Textos visibles
+  al alumno, sin notas internas ni mensajería. Hasta cien entradas/destino y diez
+  referencias/decisión; un resultado fundamentado requiere observación y evidencias.
+- Escrituras con CSRF/GUID/hash/revisión, lock breve asignación→sesión y transacción
+  atómica. Replays no duplican; revisión/evidencia vieja 409. La revisión nunca cambia
+  respuestas, ayudas, número de intentos, resultados ni avance del alumno. Cerrar
+  seguimiento exige Reviewed y referencia al último intento, sin aprobación/reset.
+- Métricas separan alumnos únicos, pares alumno/ejercicio e intentos. Sin/con ayuda
+  cuenta ejercicios distintos, prioridad sin ayuda; errores/NeedsReview/no evaluables
+  son intentos históricos. Entrega no significa correcto/dominio. Refuerzos aparte.
+- Casos derivados al consultar, sin escrituras al GET: último NeedsReview/NotEvaluable,
+  tres errores o diez intentos sin coincidencia, o marca docente explícita. Razones
+  y evidencias visibles; nueva respuesta reabre cobertura. Sin inferencias por
+  inactividad, tiempo conectado, mensajes, motivación o capacidad.
+- Sin TutoringMessage, claves, contextos ni planes/diagnósticos personales en DTO.
+  AutomaticFeedback y AiFeedback separados; reportes IA solo observaciones con
+  referencias a intentos de esa clase y metadatos de origen/desactualización.
+  ReportShare privado sigue opt-in/revocación de ADR-019. El resumen grupal IA opcional
+  se difiere; supervisión/revisión no llama IA ni depende de disponibilidad externa.
+- Sexta migración TeacherSupervision, aditiva; cinco previas intactas. Triggers
+  protegen origen de revisión, historial/referencias y evidencia primaria de intentos
+  (permiten anexar orientación/metadatos IA del motor). Sin borrado/retención automáticos.
+  Contratos SUPERVISION_HTTP.md y QA_7.md. No avanzar a 8.
 
 ## Operación y pruebas
 
@@ -291,8 +333,8 @@
 - PostgreSQL localhost:15432 (interno 5432) en proyecto Compose aulatutor-ia.
   API/web pueden seguir activos al entregar: inspeccionar puertos/procesos y detener
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
-- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 214
-  pruebas (102 unitarias/112 integración; conserva 174 previas), consistencia EF,
+- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 255
+  pruebas (112 unitarias/143 integración; conserva las 214 previas), consistencia EF,
   npm ci/check/check:theme/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
   UI-0 repitió 123 pruebas/75 HTTP y añadió 70 comprobaciones de contraste y
   19 capturas por rol/viewport; QA_UI_0.md registra teclado/storage/responsive.
@@ -301,6 +343,9 @@
   corrección Groq posterior: 174 pruebas, QA_GROQ_FIX.md y evidence-groq-fix;
   TeacherLessons aplicada localmente, Docker API compilada y QA temporal eliminado.
   Iteración 6 añade 40 pruebas, 149 HTTP y 29 capturas en evidence-6; detalle QA_6.md.
+  Iteración 7 añade 41 pruebas, 181 HTTP y 26 capturas / 35 mediciones de ajuste en
+  evidence-7/QA_7.md; cierre técnico en ITERATION_7.md. El salto 155→174 anterior
+  proviene de 19 unitarias en la corrección Groq f336578, no de una regresión de 6.
   Histórico:
   91 pruebas y 48 comprobaciones HTTP de 3; revisión visual
   desktop/móvil registrada en QA_3.md. PrivateTutoring/LearningEvidence aplicadas en BD local;
@@ -321,8 +366,10 @@
 
 ## Pendientes y continuidad
 
-- Iteración 7: supervisión docente autorizada; requiere encargo nuevo. Preservar tutoría
-  privada y planes personales como concepto diferente. No continuar automáticamente.
+- Iteración 7 autorizada por nuevo encargo; preservar tutoría privada y planes
+  personales como concepto diferente. Iteración 8 requiere nuevo encargo.
+- Remediación de intentos agotados, revisión curricular, resumen grupal IA con
+  anonimización y paginación/medición con grupos grandes siguen pendientes explícitos.
 - Pendientes documentados: confirmación email, recuperación/MFA, invitaciones,
   auditoría integral (8), retención institucional y borrado. Frontera Approved/Published
   resuelta en ADR-021: inmutable al aprobar, publicación explícita independiente.

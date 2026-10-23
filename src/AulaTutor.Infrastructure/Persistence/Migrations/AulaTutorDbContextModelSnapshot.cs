@@ -573,6 +573,135 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.ToTable("LessonVersions");
                 });
 
+            modelBuilder.Entity("AulaTutor.Domain.Lessons.ReviewEvidence", b =>
+                {
+                    b.Property<Guid>("EntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("EntryId", "AttemptId");
+
+                    b.HasIndex("AttemptId", "SessionId");
+
+                    b.HasIndex("EntryId", "SessionId");
+
+                    b.ToTable("ReviewEvidence");
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Lessons.TeacherReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ExerciseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId", "SessionId");
+
+                    b.HasIndex("SessionId", "TargetId")
+                        .IsUnique();
+
+                    b.ToTable("TeacherReviews", t =>
+                        {
+                            t.HasCheckConstraint("CK_Review_Target", "\"Revision\" > 0 AND ((\"ExerciseId\" IS NULL AND \"TargetId\" = \"SessionId\") OR (\"ExerciseId\" IS NOT NULL AND \"TargetId\" = \"ExerciseId\"))");
+                        });
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Lessons.TeacherReviewEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attention")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("EvidenceRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("Flagged")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("InputHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Observation")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Recommendation")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("ReviewId", "Revision")
+                        .IsUnique();
+
+                    b.HasIndex("ReviewId", "SessionId");
+
+                    b.HasIndex("SessionId", "RequestId")
+                        .IsUnique();
+
+                    b.ToTable("TeacherReviewEntries", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReviewEntry_State", "\"Revision\" > 0 AND \"EvidenceRevision\" >= 0 AND \"State\" BETWEEN 0 AND 3 AND \"Attention\" BETWEEN 0 AND 2 AND \"Outcome\" BETWEEN 0 AND 3");
+                        });
+                });
+
             modelBuilder.Entity("AulaTutor.Domain.Tutoring.DiagnosticAssessment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1654,6 +1783,54 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.HasOne("AulaTutor.Domain.Lessons.LessonDraftRevision", null)
                         .WithMany()
                         .HasForeignKey("LessonId", "DraftRevision")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Lessons.ReviewEvidence", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Tutoring.ExerciseAttempt", null)
+                        .WithMany()
+                        .HasForeignKey("AttemptId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Lessons.TeacherReviewEntry", null)
+                        .WithMany()
+                        .HasForeignKey("EntryId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Lessons.TeacherReview", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Tutoring.LearningExercise", null)
+                        .WithMany()
+                        .HasForeignKey("ExerciseId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Lessons.TeacherReviewEntry", b =>
+                {
+                    b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Lessons.TeacherReview", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewId", "SessionId")
+                        .HasPrincipalKey("Id", "SessionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

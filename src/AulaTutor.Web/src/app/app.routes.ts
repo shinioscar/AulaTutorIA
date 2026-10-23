@@ -2,6 +2,9 @@ import { Routes } from '@angular/router';
 import { signedInGuard, adminGuard, studentGuard, teacherGuard } from './auth/auth.service';
 
 export const routes: Routes = [
+  {path:'teacher/supervision/:id/students/:studentId',canActivate:[teacherGuard],loadComponent:()=>import('./supervision/supervision-page').then(m=>m.SupervisionPage)},
+  {path:'teacher/supervision/:id',canActivate:[teacherGuard],loadComponent:()=>import('./supervision/supervision-page').then(m=>m.SupervisionPage)},
+  {path:'teacher/supervision',canActivate:[teacherGuard],loadComponent:()=>import('./supervision/supervision-page').then(m=>m.SupervisionPage)},
   {path:'teacher/assignments',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/assignments-page').then(m=>m.AssignmentsPage)},
   {path:'classes/:id',canActivate:[studentGuard],loadComponent:()=>import('./lessons/student-classes-page').then(m=>m.StudentClassesPage)},
   {path:'classes',canActivate:[studentGuard],loadComponent:()=>import('./lessons/student-classes-page').then(m=>m.StudentClassesPage)},

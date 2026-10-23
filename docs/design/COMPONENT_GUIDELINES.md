@@ -94,3 +94,12 @@ presupuestos, costos ni contadores inventados. No añadir estadísticas de mocku
 Verificar Light/Dark, teclado/foco, 320/390 px, tablet y escritorio, prefers-reduced-motion,
 texto largo/código, storage bloqueado y recarga. Medir contraste en el estado real.
 Antes de una pantalla nueva, revisar DESIGN_SYSTEM.md y THEME_TOKENS.md.
+
+## Aplicación funcional en Iteración 7
+
+Supervisión docente añade páginas de grupos/resultados/evidencias/revisión con
+las mismas superficies y tokens. Distingue datos PostgreSQL, orientación IA y
+decisiones humanas; denominadores explícitos, sin porcentajes de dominio. Selects
+de revisión usan labels explícitos separados de opciones; tablas se sustituyen
+por tarjetas legibles en móvil. Feedback Student conserva autor/fecha/historial.
+No es un rediseño completo de dashboards. QA específico en iterations/QA_7.md.

@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<AssignedClassAccess>();
         services.AddScoped<AssignedClassWorkflow>();
         services.AddScoped<IAssignmentService, AssignmentService>();
+        services.AddScoped<ISupervisionService, SupervisionService>();
         return services;
     }
 }

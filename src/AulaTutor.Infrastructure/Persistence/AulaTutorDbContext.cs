@@ -35,6 +35,9 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
     public DbSet<LessonCommand> LessonCommands => Set<LessonCommand>();
     public DbSet<LessonAssignment> LessonAssignments => Set<LessonAssignment>();
     public DbSet<AssignmentChange> AssignmentChanges => Set<AssignmentChange>();
+    public DbSet<TeacherReview> TeacherReviews => Set<TeacherReview>();
+    public DbSet<TeacherReviewEntry> TeacherReviewEntries => Set<TeacherReviewEntry>();
+    public DbSet<ReviewEvidence> ReviewEvidence => Set<ReviewEvidence>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -43,6 +46,7 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
         builder.ConfigureLearning();
         builder.ConfigureLessons();
         builder.ConfigureAssignments();
+        builder.ConfigureSupervision();
         builder.Entity<Organization>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100);

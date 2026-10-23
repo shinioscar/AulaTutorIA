@@ -1,4 +1,4 @@
-# Arquitectura del piloto (Iteraciones 0–6)
+# Arquitectura del piloto (Iteraciones 0–7)
 
 Monolito modular. Dependencias permitidas:
 
@@ -51,7 +51,14 @@ progreso individual al motor de tutoría/evidencias, sin otro cliente IA. Trigge
 origen de asignación/sesión/ejercicio e historial. Cada alumno tiene sesión independiente;
 refuerzo complementario no sustituye obligatorios. Cierre crea reporte local trazable,
 sin cuota ni nota. Contratos en ASSIGNMENTS_HTTP.md y decisiones en ADR-023.
-No supervisión docente avanzada ni acceso implícito a tutorías privadas.
+TeacherSupervision es la sexta migración, aditiva. TeacherReview identifica el
+destino académico; TeacherReviewEntry y ReviewEvidence conservan decisiones y
+referencias inmutables. SupervisionService consulta cohortes vigentes, calcula
+métricas por versión y presenta casos explicables; escrituras con lock corto,
+GUID/hash/revisión/EvidenceRevision y CSRF. La proyección excluye chat, claves y
+tutorías autónomas. El alumno consulta exclusivamente su feedback, sin mensajería
+general. El resumen grupal IA opcional queda diferido. Contratos en
+SUPERVISION_HTTP.md y permisos/historial en ADR-024. El motor/proveedores se conservan.
 
 HTTPS local para cookies Secure, con certificados excluidos en .cache. HTTP 5080
 conserva salud y OpenAPI de desarrollo. Fuera de desarrollo se activa HTTPS/HSTS;

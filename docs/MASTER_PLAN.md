@@ -24,3 +24,9 @@ reportes y compartición mínima, con ampliación autorizada de diagnóstico y p
 personales ejecutables. ADR-018/019 e informe ITERATION_4.md. No modifica el maestro
 ni autoriza el constructor docente de Iteración 5. Groq local conservado; pruebas
 exclusivamente Mock/simuladas, sin llamadas adicionales a proveedores reales.
+
+Nuevo encargo de Iteración 7, 2026-10-22, después de los cierres de 5, corrección
+Groq y 6: panel docente, evidencias académicas autorizadas, revisión/feedback humano
+e historial, métricas por objetivo y atención explicable. ADR-024 y contratos
+SUPERVISION_HTTP.md; entrega ITERATION_7.md. Maestro leído completo y conservado;
+sin autorización para Iteración 8 ni nuevas pruebas de cuota real.

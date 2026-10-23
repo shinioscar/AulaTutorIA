@@ -1,0 +1,8 @@
+@import '../lessons/lessons.css';
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:var(--space-3)}
+.metrics p{padding:var(--space-3);border:1px solid var(--border);border-radius:var(--radius-medium);background:var(--surface-secondary)}
+.metrics strong{display:block;font-size:var(--font-large)}
+.check{display:flex;align-items:center;gap:var(--space-3);min-height:var(--target-min)}
+.check input{width:var(--space-5);min-height:var(--space-5);flex-shrink:0}
+fieldset{margin-block:var(--space-4)}
+a{display:inline-flex;align-items:center;min-height:var(--target-min)}

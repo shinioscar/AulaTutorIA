@@ -1,7 +1,9 @@
 # AulaTutor IA
 
-Iteración 6: asignación de versiones publicadas a grupos y clases individuales,
-con núcleo aprobado común, progreso/evidencia propios y refuerzo complementario.
+Iteración 7: supervisión docente de clases asignadas, evidencias académicas,
+revisiones y retroalimentación humana con historial, métricas por objetivo y casos
+de atención explicables. Conserva las asignaciones de versiones concretas,
+el núcleo aprobado común, progreso/evidencia propios y refuerzo complementario.
 Conserva constructor docente, simulaciones aisladas y versiones inmutables,
 además de diagnóstico estructurado, planes personales ejecutables, ejercicios,
 intentos, reportes orientativos, refuerzo y compartición voluntaria mínima,
@@ -40,7 +42,7 @@ de UI-0: [QA_UI_0](docs/design/QA_UI_0.md).
 ## Herramientas
 
 .NET SDK 10.0.302, EF Core/Identity 10.0.10, Npgsql EF 10.0.3, PostgreSQL 18.6;
-Angular 21.2.25 (CLI/build 21.2.26), Node 24.11.0 y npm 11.6.2 usados en validación.
+Angular 21.2.25 (CLI/build 21.2.28), Node 24.11.0 y npm 11.6.2 usados en validación.
 PowerShell 7 y Docker Desktop Linux activo. Dependencias exactas y lockfiles
 versionados; dotnet-ef local en dotnet-tools.json. Sin instalaciones globales.
 
@@ -319,8 +321,9 @@ trabajo existente en solo lectura. Retirar membresía Student/Teacher, archivar 
 grupo o revocar al docente bloquea las siguientes consultas con 404; no borra
 evidencia. Nuevos miembros pueden empezar si la relación/fechas siguen vigentes.
 Las tutorías autónomas y planes personales continúan privados y separados del
-listado de clases. La relación docente no abre chats ni evidencias en esta iteración;
-solo se conserva la compartición expresa de versiones de reporte de ADR-019.
+listado de clases. La supervisión de 7 autoriza únicamente las evidencias académicas
+de clases asignadas según ADR-024; no abre chats completos ni tutorías autónomas.
+Estas últimas conservan la compartición expresa de versiones de reporte de ADR-019.
 
 Aplicar explícitamente `AssignedClasses` con `--migrate`, como en Preparación.
 Las cuatro migraciones anteriores permanecen intactas. No cambia usuarios/hashes/
@@ -328,6 +331,46 @@ grupos ni crea cuentas. Decisiones en [ADR-023](docs/decisions/ADR-023-asignacio
 contratos en [ASSIGNMENTS_HTTP](docs/architecture/ASSIGNMENTS_HTTP.md) y entrega en
 [ITERATION_6](docs/iterations/ITERATION_6.md). Asignación individual preparada como
 extensión de la política central, sin interfaz ni permisos parciales en 6.
+
+## Supervisión y revisión docente
+
+Teacher aprobado abre «Supervisión docente» o «Inicio docente». Puede filtrar sus
+grupos, abrir una asignación concreta y consultar estudiantes elegibles actuales,
+participación, avance por objetivo, entregas, resultados de reglas y casos de
+atención. Cada métrica distingue estudiantes, ejercicios e intentos y explica su
+denominador. Abrir sesión no significa comenzar conversación; entregar un abierto
+NeedsReview no significa acertar ni recibir una calificación.
+
+«Pendientes de revisión» muestra señales verificables: abiertos/no evaluables,
+tres errores sin acierto, diez intentos agotados o marca explícita docente. El
+seguimiento individual permite examinar consigna/respuesta/ayudas/resultado y
+registrar comentario, observación, recomendación y resultado humano fundamentado.
+Seleccionar las referencias examinadas antes de resolver una actividad. Cada envío
+añade una entrada con autor/fecha e historial. Otra evidencia o revisión concurrente
+exige actualizar y examinar; repetir una solicitud confirmada no duplica decisiones.
+Atender un caso no aprueba un cerrado ni reinicia intentos agotados.
+
+El estudiante ve «Observaciones de tu docente» en el detalle de su clase, con todo
+el historial y solo sus propios comentarios. Se informa que las actividades de la
+clase son revisables por el responsable; la conversación completa sigue privada.
+Las observaciones IA de intentos/reportes están identificadas y separadas de datos
+verificados y decisiones humanas. La consulta y la revisión no generan IA. El
+resumen cualitativo grupal opcional se difiere para definir minimización de datos;
+el panel y los reportes deterministas funcionan sin disponibilidad del proveedor.
+
+Solo responsable de la asignación, activo/aprobado y con membresía docente vigente;
+co-docentes y Admin no reciben acceso por su rol. Estudiantes retirados/inactivos,
+grupos archivados y docentes revocados dejan de autorizar lecturas. Withdrawn cierra
+supervisión docente conservando registros; Inactive/plazos/publicación archivada
+permiten revisión histórica con relación vigente. Feedback propio mantiene ADR-023.
+
+Aplicar explícitamente la sexta migración `TeacherSupervision` con `--migrate`.
+Las cinco previas se conservan. No cambia usuarios, contraseñas ni grupos. Permisos,
+historial y límites en [ADR-024](docs/decisions/ADR-024-supervision-y-revision-humana.md)
+y [SUPERVISION_HTTP](docs/architecture/SUPERVISION_HTTP.md). Cierre verificado en
+[ITERATION_7](docs/iterations/ITERATION_7.md): 255 pruebas y 181 HTTP, QA Light/Dark.
+CLI/build se parchearon a 21.2.28 por avisos heredados de npm; audit final cero,
+sin nuevas dependencias directas ni cambios de runtime Angular (ADR-024).
 
 ## Configurar IA
 
@@ -368,13 +411,17 @@ script de verificación hace llamadas reales: todos fuerzan Mock o servidor simu
 ./scripts/Verify.ps1 -Smoke -Http
 ```
 
-Restaura locks, compila, ejecuta 102 pruebas unitarias y 112 de integración, verifica
+Restaura locks, compila, ejecuta 112 pruebas unitarias y 143 de integración, verifica
 consistencia de migración, npm ci/TypeScript/contraste de temas/Angular, Compose, Git y dos recorridos
 reales: smoke de fundaciones y HTTP de identidad/tutoría Mock sobre HTTPS/PostgreSQL.
 La verificación de Iteración 6 conserva las 174 pruebas anteriores y añade 40
 casos de asignación, progreso, integridad, contexto y recuperación. El HTTP conserva
 las 107 comprobaciones anteriores y añade 42 del recorrido de clases (149 en total);
-resultados en ITERATION_6.md.
+resultados en ITERATION_6.md. Iteración 7 conserva las 214 y añade 41 pruebas
+(diez unitarias y 31 de integración); el recorrido HTTP añade 32 y conserva las
+149 anteriores, 181 en total. Cierre en ITERATION_7.md. El salto histórico de 155
+a 174 corresponde a 19 unitarias de la corrección Groq intermedia, documentada en
+QA_GROQ_FIX.md y el commit f336578; no es una regresión de 6.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
 omite pruebas sin PostgreSQL. Requiere credenciales locales con CREATE DATABASE.
 HTTP usa cuentas @example.invalid y contraseña aleatoria, sin sembrar usuarios en
@@ -403,10 +450,10 @@ Groq limita tanto peticiones como tokens; los límites exactos son por organizac
 
 ## Continuar el proyecto
 
-Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md y el plan de
-iteraciones y las guías de docs/design. Iteración 6 completada por encargo explícito;
-verificación y cierre en ITERATION_6.md. No avanzar a 7 sin nuevo encargo: la supervisión
-docente deberá mantener visibilidad por modalidad y relación académica vigente.
+Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md, el plan de
+iteraciones y las guías de docs/design. Iteración 7 completada por nuevo encargo;
+su verificación se registra en ITERATION_7.md. No avanzar a 8 automáticamente.
+Conservar privacidad por modalidad, relación académica vigente e historial humano.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
 políticas de retención/compartición. Antes de producción: TLS confiable, mismo
