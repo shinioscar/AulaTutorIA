@@ -1,5 +1,8 @@
 # Clases asignadas — HTTP de Iteración 6
 
+IA-2 añade [modalidad precargada y tarjetas](PRELOADED_CLASSES.md) sobre las mismas
+versiones/asignaciones/sesiones. Las versiones previas conservan su modalidad.
+
 Todas las rutas exigen sesión HTTPS del mismo origen y Cache-Control no-store.
 Mutaciones exigen X-XSRF-TOKEN. Actor/organización proceden de Identity; ningún DTO
 acepta studentId/teacherId/organizationId. Reglas completas en ADR-023.

@@ -1,5 +1,8 @@
 # Importación externa de clases — v1
 
+Ampliación compatible IA-2: [V2 y clases precargadas](PRELOADED_CLASSES.md).
+V1 sigue aceptado y conversacional; no se convierte automáticamente.
+
 ## Guía breve para profesores
 
 1. En Mis clases, abre Crear con apoyo de IA. Configura el tema y las opciones de

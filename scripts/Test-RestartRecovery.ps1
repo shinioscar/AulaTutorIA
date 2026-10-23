@@ -22,6 +22,9 @@ function Invoke-Recovery([string]$method, [string]$route, $body = $null) {
 }
 $null = Invoke-Recovery POST '/api/auth/login' @{email=$taskState.studentEmail;password=$taskState.password}
 $taskBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskState.completedTutoringId)"
+$taskCardsReport = Get-Content "$taskRoot/artifacts/ia-2-e2e.json" -Raw | ConvertFrom-Json
+if($taskCardsReport.status -ne 'passed' -or $taskCardsReport.preloadedSessionId -notmatch '^[a-f0-9-]{36}$'){throw 'The passed preloaded E2E session is required for restart verification.'}
+$taskCardsBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskCardsReport.preloadedSessionId)"
 # Respect the retained QA account's previous rate window; never weaken server policy.
 Start-Sleep -Seconds 60
 $taskNew = Invoke-Recovery POST '/api/tutoring-sessions/' @{ requestId=[Guid]::NewGuid().ToString(); topic='Reinicio ficticio'; goal='Recuperar sin duplicar'; level='Beginner';directReview=$true }
@@ -41,8 +44,12 @@ for($taskAttempt=0;$taskAttempt -lt 60;$taskAttempt++) {
 }
 if(-not $taskReady -or $taskHealth.aiProvider -ne 'Mock'){throw 'Restarted Mock API was not ready.'}
 $taskAfter = Invoke-Recovery GET "/api/tutoring-sessions/$($taskState.completedTutoringId)"
+$taskCardsAfter = Invoke-Recovery GET "/api/tutoring-sessions/$($taskCardsReport.preloadedSessionId)"
+if($taskCardsAfter.policyVersion -ne 'preloaded-class-v1' -or $taskCardsAfter.state -ne 'Completed' -or
+    ($taskCardsBefore.learning | ConvertTo-Json -Depth 32 -Compress) -ne ($taskCardsAfter.learning | ConvertTo-Json -Depth 32 -Compress) -or
+    ($taskCardsBefore.turns | ConvertTo-Json -Depth 32 -Compress) -ne ($taskCardsAfter.turns | ConvertTo-Json -Depth 32 -Compress)) {throw 'Preloaded attempts, help/evaluation turns or reports changed across restart.'}
 if($taskAfter.messages.Count -ne $taskBefore.messages.Count -or $taskAfter.turns.Count -ne $taskBefore.turns.Count -or $taskAfter.summary -ne $taskBefore.summary){throw 'Committed history changed across restart.'}
 $taskReplay = Invoke-Recovery POST "/api/tutoring-sessions/$($taskNew.id)/messages" $taskRequest
 if($taskReplay.turns.Count -ne 1 -or $taskReplay.messages.Count -ne $taskStarted.messages.Count){throw 'Replay duplicated the durable turn after restart.'}
-@{status='passed';provider='Mock';cookieSurvived=$true;historyPreserved=$true;replayedTurns=1;duplicateTurns=0;database='isolated-http'} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/iteration-8-restart.json" -Encoding utf8
+@{status='passed';provider='Mock';cookieSurvived=$true;historyPreserved=$true;preloadedEvidencePreserved=$true;replayedTurns=1;duplicateTurns=0;database='isolated-http'} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/ia-2-restart.json" -Encoding utf8
 Write-Output 'Controlled API restart passed: cookie, committed history and idempotent replay preserved; Mock only.'

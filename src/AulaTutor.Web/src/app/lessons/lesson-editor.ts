@@ -7,8 +7,9 @@ import { Observable, Subscription } from 'rxjs';
 import { LessonContent, LessonExercise, LessonService, LessonView, LessonOperation, LessonVersion, emptyLesson, lessonState, lessonAction } from './lesson.service';
 import { SafeResponse } from '../tutoring/safe-response';
 import { LessonSummary } from './lesson-summary';
+import { PreloadedEditor } from './preloaded-editor';
 import { aiErrorMessage } from '../ai/ai-error-message';
-@Component({selector:'app-lesson-editor',imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LessonSummary],templateUrl:'./lesson-editor.html',styleUrl:'./lessons.css'})
+@Component({selector:'app-lesson-editor',imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LessonSummary,PreloadedEditor],templateUrl:'./lesson-editor.html',styleUrl:'./lessons.css'})
 export class LessonEditor {
   private readonly service=inject(LessonService);private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);private readonly destroy=inject(DestroyRef);
   readonly lesson=signal<LessonView|null>(null);readonly busy=signal(false);readonly error=signal('');readonly notice=signal('');readonly dirty=signal(false);readonly tab=signal('basic');readonly version=signal<LessonVersion|null>(null);readonly state=lessonState;

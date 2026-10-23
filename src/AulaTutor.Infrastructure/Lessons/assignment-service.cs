@@ -147,6 +147,7 @@ public sealed class AssignmentService(AulaTutorDbContext db, ICurrentActor curre
                     Level = c.Level, DirectReview = true, ProviderId = health.ProviderId, ModelId = health.ModelId, CreatedAt = clock.GetUtcNow(), LastActivityAt = clock.GetUtcNow() };
                 // Teacher free-form level is bounded separately from tutoring's enum.
                 s.Level = c.Level.Length <= 20 ? c.Level : c.Level[..20];
+                if (c.Preloaded is not null) s.PolicyVersion = "preloaded-class-v1";
                 db.TutoringSessions.Add(s); workflow.Seed(s, c, r.RequestId); await db.SaveChangesAsync(ct); sessionId = s.Id;
             }
             await tx.CommitAsync(ct);

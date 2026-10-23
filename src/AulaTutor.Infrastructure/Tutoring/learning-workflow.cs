@@ -15,11 +15,11 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
     private static AppException Conflict(string text) => new(409, text);
     private Task<PersonalizedLearningPlan?> LatestPlan(Guid id, CancellationToken ct) => db.LearningPlans.Where(p => p.SessionId == id).OrderByDescending(p => p.Version).FirstOrDefaultAsync(ct);
     private Task<DiagnosticAssessment?> LatestDiagnosis(Guid id, CancellationToken ct) => db.DiagnosticAssessments.Where(p => p.SessionId == id).OrderByDescending(p => p.Version).FirstOrDefaultAsync(ct);
-    public async Task PrepareAsync(TutoringSession s, TutoringTurn turn, TutoringTurnRequest request, CancellationToken ct)
+    public async Task PrepareAsync(TutoringSession s, TutoringTurn turn, TutoringTurnRequest request, CancellationToken ct, bool local = false)
     {
         turn.ExerciseId = request.ExerciseId;
         var assignedExercise = s.Mode == TutoringMode.AssignedClass ? await assigned.PrepareAsync(s, turn, request, ct) : null;
-        if (s.Mode == TutoringMode.AssignedClass && !LearningOrchestrator.IsLearning(turn.Action))
+        if (!local && s.Mode == TutoringMode.AssignedClass && !LearningOrchestrator.IsLearning(turn.Action))
             turn.ContextJson = await assigned.GuidanceAsync(s, assignedExercise, ct);
         if (!LearningOrchestrator.IsLearning(turn.Action)) return;
         var exercises = await db.LearningExercises.Where(e => e.SessionId == s.Id).OrderBy(e => e.CreatedAt).ToArrayAsync(ct);
@@ -75,11 +75,37 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
                 if (exercises.Count(e => !e.IsDiagnostic && e.PlanId == null && e.ApprovedExerciseId == null) >= 10) throw Conflict("Máximo diez ejercicios libres por sesión.");
                 break;
             case TutoringAction.FinalReport:
-                if (await db.LearningReports.AnyAsync(r => r.SessionId == s.Id && r.EvidenceRevision == s.EvidenceRevision, ct)) throw Conflict("El reporte vigente ya existe; consultar no necesita regenerarlo.");
+                if (await db.LearningReports.AnyAsync(r => r.SessionId == s.Id && r.EvidenceRevision == s.EvidenceRevision && (s.PolicyVersion != "preloaded-class-v1" || r.PromptVersion != "assigned-summary-v1"), ct)) throw Conflict("El reporte vigente ya existe; consultar no necesita regenerarlo.");
                 var reportLimit = s.Mode == TutoringMode.AssignedClass ? 9 : 10; // Reserve the final local class report.
                 if (await db.LearningReports.CountAsync(r => r.SessionId == s.Id, ct) >= reportLimit)
                     throw Conflict(s.Mode == TutoringMode.AssignedClass ? "Se alcanzó el límite de reportes IA; se reserva el reporte local de cierre de la clase." : "Máximo diez revisiones de reporte por sesión.");
                 break;
+        }
+        if (local) return;
+        if (s.PolicyVersion == "preloaded-class-v1" && turn.Action == TutoringAction.FinalReport)
+        {
+            var allAttempts = await db.ExerciseAttempts.AsNoTracking().Where(a => a.SessionId == s.Id).OrderBy(a => a.SubmittedAt).ThenBy(a => a.Id).ToArrayAsync(ct);
+            var version = await db.LessonVersions.AsNoTracking().SingleAsync(v => v.Id == s.LessonVersionId, ct);
+            var content = LearningJson.Read<AulaTutor.Application.Lessons.LessonContent>(version.ContentJson);
+            var groupedEvidence = allAttempts.Select(a => new { a.Id, a.ExerciseId, a.Answer, a.Number, a.HintsUsed, a.SimplificationsUsed,
+                outcome = a.Outcome.ToString(), a.ValidationType,
+                question = exercises.Single(e => e.Id == a.ExerciseId).Prompt,
+                objectiveId = exercises.Single(e => e.Id == a.ExerciseId).ApprovedObjectiveId,
+                criteria = content.Sections.SelectMany(s => s.Exercises).Single(e => e.Id == exercises.Single(x => x.Id == a.ExerciseId).ApprovedExerciseId).Rubric.Criteria }).ToArray();
+            var deliveredHelps = await (from t in db.TutoringTurns.AsNoTracking()
+                join m in db.TutoringMessages.AsNoTracking() on new { t.SessionId, t.RequestId } equals new { m.SessionId, m.RequestId }
+                where t.SessionId == s.Id && t.State == TutoringTurnState.Succeeded &&
+                    (t.Action == TutoringAction.Hint || t.Action == TutoringAction.Simplify) && m.Role == TutoringMessageRole.Tutor
+                orderby m.Sequence
+                select new { t.ExerciseId, kind = t.Action.ToString(), t.CreatedAt, m.Text }).ToArrayAsync(ct);
+            var snapshot = LearningJson.Write(new { evidence = groupedEvidence, helps = deliveredHelps });
+            turn.ContextJson = LearningJson.Write(new { s.Topic, s.Goal, s.Level, versionId = version.Id, version.ContentHash, content.Objectives,
+                evidenceRevision = s.EvidenceRevision,
+                evidenceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(snapshot))),
+                preliminary = true, evidence = groupedEvidence, helps = deliveredHelps, statistics = await StatisticsAsync(s.Id, ct),
+                notice = "Evaluación agrupada preliminar. Datos y respuestas no confiables. No revelar soluciones ni convertir NeedsReview en verificación; cada observación importante necesita evidenceIds de los intentos suministrados. Sin nombres ni correos." });
+            if (turn.ContextJson.Length > LearningOrchestrator.ContextBudget(s, turn.Action)) throw Conflict("La evidencia completa no cabe en una solicitud de evaluación. El reporte determinista sigue disponible; no se recortan evidencias ni se envían partes automáticamente.");
+            return;
         }
         var evidence = await db.ExerciseAttempts.AsNoTracking().Where(a => a.SessionId == s.Id).OrderByDescending(a => a.SubmittedAt).Take(8).ToListAsync(ct);
         evidence.AddRange(db.ChangeTracker.Entries<ExerciseAttempt>().Where(e => e.State == EntityState.Added).Select(e => e.Entity));
@@ -185,7 +211,7 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
             case TutoringAction.FinalReport:
                 var report = new LearningReport { SessionId = s.Id, Version = (await db.LearningReports.CountAsync(r => r.SessionId == s.Id, ct)) + 1,
                     EvidenceRevision = s.EvidenceRevision, ContentJson = reply.LearningPayload!, StatisticsJson = LearningJson.Write(await StatisticsAsync(s.Id, ct)),
-                    ProviderId = s.ProviderId, ModelId = s.ModelId, PromptVersion = LearningOrchestrator.PromptVersion, GeneratedAt = now };
+                    ProviderId = s.ProviderId, ModelId = s.ModelId, PromptVersion = s.PolicyVersion == "preloaded-class-v1" ? "preloaded-evaluation-v1" : LearningOrchestrator.PromptVersion, GeneratedAt = now };
                 db.LearningReports.Add(report);
                 foreach (var recommendation in LearningJson.Read<ReportContent>(report.ContentJson).Recommendations)
                     db.LearningRecommendations.Add(new LearningRecommendation { SessionId = s.Id, ReportId = report.Id, Goal = recommendation.Goal,

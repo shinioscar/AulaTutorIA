@@ -25,6 +25,11 @@ sobre los límites históricos de un ADR; no autorizan encargos nuevos.
 
 ## Alcance, pendientes e históricos — solo cuando aporten al encargo
 
+Clases precargadas IA-2: [ADR-028](../decisions/ADR-028-clases-precargadas-y-evaluacion-agrupada.md),
+[contrato/guía](../architecture/PRELOADED_CLASSES.md),
+[estado/verificación](../iterations/IA_2.md). Consultar también clases, asignaciones,
+turnos, evaluación, supervisión, proveedores/cuotas y frontend: el cambio es transversal.
+
 Importación externa docente IA-1: [ADR-027](../decisions/ADR-027-importacion-externa-de-clases.md)
 y [contrato/guía](../architecture/LESSON_IMPORT.md), junto con las filas de constructor,
 frontend y permisos. No conecta una API ni sustituye el motor estudiantil.
@@ -33,6 +38,7 @@ frontend y permisos. No conecta una API ni sustituye el motor estudiantil.
   [preguntas abiertas](../architecture/OPEN_QUESTIONS.md): pendientes y límites.
 - Cierres actuales: [Iteración 8](../iterations/ITERATION_8.md), [UI-1](../iterations/UI_1.md).
 - Importación externa cerrada: [IA-1](../iterations/IA_1.md).
+- Clases precargadas y evaluación agrupada cerradas: [IA-2](../iterations/IA_2.md).
   Sus resultados son históricos, no pruebas ejecutadas por cada nueva tarea.
 - Historial: docs/iterations/ITERATION_0.md a ITERATION_8.md; QA_3/4/5/6/7/8.md,
   QA_GROQ_FIX.md, evidence-* y docs/design/QA_UI_0.md. Elegir el informe del problema

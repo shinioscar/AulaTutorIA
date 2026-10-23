@@ -1,0 +1,35 @@
+{
+  "format": "aulatutor-lesson-v2",
+  "lesson": {
+    "explanation": "Ejemplo ficticio precargado para revisión docente.",
+    "title": "Comparar fracciones", "subject": "Matemáticas",
+    "description": "Introducción a equivalencias sencillas.",
+    "prerequisites": "Reconocer numerador y denominador.", "level": "Principiante",
+    "durationMinutes": 40, "methodology": "Representar, practicar y reflexionar.",
+    "instructions": "Usa dibujos del mismo tamaño.",
+    "objectives": [{"id":"o1","text":"Reconocer fracciones equivalentes."}],
+    "sections": [{"id":"s1","title":"Representar y practicar","body":"Una misma proporción puede representarse dividiendo sus partes en unidades más pequeñas."}],
+    "exercises": [{
+      "id":"e1","sectionId":"s1","objectiveId":"o1","required":true,
+      "kind":"TrueFalse","prompt":"¿1/2 equivale a 2/4?",
+      "options":["Verdadero","Falso"],"acceptedAnswers":["Verdadero"],
+      "publicRubric":"Justifica comparando las partes.",
+      "criteria":["Reconoce que ambas fracciones representan la misma proporción."],
+      "referenceSolution":"Verdadero: multiplicar numerador y denominador por dos conserva la proporción.",
+      "hintRules":"Ofrece primero una representación gráfica y no anticipes la solución."
+    }]
+  },
+  "preloaded": {
+    "introduction":"Hoy compararás representaciones de una misma proporción. Puedes pedir ayudas locales y explicar tu razonamiento.",
+    "exercises":[{
+      "exerciseId":"e1",
+      "hints":["Dibuja dos rectángulos iguales.","Divide el primero en dos partes y el segundo en cuatro.","Compara cuánto espacio ocupan las partes indicadas."],
+      "alternatives":["Piensa en porciones de una misma figura, no solo en los números escritos."],
+      "correctFeedback":"Coincide con la regla. Explica por qué se conserva la proporción; un acierto no demuestra dominio.",
+      "incorrectFeedback":"Revisa que las dos figuras tengan el mismo tamaño antes de comparar.",
+      "reviewFeedback":"Respuesta registrada; requiere revisión docente.",
+      "commonErrors":["Comparar solo los numeradores puede resultar engañoso."],
+      "reinforcementSuggestions":["Practica dibujando otras particiones equivalentes y pide al docente que revise tu explicación."]
+    }]
+  }
+}

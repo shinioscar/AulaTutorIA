@@ -40,11 +40,14 @@ public static class LessonValidationRules
                 Text(e.Rubric.ReferenceSolution, 1500); Text(e.Rubric.HintRules, 600);
             }
         }
+        PreloadedRules.Validate(p);
         Require(exercises <= 24 && LearningJson.Write(p).Length <= 20000);
     }
     public static LessonValidation Review(LessonContent p)
     {
         ValidateDraft(p); var errors = new List<string>(); var warnings = new List<string>();
+        try { PreloadedRules.Validate(p, true); } catch (AppException e) { errors.Add(e.Message); }
+        if (p.Preloaded is not null) warnings.Add("Revisa que las primeras pistas, explicaciones y feedback no revelen soluciones privadas. La comprobación estructural no detecta todas las revelaciones semánticas.");
         if (string.IsNullOrWhiteSpace(p.Title) || string.IsNullOrWhiteSpace(p.Subject) || string.IsNullOrWhiteSpace(p.Level) || p.DurationMinutes < 1) errors.Add("Completa título, tema, nivel y duración orientativa.");
         if (p.Objectives.Length == 0 || p.Objectives.Any(o => string.IsNullOrWhiteSpace(o.Text))) errors.Add("Define al menos un objetivo con texto.");
         if (p.Sections.Length == 0 || p.Sections.Any(s => string.IsNullOrWhiteSpace(s.Title) || string.IsNullOrWhiteSpace(s.Content))) errors.Add("Cada sección necesita título y contenido.");

@@ -13,7 +13,7 @@ export interface Plan {id:string;version:number;state:string;currentActivity:num
 export interface Report {id:string;version:number;outdated:boolean;providerId:string;modelId:string;promptVersion:string;topic:string;goal:string;statistics:{exercises:number;attempts:number;correctWithoutHelp:number;correctWithHelp:number;incorrect:number;needsReview:number;notEvaluable:number;hints:number;workedObjectives:string[]};content:{summary:string;observations:Observation[];notAssessed:string[];recommendations:{goal:string;evidenceIds:string[]}[]};}
 export interface Share {id:string;reportId:string;recipientId:string;recipientName:string;revokedAt:string|null;}
 export interface Learning {evidenceRevision:number;diagnosticQuestionLimit:number;minimumEvidence:number;exercises:Exercise[];attempts:Attempt[];diagnostic:Diagnostic|null;plan:Plan|null;reports:Report[];recommendations:{id:string;reportId:string;goal:string;isGeneral:boolean}[];shares:Share[];}
-export interface Session extends SessionItem { level:string; directReview:boolean; revision:number; messages:Message[]; turns:Turn[]; pendingRequestId:string|null; summary:string|null; activity:string; currentFocus:string; learning:Learning;mode:string;assignedClass:AssignedSession|null; }
+export interface Session extends SessionItem { level:string; directReview:boolean; revision:number; messages:Message[]; turns:Turn[]; pendingRequestId:string|null; summary:string|null; activity:string; currentFocus:string; learning:Learning;mode:string;assignedClass:AssignedSession|null;policyVersion:string; }
 export interface TurnRequest { requestId:string; revision:number; action:string; text:string|null; retry:boolean; exerciseId?:string|null; }
 export interface LearningAction {action:string;text?:string;exerciseId?:string;}
 @Injectable({providedIn:'root'})
@@ -22,6 +22,7 @@ export class TutoringService {
   list(page:number) { return this.http.get<SessionItem[]>('/api/students/me/tutoring-sessions',{params:{page}}); }
   create(request:object) { return this.http.post<Session>('/api/tutoring-sessions/',request); }
   get(id:string) { return this.http.get<Session>(`/api/tutoring-sessions/${id}`); }
+  card(id:string,request:TurnRequest){return this.http.post<Session>(`/api/tutoring-sessions/${id}/cards`,request);}
   send(id:string,request:TurnRequest) { return this.http.post<Session>(`/api/tutoring-sessions/${id}/messages`,request); }
   transition(id:string,action:string,revision:number) { return this.http.post<Session>(`/api/tutoring-sessions/${id}/${action}`,{revision}); }
   cancel(id:string,requestId:string,revision:number) { return this.http.post<Session>(`/api/tutoring-sessions/${id}/turns/${requestId}/cancel`,{revision}); }

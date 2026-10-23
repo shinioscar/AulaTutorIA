@@ -60,3 +60,8 @@ endpoint de ejecución estudiantil; no actualización directa de versiones.
 Ampliación IA-1: [contrato externo y rutas de importación](LESSON_IMPORT.md),
 ADR-027. Crea exclusivamente clases nuevas tras vista previa; el ciclo anterior
 permanece intacto. Asignaciones posteriores siguen ADR-023.
+
+IA-2/ADR-028 añade PreloadedPlan y LessonImportV2, manteniendo V1. Modalidad y
+ayudas se congelan con el contenido académico; simulación precargada es local.
+Editor y resumen privados incluyen las ayudas completas. Student recibe solo las
+entregadas por el servidor. [Contrato precargado](PRELOADED_CLASSES.md).

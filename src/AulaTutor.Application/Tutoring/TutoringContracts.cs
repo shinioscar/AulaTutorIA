@@ -31,6 +31,7 @@ public sealed record TutoringSessionView(Guid Id, string Topic, string Goal, str
 public sealed record TutoringReply(string Text, string Activity, string Focus, AiChatResult Result, string? LearningPayload = null);
 public interface ITutoringService
 {
+    Task<TutoringSessionView> SendCardAsync(Guid id, TutoringTurnRequest request, CancellationToken ct);
     Task<TutoringSessionView> CreateAsync(CreateTutoringRequest request, CancellationToken ct);
     Task<TutoringSessionItem[]> ListAsync(int page, CancellationToken ct);
     Task<TutoringSessionView> GetAsync(Guid id, CancellationToken ct);

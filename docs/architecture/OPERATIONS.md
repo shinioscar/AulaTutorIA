@@ -49,6 +49,14 @@ sus procesos, elimina la base aulatutor_http_GUID y su archivo privado de estado
 Si se interrumpe el proceso padre, validar PID/ruta y el nombre exacto de base
 antes de la limpieza manual. No imprimir .cache/http-qa.json ni credenciales.
 
+Desde IA-2 el runner conserva los recorridos anteriores y añade tarjetas, ayudas
+locales, evaluación agrupada y revisión humana. Escribe artifacts/ia-2-e2e.json;
+Test-RestartRecovery requiere ese pase y verifica también intentos, turnos de
+ayuda/evaluación y reportes de la sesión precargada tras reiniciar. Escribe
+artifacts/ia-2-restart.json. Ambos artefactos son privados/ignorados. La prueba
+de cuota bloquea la ruta IA en el navegador; las pruebas de integración cuentan
+GenerateAsync y comprueban el recorrido local aun con proveedor fallando.
+
 Las pruebas BoundedMockLoad y DashboardQueryCount generan JSON privado en artifacts
 con p50/p95, recursos y consultas. Puede repetirse con el filtro dotnet test;
 requiere PostgreSQL real/loader y no sustituye E2E ni prueba rendimiento de Groq.

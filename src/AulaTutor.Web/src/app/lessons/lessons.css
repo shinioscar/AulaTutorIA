@@ -11,3 +11,4 @@
 .library-empty{text-align:center;padding:var(--space-8);background:var(--surface-secondary);border-radius:var(--radius-large);margin-block:var(--space-6)}.creation-form{max-width:var(--layout-form);margin-inline:auto}.library-filters{margin-block:var(--space-4)}
 @media(max-width:640px){.creation-grid,.lesson-grid{grid-template-columns:1fr;gap:var(--space-4)}.creation-card,.lesson-card{padding:var(--space-4)}}
 .editor-steps{margin-block:var(--space-6)}.editor-steps [aria-current='step']{border-color:var(--primary);background:var(--info-surface);color:var(--info);font-weight:var(--weight-bold)}.ai-adjustments{margin-block:var(--space-4)}
+.creation-form label:has(input[type='checkbox']){display:flex;align-items:center;gap:var(--space-3);min-height:var(--target-min)}.creation-form input[type='checkbox']{width:var(--space-6);flex:0 0 var(--space-6);min-height:var(--target-min)}

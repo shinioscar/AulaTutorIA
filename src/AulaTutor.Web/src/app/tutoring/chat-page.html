@@ -1,6 +1,7 @@
 <a [routerLink]="session()?.assignedClass?'/classes':'/tutoring'">← {{session()?.assignedClass?'Mis clases asignadas':'Mis tutorías'}}</a>
 <p class="message" role="status">{{message()}}</p>
 @if(session();as session){
+@if(session.policyVersion==='preloaded-class-v1'){<app-class-cards [session]="session" (updated)="cardsUpdated($event)" (refresh)="refresh()"/>}@else{
   <div class="conversation-heading"><div><p class="eyebrow">{{session.assignedClass?'CLASE ASIGNADA':session.mode==='Personalized'?'TUTORÍA PERSONALIZADA PRIVADA':'TUTORÍA PRIVADA'}}</p><h1>{{session.topic}}</h1><p class="goal">{{session.goal}}</p>@if(session.assignedClass;as a){<p>Versión {{a.class.versionNumber}} · {{a.class.teacherName}} · {{a.class.groupName}}</p>}</div><span class="state-badge">{{label(session.state)}}</span></div>
   <div class="tutoring-layout">
     <aside class="session-details"><h2>Tu espacio de aprendizaje</h2>@if(session.assignedClass;as a){<p><strong>Clase y evidencias vinculadas:</strong> {{a.class.teacherName}} · {{a.class.groupName}}. El docente responsable puede revisar consignas, respuestas a actividades, intentos, ayudas y resultados de esta clase mientras la relación académica esté vigente. La conversación completa sigue siendo privada. Puedes autorizar por separado una versión de tu reporte.</p><p>Entregadas {{a.class.deliveredRequired}} / {{a.class.totalRequired}} obligatorias. Coinciden con reglas cerradas: {{a.class.verifiedRequired}}.</p>@if(a.unavailableReason){<p class="notice warning">{{a.unavailableReason}}</p>}}@else{<p><strong>Historial privado:</strong> solo tú. Puedes autorizar por separado una versión de tu reporte para un docente relacionado.</p>}<p class="note">{{session.providerId}} · {{session.modelId}}</p><p class="note">El tutor usa contexto reciente acotado. Tu historial completo permanece aquí. Usa datos ficticios y no escribas secretos.</p><p class="notice">Las interpretaciones de la IA son orientativas. Los resultados de ejercicios cerrados se contrastan con reglas; no son calificaciones oficiales.</p>
@@ -41,4 +42,4 @@
       @if(session.state==='Completed'){<section aria-labelledby="summary-title"><h2 id="summary-title">Resumen de {{session.assignedClass?'tu clase':'tu tutoría'}}</h2><app-safe-response [text]="session.summary??''" /><p class="note">Conversación cerrada. Puedes volver a leerla desde {{session.assignedClass?'Mis clases asignadas':'Mis tutorías'}} mientras tengas acceso.</p></section>}
     </div>
   </div>
-} @else if(!message()) {<p role="status">Cargando tu tutoría privada…</p>}
+}} @else if(!message()) {<p role="status">Cargando tu tutoría privada…</p>}

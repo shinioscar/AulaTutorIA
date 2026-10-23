@@ -47,3 +47,17 @@ FinalReport conserva un turno de generación durable pero no agrega mensajes al
 historial: puede ejecutarse incluso al alcanzar los cien mensajes, sin reabrir el chat.
 si falla se conservan evidencias/resumen y se ofrece recuperación del mismo turno.
 El motor no ejecuta SQL/código de alumnos ni produce calificaciones oficiales.
+
+## IA-2: recorrido precargado y evaluación agrupada
+
+Las sesiones AssignedClass con policyVersion=preloaded-class-v1 registran las
+respuestas y ayudas mediante /cards, usando los mismos intentos, comparadores,
+revisiones y permisos. Las actividades ordinarias no llaman a IAiProvider.
+FinalReport se solicita explícitamente mediante /messages solo tras Completed;
+genera LearningReport con promptVersion=preloaded-evaluation-v1 y conserva aparte
+assigned-summary-v1. Incluye todos los intentos dentro del presupuesto, sin
+recortarlos ni enviar soluciones privadas, nombre o correo. Las referencias se
+validan contra las evidencias enviadas. Un fallo conserva el cierre y reporte local;
+reintento y cancelación mantienen los contratos existentes.
+
+Contrato, límites y compatibilidad: [Clases precargadas](PRELOADED_CLASSES.md).

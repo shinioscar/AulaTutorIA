@@ -11,9 +11,9 @@ const { chromium } = require(process.env.AULATUTOR_PLAYWRIGHT_MODULE || 'playwri
 const qa = JSON.parse(await fs.readFile(path.join(root, '.cache/http-qa.json'), 'utf8'));
 assert.match(qa.database, /^aulatutor_http_[a-f0-9]{32}$/);
 const origin = 'https://localhost:4200';
-const evidence = path.join(root, 'docs/iterations/evidence-ia-1'); await fs.mkdir(evidence, { recursive: true });
+const evidence = path.join(root, 'docs/iterations/evidence-ia-2'); await fs.mkdir(evidence, { recursive: true });
 const results = []; const pageErrors = []; let step = 'startup'; let browser, lastPage;
-await fs.writeFile(path.join(root, 'artifacts/ia-1-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
+await fs.writeFile(path.join(root, 'artifacts/ia-2-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
 const generationTimes = new WeakMap();
 async function rateLimit(page) {
   const times = (generationTimes.get(page) || []).filter(t => Date.now() - t < 61000);
@@ -318,12 +318,65 @@ try {
       reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }));
     assert.ok(observed.keys.every(k => k === 'aulatutor.theme.v1')); assert.equal(observed.sessionKeys.length, 0); assert.notEqual(observed.outline, 'none'); assert.ok(observed.width >= 2); assert.ok(observed.reduced);
   });
+  let preloadedAssignment,preloadedSession;
+  await check('IA-2 A: teacher generates one preloaded proposal, edits aids, simulates, publishes and assigns',async()=>{
+    const example=await fs.readFile(path.join(root,'docs/architecture/examples/lesson-import-v2.json'),'utf8');
+    const preview=await api(teacher.context,'POST','/api/lessons/import/preview',{json:example});assert.equal(preview.errors.length,0);assert.ok(preview.content.preloaded);
+    const p=teacher.page;await p.goto(origin+'/teacher/lessons/new/ai');
+    await p.getByLabel('Clase precargada: tarjetas y ayudas sin IA durante los ejercicios',{exact:true}).check();
+    await p.getByLabel('Tema de la clase',{exact:true}).fill('Clase precargada IA-2 ficticia');
+    await p.getByRole('button',{name:'Generar con IA integrada',exact:true}).click();await p.waitForURL(/mode=ai/);
+    await mutation(p,'Aplicar propuesta',/\/apply-proposal$/);
+    await p.getByRole('button',{name:'2. Contenido',exact:true}).click();
+    await p.getByText('Contenido precargado y modalidad',{exact:true}).click();
+    await p.getByLabel('Introducción (hasta 600 caracteres)',{exact:true}).fill('Introducción precargada IA-2 revisada por el docente.');
+    await mutation(p,'Guardar borrador',/\/draft$/);
+    await p.getByRole('button',{name:'3. Revisar y publicar',exact:true}).click();
+    await mutation(p,'Simular como estudiante',/\/simulations$/);await p.waitForURL(/\/simulations\//);
+    await mutation(p,'Comenzar enseñanza simulada',/\/messages$/);await mutation(p,'Pedir pista',/\/messages$/);await mutation(p,'Simplificar explicación',/\/messages$/);
+    await mutation(p,'Detener simulación',/\/stop$/);await p.getByRole('link',{name:'← Volver al editor',exact:true}).click();
+    await p.getByRole('button',{name:'3. Revisar y publicar',exact:true}).click();
+    await mutation(p,'Pasar a revisión',/\/review$/);await mutation(p,'Confirmar aprobación de esta revisión',/\/approve$/);await mutation(p,'Confirmar publicación de versión 1',/\/publish$/);
+    await p.getByRole('link',{name:'Asignar versión 1 a un grupo',exact:true}).click();await p.getByLabel('Grupo autorizado').selectOption(groupId);
+    preloadedAssignment=await mutation(p,'Confirmar asignación',/\/api\/teacher\/assignments\/?$/);
+  });
+  await check('IA-2 B/E: cards, progressive local aids, lost response, pause/reload and completion despite staged AI quota',async()=>{
+    const p=student.page;let blocked=0;await p.route('**/api/tutoring-sessions/*/messages',route=>{blocked++;return route.fulfill({status:429,contentType:'application/problem+json',body:JSON.stringify({title:'Cuota IA simulada; el resultado local se conserva.'})});});
+    await p.goto(origin+'/classes/'+preloadedAssignment.id);await p.getByRole('button',{name:'Iniciar clase',exact:true}).click();await p.waitForURL(/\/tutoring\//);preloadedSession=p.url().split('/').at(-1);
+    await mutation(p,'Comenzar clase precargada',/\/cards$/);
+    await p.getByRole('button',{name:'Dame una pista',exact:true}).focus();await p.keyboard.press('Tab');
+    const cardFocus=await p.evaluate(()=>({outline:getComputedStyle(document.activeElement).outlineStyle,width:parseFloat(getComputedStyle(document.activeElement).outlineWidth),keys:Object.keys(localStorage),session:Object.keys(sessionStorage)}));
+    assert.notEqual(cardFocus.outline,'none');assert.ok(cardFocus.width>=2);assert.deepEqual(cardFocus.session,[]);assert.ok(cardFocus.keys.every(k=>k==='aulatutor.theme.v1'));
+    for(const width of [320,390,1440])for(const dark of [false,true])await capture(p,`cards-${width}-${dark?'dark':'light'}`,width,dark,p.getByRole('heading',{name:'Introducción y práctica',exact:true}));
+    await mutation(p,'Dame una pista',/\/cards$/);
+    await p.route('**/api/tutoring-sessions/*/cards',async route=>{const response=await route.fetch();assert.ok(response.ok());await route.abort('failed');},{times:1});
+    await p.getByRole('button',{name:'Dame una pista',exact:true}).click();await p.getByRole('button',{name:'Recuperar misma solicitud',exact:true}).waitFor();await mutation(p,'Recuperar misma solicitud',/\/cards$/);
+    const afterHelp=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.equal(afterHelp.learning.exercises[0].hints,2);
+    await mutation(p,'Otra explicación',/\/cards$/);await mutation(p,'Pausar clase',/\/pause$/);await p.reload();await mutation(p,'Continuar clase',/\/resume$/);
+    await p.getByLabel('Falso',{exact:true}).check();await mutation(p,'Registrar respuesta',/\/cards$/);await mutation(p,'Siguiente actividad',/\/cards$/);
+    await p.getByLabel('Respuesta',{exact:true}).fill('Evidencia abierta ficticia IA-2.');await mutation(p,'Registrar respuesta',/\/cards$/);
+    await mutation(p,'Finalizar clase precargada',/\/complete$/);assert.equal(blocked,0);
+    const completed=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.equal(completed.state,'Completed');assert.equal(completed.learning.reports[0].providerId,'Application');assert.equal(completed.learning.attempts.at(-1).outcome,'NeedsReview');
+    await p.getByRole('button',{name:'Solicitar evaluación cualitativa final con IA',exact:true}).click();await p.getByText('Cuota IA simulada; el resultado local se conserva.',{exact:true}).waitFor();assert.equal(blocked,1);
+    await capture(p,'cards-completed-no-quota-dark-390',390,true,p.getByText('Cuota IA simulada; el resultado local se conserva.',{exact:true}));
+    await p.unroute('**/api/tutoring-sessions/*/messages');
+  });
+  await check('IA-2 C/D: grouped preliminary evaluation, reload without regeneration and independent human review',async()=>{
+    const p=student.page;await mutation(p,'Solicitar evaluación cualitativa final con IA',/\/messages$/);
+    await p.getByText('preloaded-evaluation-v1',{exact:false}).waitFor();const before=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);
+    assert.equal(before.learning.reports.length,2);await p.reload();const after=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.deepEqual(after.learning.reports,before.learning.reports);
+    await capture(p,'cards-evaluation-light-1440',1440,false,p.getByText('preloaded-evaluation-v1',{exact:false}));
+    const user=await api(student.context,'GET','/api/me');const data=await api(teacher.context,'GET',`/api/teacher/supervision/assignments/${preloadedAssignment.id}/students/${user.id}`);assert.ok(data.aiObservations.length>0);
+    await teacher.page.goto(`${origin}/teacher/supervision/${preloadedAssignment.id}/students/${user.id}`);
+    await teacher.page.getByLabel('Comentario para el estudiante').fill('Revisión humana IA-2 independiente de la evaluación preliminar.');await mutation(teacher.page,'Guardar decisión docente',/\/reviews$/);
+    const reviewed=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.deepEqual(reviewed.learning.attempts,after.learning.attempts);
+  });
   assert.equal(pageErrors.length, 0);
-  await fs.writeFile(path.join(root, 'artifacts/ia-1-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, scope: 'Browser A/B/C/D and privacy/recovery; E diagnosis/plan/report covered by reproducible HTTPS harness and integration suite, then privacy in browser; 429 and response loss explicitly staged.' }, null, 2));
+  await fs.writeFile(path.join(root, 'artifacts/ia-2-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, preloadedSessionId:preloadedSession, scope: 'Prior 34 checks retained; preloaded teacher/cards/grouped evaluation/human review, ordinary actions with AI route blocked. 429 and response loss explicitly staged; pedagogy not validated.' }, null, 2));
   console.log(`E2E passed: ${results.length} checks; Mock only.`);
 } catch (error) {
   const safe = String(error.message).split(qa.password).join('[redacted]');
-  await fs.writeFile(path.join(root, 'artifacts/ia-1-e2e.json'), JSON.stringify({ status: 'failed', step, message: safe, checks: results }, null, 2));
-  if (lastPage && !lastPage.isClosed()) await lastPage.screenshot({ path: path.join(root, 'artifacts/ia-1-e2e-failure.png'), animations: 'disabled' }).catch(() => {});
+  await fs.writeFile(path.join(root, 'artifacts/ia-2-e2e.json'), JSON.stringify({ status: 'failed', step, message: safe, checks: results }, null, 2));
+  if (lastPage && !lastPage.isClosed()) await lastPage.screenshot({ path: path.join(root, 'artifacts/ia-2-e2e-failure.png'), animations: 'disabled' }).catch(() => {});
   console.error(`E2E failed at ${step}: ${safe}`); process.exitCode = 1;
 } finally { if (browser) { for (const c of browser.contexts()) await c.clearCookies(); await browser.close(); } }

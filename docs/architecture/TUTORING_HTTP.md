@@ -85,3 +85,8 @@ recuperar podría consumir cuota nuevamente; no se promete facturación exactly-
 ajeno/inexistente; 409: conflicto; 429: límite API. No hay acceso administrativo
 ordinario ni compartición del historial, borrado ni ejecución de código. La
 compartición de versiones de reportes de 4 se regula separadamente. OpenAPI solo Development.
+## Ampliación IA-2
+
+Las clases precargadas reutilizan estas sesiones y sus garantías; añaden la ruta
+local `/api/tutoring-sessions/{id}/cards`, sin proveedor, y evaluación FinalReport
+opcional posterior al cierre. [Contrato y límites](PRELOADED_CLASSES.md).

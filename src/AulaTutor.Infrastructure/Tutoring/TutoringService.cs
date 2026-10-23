@@ -15,7 +15,7 @@ using Microsoft.Extensions.Options;
 
 namespace AulaTutor.Infrastructure.Tutoring;
 
-public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current,
+public sealed partial class TutoringService(AulaTutorDbContext db, ICurrentActor current,
     IAiProvider provider, TutoringOrchestrator orchestrator, TimeProvider clock,
     IOptions<AiProviderOptions> options, ILogger<TutoringService> logger, LearningWorkflow learning,
     AssignedClassAccess assignedAccess, AssignedClassWorkflow assigned) : ITutoringService
@@ -116,6 +116,9 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
         {
             session = await OwnedAsync(id, actor, true, ct);
             await assignedAccess.RequireWorkAsync(session, ct);
+            var preloaded = await assigned.PreloadedAsync(session, ct);
+            if (preloaded is not null && (request.Action == "FinalReport" ? session.State != TutoringState.Completed : request.Action is not ("Start" or "Hint" or "Simplify" or "SubmitAttempt" or "NextActivity")))
+                throw Conflict("La clase precargada usa actividades y ayudas locales. La evaluación IA es opcional después de finalizar; no hay conversación libre.");
             var input = InputText(request, session);
             var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Action + "\n" + input + (request.ExerciseId is null ? "" : "\n" + request.ExerciseId))));
             turn = (await db.TutoringTurns.SingleOrDefaultAsync(t => t.SessionId == id && t.RequestId == request.RequestId, ct))!;
@@ -133,13 +136,18 @@ public sealed class TutoringService(AulaTutorDbContext db, ICurrentActor current
             {
                 if (request.Retry) throw Conflict("No existe un turno previo para reintentar.");
                 if (session.State == TutoringState.Created && request.Action is not ("Start" or "DiagnosticQuestion" or "AnalyzeDiagnosis") || session.State != TutoringState.Created && request.Action == "Start") throw Conflict("Inicia la conversación una sola vez.");
-                if (request.Action != "FinalReport" && session.NextSequence + 2 > TutoringOrchestrator.MaxMessages) throw Conflict("Se alcanzó el límite del historial. Finaliza esta tutoría y crea otra.");
+                if (preloaded is null && request.Action != "FinalReport" && session.NextSequence + 2 > TutoringOrchestrator.MaxMessages) throw Conflict("Se alcanzó el límite del historial. Finaliza esta tutoría y crea otra.");
                 turn = new TutoringTurn { SessionId = id, RequestId = request.RequestId, Action = Enum.Parse<TutoringAction>(request.Action), InputHash = hash, CreatedAt = clock.GetUtcNow(), RequestText = request.Text?.Trim() };
                 db.TutoringTurns.Add(turn);
-                await learning.PrepareAsync(session, turn, request, ct);
-                if (turn.Action != TutoringAction.FinalReport)
+                await learning.PrepareAsync(session, turn, request, ct, preloaded is not null && request.Action != "FinalReport");
+                if (preloaded is null && turn.Action != TutoringAction.FinalReport)
                     db.TutoringMessages.Add(new TutoringMessage { SessionId = id, RequestId = turn.RequestId,
                         Sequence = session.NextSequence++, Role = TutoringMessageRole.Student, Text = input, CreatedAt = clock.GetUtcNow() });
+            }
+            if (preloaded is not null && request.Action != "FinalReport")
+            {
+                await CompleteLocalAsync(session, turn, preloaded, ct);
+                await db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return await GetAsync(id, ct);
             }
             if (turn.Attempts >= 3) throw Conflict("Se agotaron los tres intentos de este turno. Cancélalo para continuar.");
             if (turn.RetryNotBefore > clock.GetUtcNow()) throw new AppException(429, "El proveedor pidió esperar. No reintentes todavía.");

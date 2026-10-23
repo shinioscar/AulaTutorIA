@@ -7,7 +7,10 @@
   datos u otras operaciones destructivas sin autorización expresa.
 - Iteraciones 0–8, UI-1, OPT-1 e IA-1 cerradas. IA-1 incorpora generación de prompt
   externo e importación segura docente (ADR-027, IA_1.md); no avanzar
-  automáticamente a IA-2, Iteración 9 ni otra ampliación académica/visual.
+  automáticamente a otra ampliación. IA-2 está autorizada por encargo explícito:
+  clases precargadas, tarjetas y evaluación agrupada (ADR-028, IA_2.md), completadas:
+  335 .NET/191 HTTP/45 E2E, sin llamadas reales. V1/conversacional conservados.
+  No avanzar a Iteración 9.
 - Nunca modificar `AulaTutor_IA_Documento_Maestro_v1.0.md`. SHA256:
   `FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05`.
 - Leer siempre este archivo y las instrucciones aplicables al directorio afectado.

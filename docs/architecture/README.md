@@ -86,3 +86,9 @@ LessonImportV1, reutilizando LessonDesignPayload/LessonContent y creación norma
 Vista previa sin persistencia; guardado explícito crea una clase nueva idempotente,
 con evento mínimo LessonImported. Sin API externa ni otro motor académico.
 Contrato, ejemplo y guía en [LESSON_IMPORT.md](LESSON_IMPORT.md).
+
+IA-2/ADR-028: PreloadedContent opcional se congela en los mismos snapshots JSON;
+V1 y clases anteriores conservan su modalidad. La ejecución local reutiliza turnos,
+ejercicios, intentos y políticas de clases asignadas. La evaluación final explícita
+reutiliza LearningReport/orquestación/cuotas y la supervisión referenciada. Sin otro
+motor académico ni nuevas tablas. [Contrato](PRELOADED_CLASSES.md).

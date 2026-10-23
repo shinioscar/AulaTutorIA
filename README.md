@@ -1,6 +1,11 @@
 # AulaTutor IA
 
-Iteración 7: supervisión docente de clases asignadas, evidencias académicas,
+IA-2 completada: clases precargadas con tarjetas, pistas y explicaciones locales,
+importación V2 compatible con V1 y evaluación IA final agrupada opcional. El tutor
+conversacional permanece disponible. Verificación: 335 pruebas .NET, 191 HTTP y
+45 comprobaciones E2E con Mock, sin cuota real. [Cierre IA-2](docs/iterations/IA_2.md).
+
+Conserva la supervisión docente de clases asignadas, evidencias académicas,
 revisiones y retroalimentación humana con historial, métricas por objetivo y casos
 de atención explicables. Conserva las asignaciones de versiones concretas,
 el núcleo aprobado común, progreso/evidencia propios y refuerzo complementario.
@@ -517,3 +522,20 @@ automáticamente a ChatGPT. No cambia el tutor estudiantil ni implementa IA-2.
 [Guía docente y contrato](docs/architecture/LESSON_IMPORT.md),
 [ADR-027](docs/decisions/ADR-027-importacion-externa-de-clases.md),
 [informe IA-1](docs/iterations/IA_1.md).
+
+## IA-2 — Clases precargadas y tarjetas
+
+Completada y verificada con Mock. En Crear con IA, Clase precargada prepara
+ejercicios, pistas progresivas, explicaciones alternativas y feedback antes de
+publicar. Acepta importación V2 y conserva V1 conversacional. La versión aprobada
+fija la modalidad; ninguna clase anterior se convierte automáticamente.
+
+El estudiante responde mediante tarjetas y recibe ayudas locales registradas en
+PostgreSQL, sin IA durante esas interacciones. Al cerrar obtiene un reporte
+determinista y puede solicitar aparte una evaluación IA preliminar agrupada.
+Observaciones y revisión humana permanecen diferenciadas. Sin notas oficiales,
+ejecución de código ni promesas de equivalencia pedagógica o ahorro facturado.
+
+[Guía y contrato IA-2](docs/architecture/PRELOADED_CLASSES.md),
+[ADR-028](docs/decisions/ADR-028-clases-precargadas-y-evaluacion-agrupada.md),
+[verificación IA-2](docs/iterations/IA_2.md).

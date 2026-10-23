@@ -8,7 +8,8 @@ public sealed record LessonExercise(string Id, string ObjectiveId, bool Required
 public sealed record LessonSection(string Id, string Title, string Content, LessonExercise[] Exercises);
 public sealed record LessonContent(string Title, string Subject, string Description, string Prerequisites,
     string Level, int DurationMinutes, string Methodology, string Instructions,
-    LessonObjective[] Objectives, LessonSection[] Sections);
+    LessonObjective[] Objectives, LessonSection[] Sections,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] PreloadedContent? Preloaded = null);
 public sealed record LessonPlanProposal(string Explanation, LessonContent Content);
 public sealed record CreateLessonRequest(Guid RequestId, LessonContent Content);
 public sealed record SaveLessonRequest(long Revision, LessonContent Content);
@@ -32,7 +33,7 @@ public sealed record SimulationExerciseView(string Id, string Kind, string Promp
 public sealed record LessonSimulationView(Guid Id, Guid LessonId, long DraftRevision, string State,
     long Revision, string Title, string SectionTitle, string SectionContent,
     SimulationExerciseView? Exercise, int SectionIndex, int SectionCount, int Hints,
-    bool Answered, LessonOperationView[] Operations);
+    bool Answered, LessonOperationView[] Operations, bool Preloaded = false);
 public interface ILessonService
 {
     Task<string> ExternalPromptAsync(LessonExternalOptions options, CancellationToken ct);

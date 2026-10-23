@@ -11,6 +11,12 @@ namespace AulaTutor.Infrastructure.Tutoring;
 
 public sealed class AssignedClassWorkflow(AulaTutorDbContext db, AssignedClassAccess access, TimeProvider clock)
 {
+    public async Task<LessonContent?> PreloadedAsync(TutoringSession s, CancellationToken ct)
+    {
+        if (s.Mode != TutoringMode.AssignedClass) return null;
+        var c = LearningJson.Read<LessonContent>((await db.LessonVersions.AsNoTracking().SingleAsync(v => v.Id == s.LessonVersionId, ct)).ContentJson);
+        return c.Preloaded is null ? null : c;
+    }
     public void Seed(TutoringSession s, LessonContent c, Guid key)
     {
         var order = 0;

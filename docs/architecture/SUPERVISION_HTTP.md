@@ -1,5 +1,9 @@
 # Supervisión docente — contratos de Iteración 7
 
+IA-2 conserva esta autorización e incorpora observaciones referenciadas del reporte
+preliminar preloaded-evaluation-v1. No transforma NeedsReview ni revisiones humanas;
+véase [clases precargadas](PRELOADED_CLASSES.md).
+
 Cookies HTTPS de mismo origen, sesión Identity y autorización en backend. Todos los
 recursos se consultan en PostgreSQL; GET no escribe ni llama a IA. ADR-024 define la
 relación académica y la conservación. No hay chat docente-estudiante general.
