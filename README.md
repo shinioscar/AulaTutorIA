@@ -469,7 +469,7 @@ en el informe. API y Angular locales restauradas con Groq, sin consumir cuota re
 
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md, el plan de
 iteraciones y las guías de docs/design. Iteración 7 completada por nuevo encargo;
-su verificación se registra en ITERATION_7.md. La Iteración 8 está cerrada; no avanzar a 9 ni UI-1.
+su verificación se registra en ITERATION_7.md. Las iteraciones 0–8 y UI-1 están cerradas; no avanzar a 9 ni IA-1.
 Conservar privacidad por modalidad, relación académica vigente e historial humano.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y
@@ -496,3 +496,10 @@ objetos de texto del historial completo. No muestra coincidencias sensibles.
 No versionar `.env`, certificados, copias de base de datos, logs ni estados privados.
 `.env.example` es la plantilla pública; configurar valores privados solo localmente.
 El repositorio indicado es [AulaTutorIA](https://github.com/shinioscar/AulaTutorIA).
+
+## Contexto para desarrollo
+
+Leer [AGENTS.md](AGENTS.md) siempre y elegir la documentación del subsistema en el
+[índice de contexto](docs/development/CONTEXT_INDEX.md). Consultar históricos solo
+por una decisión o regresión concreta; ampliar revisión en cambios críticos.
+Clasificación, preservación y medidas de OPT-1: [informe](docs/iterations/OPT_1.md).
