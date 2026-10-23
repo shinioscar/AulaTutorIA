@@ -15,6 +15,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpContextAccessor();
         services.AddOptions<AiProviderOptions>()
             .Bind(configuration.GetSection(AiProviderOptions.SectionName))
             .Validate(options => options.IsValid(), "Configuración IA inválida: revisa proveedor, modelo, credencial y límites privados.")
@@ -23,6 +24,9 @@ public static class DependencyInjection
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false })
             .RemoveAllLoggers();
         services.AddSingleton<AiHttpTransport>();
+        services.AddOptions<AiQuotaOptions>().Bind(configuration.GetSection("AiQuota"))
+            .Validate(p => p.Valid(), "Límites persistentes IA inválidos.").ValidateOnStart();
+        services.AddSingleton<IAiCallAdmission, PersistentAiAdmission>();
         services.AddSingleton<IAiProvider>(provider =>
         {
             var options = provider.GetRequiredService<IOptions<AiProviderOptions>>();

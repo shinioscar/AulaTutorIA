@@ -8,9 +8,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AulaTutor.Infrastructure.Persistence;
 
-public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> options)
+public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> options, Microsoft.AspNetCore.Http.IHttpContextAccessor? accessor = null)
     : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
+    public DbSet<AiReservation> AiReservations => Set<AiReservation>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => SaveChangesAsync(true, cancellationToken);
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        var events = OperationalModel.Capture(this, accessor);
+        AuditEvents.AddRange(events);
+        try { return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
+        catch { foreach (var item in events) Entry(item).State = EntityState.Detached; throw; }
+    }
+    public override int SaveChanges() => SaveChanges(true);
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        var events = OperationalModel.Capture(this, accessor); AuditEvents.AddRange(events);
+        try { return base.SaveChanges(acceptAllChangesOnSuccess); }
+        catch { foreach (var item in events) Entry(item).State = EntityState.Detached; throw; }
+    }
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<AcademicGroup> Groups => Set<AcademicGroup>();
     public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
@@ -42,6 +59,7 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.ConfigureOperations();
         builder.ConfigureTutoring();
         builder.ConfigureLearning();
         builder.ConfigureLessons();

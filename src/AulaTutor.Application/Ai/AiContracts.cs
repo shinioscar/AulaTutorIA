@@ -40,7 +40,7 @@ public sealed class AiProviderException(AiErrorCode code, TimeSpan? retryAfter =
     {
         AiErrorCode.Authentication => "El proveedor rechazó la credencial configurada.",
         AiErrorCode.Forbidden => "El proveedor no permite esta operación.",
-        AiErrorCode.RateLimited => "El proveedor limitó la cuota. Espera antes de reintentar.",
+        AiErrorCode.RateLimited => "Se alcanzó un límite de solicitudes o presupuesto. Espera antes de reintentar.",
         AiErrorCode.Timeout => "Se agotó el tiempo de la solicitud.",
         AiErrorCode.Connection => "No se pudo conectar con el proveedor.",
         AiErrorCode.Unavailable => "El proveedor no está disponible temporalmente.",

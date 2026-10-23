@@ -87,6 +87,7 @@ public sealed class IdentityService(UserManager<AppUser> users, SignInManager<Ap
         await RequireAdminAsync();
         await using var tx = await db.Database.BeginTransactionAsync();
         await AdminBootstrap.LockAsync(db);
+        await RequireAdminAsync();
         var user = await FindAsync(id);
         if (user.TeacherApproval == TeacherApproval.NotRequested)
             throw new AppException(409, "La cuenta no tiene solicitud docente.");
@@ -107,6 +108,7 @@ public sealed class IdentityService(UserManager<AppUser> users, SignInManager<Ap
             throw new AppException(400, "Roles no válidos.");
         await using var tx = await db.Database.BeginTransactionAsync();
         await AdminBootstrap.LockAsync(db);
+        await RequireAdminAsync();
         var user = await FindAsync(id);
         if (roles.Contains(RoleNames.Teacher) && user.TeacherApproval != TeacherApproval.Approved)
             throw new AppException(409, "Aprueba primero la solicitud docente.");
@@ -124,6 +126,7 @@ public sealed class IdentityService(UserManager<AppUser> users, SignInManager<Ap
         var actor = await RequireAdminAsync();
         await using var tx = await db.Database.BeginTransactionAsync();
         await AdminBootstrap.LockAsync(db);
+        await RequireAdminAsync();
         var user = await FindAsync(id);
         if (!isActive && await users.IsInRoleAsync(user, RoleNames.Admin)) await ProtectAdminAsync(user, actor);
         user.IsActive = isActive;
@@ -143,7 +146,9 @@ public sealed class IdentityService(UserManager<AppUser> users, SignInManager<Ap
     private async Task<Actor> RequireAdminAsync()
     {
         var actor = await current.GetAsync();
-        if (!actor.IsAdmin) throw new AppException(403, "Acceso administrativo requerido.");
+        if (!actor.IsAdmin || !await db.Users.AnyAsync(u => u.Id == actor.Id && u.OrganizationId == actor.OrganizationId && u.IsActive &&
+            db.UserRoles.Any(ur => ur.UserId == u.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.Name == RoleNames.Admin))))
+            throw new AppException(403, "Acceso administrativo requerido.");
         return actor;
     }
     private async Task<AppUser> FindAsync(Guid id) => await db.Users.SingleOrDefaultAsync(

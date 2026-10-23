@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using AulaTutor.Api;
 using AulaTutor.Api.Identity;
 using AulaTutor.Api.Ai;
 using AulaTutor.Api.Tutoring;
@@ -13,9 +14,11 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1_048_576);
 builder.Logging.ClearProviders();
 builder.Logging.AddJsonConsole();
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+    context.ProblemDetails.Extensions["correlationId"] = context.HttpContext.TraceIdentifier);
 builder.Services.AddOpenApi(options => options.DescribeIdentity());
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAcademicIdentity(builder.Configuration);
@@ -66,12 +69,28 @@ if (args.Contains("--migrate") || args.Contains("--bootstrap-admin"))
 app.UseExceptionHandler();
 app.Use(async (context, next) =>
 {
+    // Server generated: never trust a client header as a log/correlation identifier.
+    context.TraceIdentifier = Guid.NewGuid().ToString("N");
+    context.Response.Headers["X-Correlation-ID"] = context.TraceIdentifier;
     context.Response.Headers.CacheControl = "no-cache, no-store";
     context.Response.Headers.Pragma = "no-cache";
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    if (context.Request.ContentLength > 1_048_576)
+    {
+        await Results.Problem(statusCode: 413, title: "La solicitud supera el tamaño máximo permitido.").ExecuteAsync(context);
+        return;
+    }
     try { await next(context); }
     catch (AppException error) { await Results.Problem(statusCode: error.Status, title: error.Message).ExecuteAsync(context); }
     catch (DbUpdateException) { await Results.Problem(statusCode: 409, title: "No se pudo guardar el cambio. Revisa los datos o actualiza la página.").ExecuteAsync(context); }
+    catch (Npgsql.NpgsqlException) { await Results.Problem(statusCode: 503, title: "El almacenamiento no está disponible temporalmente. Conserva tu solicitud y consulta su estado antes de reintentar.").ExecuteAsync(context); }
+    finally
+    {
+        if (context.Response.StatusCode is 400 or 401 or 403 or 429 or 503)
+            app.Logger.LogWarning("Operational rejection {Status} {CorrelationId}", context.Response.StatusCode, context.TraceIdentifier);
+    }
 });
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 else { app.UseHsts(); app.UseHttpsRedirection(); }
@@ -91,6 +110,7 @@ app.MapTutoringEndpoints();
 app.MapLessonEndpoints();
 app.MapAssignmentEndpoints();
 app.MapSupervisionEndpoints();
+app.MapOperationalEndpoints();
 app.Run();
 
 public sealed record ApiHealthResponse(string Status, string Application, int Iteration, string AiProvider, string AiModel);

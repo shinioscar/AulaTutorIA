@@ -8,15 +8,16 @@ using Microsoft.Extensions.Options;
 namespace AulaTutor.Infrastructure.Ai;
 
 public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProviderOptions> options,
-    ILogger<AiHttpTransport> logger) : IDisposable
+    ILogger<AiHttpTransport> logger, IAiCallAdmission? admission = null) : IDisposable
 {
     private readonly AiProviderOptions settings = options.Value;
     private readonly SemaphoreSlim slots = new(options.Value.MaxConcurrency);
-    public async Task<JsonDocument> SendAsync(Func<HttpRequestMessage> requestFactory, string provider, string model, CancellationToken ct)
+    public async Task<JsonDocument> SendAsync(Func<HttpRequestMessage> requestFactory, string provider, string model, CancellationToken ct, int estimatedTokens = 0)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(TimeSpan.FromSeconds(settings.TimeoutSeconds));
         var admitted = false; var timer = Stopwatch.StartNew(); var outcome = "Success";
+        Guid? reservation = null;
         try
         {
             await slots.WaitAsync(deadline.Token); admitted = true;
@@ -24,6 +25,7 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
             for (var attempt = 0; ; attempt++)
             {
                 using var request = requestFactory();
+                if (admission is not null) reservation = await admission.ReserveAsync(provider, model, estimatedTokens, deadline.Token);
                 using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -31,6 +33,12 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
                     var retryAfter = response.Headers.RetryAfter?.Delta;
                     if (response.Headers.RetryAfter?.Date is { } date) retryAfter = date - DateTimeOffset.UtcNow;
                     if (retryAfter < TimeSpan.Zero) retryAfter = TimeSpan.Zero;
+                    if (reservation.HasValue)
+                    {
+                        await admission!.FinishAsync(reservation.Value, "Failed", null, timer.ElapsedMilliseconds,
+                            response.StatusCode == HttpStatusCode.TooManyRequests ? retryAfter ?? TimeSpan.FromSeconds(60) : null);
+                        reservation = null;
+                    }
                     if (attempt < settings.MaxRetries && response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable &&
                         (!retryAfter.HasValue || retryAfter <= TimeSpan.FromSeconds(settings.MaxRetryDelaySeconds)))
                     {
@@ -60,7 +68,13 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
                     if (buffer.Length + read > 2_000_000) throw new AiProviderException(AiErrorCode.InvalidResponse);
                     buffer.Write(chunk, 0, read);
                 }
-                return JsonDocument.Parse(buffer.ToArray(), new JsonDocumentOptions { MaxDepth = 48 });
+                var document = JsonDocument.Parse(buffer.ToArray(), new JsonDocumentOptions { MaxDepth = 48 });
+                if (reservation.HasValue)
+                {
+                    await admission!.FinishAsync(reservation.Value, "Succeeded", ReportedUsage(document.RootElement, provider), timer.ElapsedMilliseconds);
+                    reservation = null;
+                }
+                return document;
             }
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -72,9 +86,24 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
         catch (AiProviderException e) { outcome = e.Code.ToString(); throw; }
         finally
         {
+            if (reservation.HasValue) await admission!.FinishAsync(reservation.Value, "Uncertain", null, timer.ElapsedMilliseconds);
             if (admitted) slots.Release();
             logger.LogInformation("AI transport {Provider} {Model} {DurationMs}ms {Outcome}", provider, model, timer.ElapsedMilliseconds, outcome);
         }
+    }
+    private static AiTokenUsage? ReportedUsage(JsonElement root, string provider)
+    {
+        try
+        {
+            var usage = root;
+            var field = provider == "Groq" ? "usage" : provider == "Gemini" ? "usageMetadata" : "";
+            if (field.Length > 0 && !root.TryGetProperty(field, out usage)) return null;
+            var input = provider == "Groq" ? "prompt_tokens" : provider == "Gemini" ? "promptTokenCount" : "prompt_eval_count";
+            var output = provider == "Groq" ? "completion_tokens" : provider == "Gemini" ? "candidatesTokenCount" : "eval_count";
+            if (!usage.TryGetProperty(input, out var i) || !usage.TryGetProperty(output, out var o) || !i.TryGetInt32(out var a) || !o.TryGetInt32(out var b) || a < 0 || b < 0) return null;
+            return new(a, b, false);
+        }
+        catch (InvalidOperationException) { return null; }
     }
     private static async Task<bool> IsGroqGenerationFailureAsync(HttpContent content, CancellationToken ct)
     {

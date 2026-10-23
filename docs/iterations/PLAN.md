@@ -12,7 +12,7 @@ Fuente: documento maestro v1.0 §18. Una sola iteración por encargo.
 | 5 | Completada; registro ITERATION_5.md | Constructor docente, propuestas explícitas, simulación aislada y aprobación/publicación de versiones inmutables; 155 pruebas/107 HTTP. |
 | 6 | Completada; cierre en ITERATION_6.md | Asignaciones de publicación concreta, progreso/evidencias independientes, mismo núcleo aprobado y refuerzo complementario; 214 pruebas/149 HTTP. |
 | 7 | Completada; cierre en ITERATION_7.md | Supervisión de clases asignadas, evidencias, revisión/feedback con historial, métricas y atención explicable; 255 pruebas/181 HTTP. |
-| 8 | Pendiente | Límites, 429, auditoría, recuperación, concurrencia y E2E. |
+| 8 | Completada; cierre en ITERATION_8.md | Cuotas PostgreSQL, auditoría atómica, N+1, carga acotada, E2E/recuperación y seguridad; 290 pruebas/191 HTTP/16 E2E, siete capturas y recuperación verificadas. |
 | 9 | Pendiente | Piloto SQL con datos ficticios, guías y métricas. |
 | 10 | Futuro | Derivación/conector institucional autorizado; no necesario para MVP. |
 
@@ -23,5 +23,5 @@ sin privilegio automático sobre chats. No implementar tutorías en ese encargo.
 
 Los encargos de 0/1 se conservan. La Iteración 2 añade proveedores según autorización
 explícita del 2026-10-13, más política de contraseña y búsqueda por correo (ADR-014/015).
-Iteraciones 3/4/5/6/7 autorizadas por nuevos encargos. No avanzar a 8 automáticamente. Mantener
+Iteraciones 3/4/5/6/7/8 autorizadas por nuevos encargos. No avanzar a 9 automáticamente. Mantener
 cookies/CSRF, propiedad, privacidad y Groq local; pruebas solo Mock/simulaciones.

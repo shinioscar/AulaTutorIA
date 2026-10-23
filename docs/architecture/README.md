@@ -67,8 +67,14 @@ la configuración TLS/proxy de producción queda pendiente. Compose es de desarr
 Adaptadores en `Infrastructure/Ai/`; configuración validada, catálogo de capacidades
 y errores seguros según ADR-014. Mock predeterminado, sin fallback ni llamadas
 durante arranque/salud. Orquestación inicial en Application y persistencia/leases en
-Infrastructure (ADR-016/017). Streaming, auditoría integral y cuotas distribuidas
-permanecen pendientes. Contraseñas y búsqueda de miembros: ADR-015.
+Infrastructure (ADR-016/017). Iteración 8 añade admisión persistente por intento
+HTTP con PostgreSQL, reservas/leases/presupuestos, cooldown compartido y auditoría
+mínima transaccional sin contenido académico (ADR-025). OperationalResilience es
+la séptima migración; seis previas intactas. Dashboard carga snapshots autorizados
+en lote, sin N+1 por grupo/asignación; no trunca denominadores. Readiness y endpoints
+operativos son Admin, separados de liveness/configuración. Procedimientos en
+OPERATIONS.md. Streaming y una auditoría institucional más amplia siguen futuros.
+Contraseñas y búsqueda de miembros: ADR-015.
 
 UI-0: temas globales en ThemeService/ThemeToggle y CSS custom properties,
 sin acoplarse a identidad o HTTP. Light inicial, Dark explícito; solo preferencia

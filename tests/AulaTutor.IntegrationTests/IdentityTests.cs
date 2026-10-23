@@ -55,6 +55,23 @@ public sealed class IdentityTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ReadinessIsRestrictedToActiveAdminAndDoesNotProbeAi()
+    {
+        using var anonymous = await AnonymousAsync();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/admin/operations/readiness")).StatusCode);
+        var (student, _) = await RegisterAsync(); using var studentClient = student;
+        Assert.Equal(HttpStatusCode.Forbidden, (await student.GetAsync("/api/admin/operations/readiness")).StatusCode);
+        using var admin = await AdminAsync();
+        using var response = await admin.GetAsync("/api/admin/operations/readiness");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(json.GetProperty("database").GetBoolean());
+        Assert.False(json.GetProperty("aiAvailabilityChecked").GetBoolean());
+        Assert.Equal(response.Headers.GetValues("X-Correlation-ID").Single(), json.GetProperty("correlationId").GetString());
+        Assert.DoesNotContain("Host=", json.ToString());
+    }
+
+    [Fact]
     public async Task FiveCharacterPasswordsWorkForAllRolesAndFourAreRejected()
     {
         using var admin = await AdminAsync(); // Bootstrap also uses five lowercase characters.
@@ -150,7 +167,7 @@ public sealed class IdentityTests : IAsyncLifetime
         Assert.Contains("secure", cookie); Assert.Contains("httponly", cookie); Assert.Contains("samesite=strict", cookie);
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>();
-        Assert.Equal(6, (await db.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.Equal(7, (await db.Database.GetAppliedMigrationsAsync()).Count());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         var persisted = await db.Users.SingleAsync(x => x.Id == user.Id);
         Assert.NotEqual(password, persisted.PasswordHash);

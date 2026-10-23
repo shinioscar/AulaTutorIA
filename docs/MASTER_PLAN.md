@@ -30,3 +30,12 @@ Groq y 6: panel docente, evidencias académicas autorizadas, revisión/feedback 
 e historial, métricas por objetivo y atención explicable. ADR-024 y contratos
 SUPERVISION_HTTP.md; entrega ITERATION_7.md. Maestro leído completo y conservado;
 sin autorización para Iteración 8 ni nuevas pruebas de cuota real.
+
+Nuevo encargo explícito de Iteración 8 y continuación para cierre: resiliencia,
+reservas PostgreSQL, auditoría mínima, corrección de N+1, seguridad y pruebas de
+carga/E2E/recuperación. ADR-025, OPERATIONS.md e ITERATION_8.md. Se conserva el
+maestro byte por byte, la contraseña vigente y Groq local sin pruebas reales.
+No autoriza Iteración 9, UI-1 ni ampliaciones académicas.
+
+Cierre de 8 verificado: 290 pruebas, 191 HTTP, 16 E2E, carga acotada y recuperación.
+Séptima migración local; Groq configurado sin consumo real. No iniciar 9 ni UI-1.

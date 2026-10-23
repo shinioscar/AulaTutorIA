@@ -29,7 +29,9 @@ public abstract class HttpAiProvider(AiHttpTransport transport, AiProviderOption
         if (request.ResponseContract.Format == "json" && !Capabilities.Json || request.ResponseContract.Format == "json-schema" && !Capabilities.JsonSchema ||
             request.ResponseContract.Strict && !Capabilities.StrictJsonSchema) throw new AiProviderException(AiErrorCode.Unsupported);
         var schema = AiJsonContract.ValidateSchema(request.ResponseContract);
-        using var response = await transport.SendAsync(() => Build(request, schema), ProviderId, Model, ct);
+        // Byte-based planning allowance, not a tokenizer or confirmed upstream usage.
+        var allowance = request.Messages.Sum(m => System.Text.Encoding.UTF8.GetByteCount(m.Text)) + request.MaxOutputTokens + 4096;
+        using var response = await transport.SendAsync(() => Build(request, schema), ProviderId, Model, ct, allowance);
         AiChatResult result;
         try { result = Parse(response.RootElement); }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException or FormatException)

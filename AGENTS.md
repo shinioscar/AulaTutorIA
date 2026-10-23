@@ -4,15 +4,19 @@
 
 - Trabajar solo en F:\AulaTutorIA. Documento maestro v1.0 en raíz: leer completo,
   nunca modificarlo. SHA256 FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05.
-- Último encargo: **Iteración 7**, supervisión docente de clases asignadas, revisión
+- Último encargo: **Iteración 8**, autorizada por encargo explícito: resiliencia,
+  cuotas persistentes, auditoría, seguridad, concurrencia y pruebas integrales.
+  Completada y verificada; cierre en ITERATION_8.md. No avanzar a 9 ni UI-1.
+  Cero llamadas reales a proveedores durante QA; contraseña mínima cinco intacta.
+- Cierre previo: **Iteración 7**, supervisión docente de clases asignadas, revisión
   de evidencias, feedback e historial humano, métricas y atención explicable.
   Completada y verificada. Iteración 5 conserva constructor,
   simulación y publicación;
   UI-0 conserva guía visual oficial, tokens y temas Light/Dark,
   con Groq activo local y Mock en pruebas. No ejecutar cuota real sin autorización.
-  Iteraciones 0–7 y UI-0 completadas; cierre de 7 en ITERATION_7.md.
-  No avanzar a 8 sin nuevo encargo.
-- Registros: docs/iterations/ITERATION_0.md a ITERATION_7.md; ADR en docs/.
+  Iteraciones 0–8 y UI-0 completadas; cierre de 8 en ITERATION_8.md.
+  Verificación de 8: 290 pruebas/191 HTTP, 16 E2E y recuperación/QA Light/Dark.
+- Registros: docs/iterations/ITERATION_0.md a ITERATION_8.md; ADR en docs/.
   Mantener README, AGENTS, ADR, ambigüedades y verificaciones actualizados.
 - Corrección posterior a 5 autorizada: investigar rechazos Groq y revisar Student
   con pruebas reales ficticias espaciadas. ADR-022/QA_GROQ_FIX registran resultados.
@@ -163,7 +167,7 @@
   text/activity/focus; esquemas para aprendizaje/diseño, texto para Mock. Modelo/proveedor se fijan al
   crear; cambio de configuración: 409 antes de llamada, sin fallback. tutor texto de 6000,
   entrada de 2000, tema 160/objetivo 500/foco 200, 100 mensajes y 100 sesiones/alumno.
-  Rate limit de 6 envíos/min/cuenta/proceso; presupuesto/auditoría completa siguen para 8.
+  Rate limit de 6 envíos/min/cuenta/proceso; cuotas persistentes y auditoría mínima añadidas en 8/ADR-025.
 - Mock conserva comportamiento/8 pruebas previas; añade guiones SQL explícitamente
   simulados de diagnóstico/repaso/ejercicio/pista/simplificación. No comprensión LLM.
 - Resumen descriptivo local al cierre: fechas/tema/objetivo/ayudas/turnos, sin IA,
@@ -321,9 +325,37 @@
 - Sexta migración TeacherSupervision, aditiva; cinco previas intactas. Triggers
   protegen origen de revisión, historial/referencias y evidencia primaria de intentos
   (permiten anexar orientación/metadatos IA del motor). Sin borrado/retención automáticos.
-  Contratos SUPERVISION_HTTP.md y QA_7.md. No avanzar a 8.
+  Contratos SUPERVISION_HTTP.md y QA_7.md. El nuevo encargo autoriza 8, sin ampliar
+  permisos académicos ni consumir cuota externa durante QA.
 
 ## Operación y pruebas
+
+- Iteración 8 / ADR-025: AiHttpTransport reserva cada intento HTTP con
+  PersistentAiAdmission antes de enviar (Mock no consume). PostgreSQL lock breve,
+  actor/rol/grupo revalidados, ventanas móviles/días UTC y leases timeout+30s;
+  429 establece cooldown compartido. Fallidos/consumo incierto no tienen refund.
+  Expirar libera cupo, conserva cargo. Uso reportado nullable separado de provisión
+  estimada; no sumar provisión como tokens reales ni prometer facturación exacta.
+- AiQuota:Limits: 6/min y 100/día usuario; 20/min y 1000/día proveedor;
+  1000/día organización, 300/día grupo; concurrencia global 2/usuario 1.
+  Providers y diccionarios GUID permiten overrides; misma política en todas las
+  instancias. AllowExternalCalls=false bloquea nuevas llamadas tras reiniciar;
+  sin fallback ni cambios a claves. Presupuesto estimado opcional, sin dinero ficticio.
+- AuditEvent mínimo se guarda atómicamente en SaveChanges con cambios sensibles:
+  actor/fecha/recurso/tipo/resultado/correlación, sin contenido académico/secretos.
+  Append-only; reservas protegen origen/estado terminal. Séptima migración
+  OperationalResilience después de seis intactas. GET /api/admin/operations
+  /readiness, /audit?page=, /usage solo Admin vigente; ningún acceso al chat.
+  Readiness consulta DB, no disponibilidad del modelo. Errores DB 503 saneados,
+  body 1 MiB y correlación generada por servidor; no confiar en cabecera del cliente.
+- Dashboard carga snapshots autorizados en lote, sin N+1 por grupo/asignación,
+  manteniendo cohortes/versiones/denominadores. Medición repetible: 15 consultas
+  con una y con dos asignaciones/dos grupos; carga 1/3/5 solo Mock/PG aislado.
+- Test-E2E.ps1 requiere Edge y módulo Playwright existentes, nunca descarga paquetes;
+  prepara/limpia base HTTP y procesos propios, incluye UI y reinicio real con
+  Test-RestartRecovery. Test-BackupRestore hace pg_dump/restauración aislada, modo
+  600, sin escribir en principal. No es respaldo durable ni política de retención.
+  Procedimientos y límites en OPERATIONS.md, QA_8.md e ITERATION_8.md.
 
 - Inicializar herramientas: . ./scripts/Initialize-Environment.ps1.
   Exportar certificado: ./scripts/Prepare-Local.ps1 (solo .cache/certs).
@@ -333,8 +365,8 @@
 - PostgreSQL localhost:15432 (interno 5432) en proyecto Compose aulatutor-ia.
   API/web pueden seguir activos al entregar: inspeccionar puertos/procesos y detener
   SOLO los del proyecto antes de build/smoke (Windows bloquea DLL en uso).
-- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 255
-  pruebas (112 unitarias/143 integración; conserva las 214 previas), consistencia EF,
+- CI local completo: ./scripts/Verify.ps1 -Smoke -Http. Restore locked, build, 290
+  pruebas (116 unitarias/174 integración; conserva las 255 previas), consistencia EF,
   npm ci/check/check:theme/build, Compose config, diff, smoke Mock y HTTP identidad/tutoría.
   UI-0 repitió 123 pruebas/75 HTTP y añadió 70 comprobaciones de contraste y
   19 capturas por rol/viewport; QA_UI_0.md registra teclado/storage/responsive.
@@ -346,6 +378,9 @@
   Iteración 7 añade 41 pruebas, 181 HTTP y 26 capturas / 35 mediciones de ajuste en
   evidence-7/QA_7.md; cierre técnico en ITERATION_7.md. El salto 155→174 anterior
   proviene de 19 unitarias en la corrección Groq f336578, no de una regresión de 6.
+  Iteración 8 añade 35 pruebas, 191 HTTP, 16 E2E y siete capturas Light/Dark;
+  carga aislada 1/3/5, reinicio y restauración controlada satisfactorios. Séptima
+  migración aplicada localmente; API/web restauradas con Groq, cero cuota real.
   Histórico:
   91 pruebas y 48 comprobaciones HTTP de 3; revisión visual
   desktop/móvil registrada en QA_3.md. PrivateTutoring/LearningEvidence aplicadas en BD local;
@@ -358,7 +393,7 @@
   contraseña ficticia aleatoria/PID/base temporal. Limpiar proceso/base/archivo al
   terminar; no mantener el administrador de QA en la BD principal.
 - Pruebas con @example.invalid, claves aleatorias ficticias. Capturas versionadas
-  en docs/iterations/evidence-1/2/3/4/5/6, sin secretos. Caches/logs ignorados.
+  en docs/iterations/evidence-1/2/3/4/5/6/7/8, sin secretos. Caches/logs ignorados.
 - /api/health conserva iteration=1 por contrato heredado; liveness/configuración IA,
   sin red ni readiness PostgreSQL. OpenAPI solo Development, cookie/CSRF y rutas 1–4.
   Los endpoints nuevos deben exigir autorización; nunca diagnóstico IA público.
@@ -366,12 +401,14 @@
 
 ## Pendientes y continuidad
 
-- Iteración 7 autorizada por nuevo encargo; preservar tutoría privada y planes
-  personales como concepto diferente. Iteración 8 requiere nuevo encargo.
+- Iteración 8 completada (ITERATION_8.md); preservar tutoría privada y
+  planes personales. No avanzar a 9/UI-1 ni declarar preparado el piloto real.
 - Remediación de intentos agotados, revisión curricular, resumen grupal IA con
   anonimización y paginación/medición con grupos grandes siguen pendientes explícitos.
 - Pendientes documentados: confirmación email, recuperación/MFA, invitaciones,
-  auditoría integral (8), retención institucional y borrado. Frontera Approved/Published
+  auditoría institucional ampliada, retención y borrado. Auditoría mínima en 8;
+  no declarar preparado un piloto real con contraseña cinco y políticas pendientes.
+  Frontera Approved/Published
   resuelta en ADR-021: inmutable al aprobar, publicación explícita independiente.
 - Antes de producción/datos reales: aprobación/políticas institucionales, TLS/proxy
   de mismo origen, mínimo privilegio PostgreSQL, claves Linux cifradas y respaldos.

@@ -39,12 +39,15 @@ public sealed partial class SupervisionService(AulaTutorDbContext db, ICurrentAc
         var actor = await TeacherAsync(true);
         var groups = await Groups(actor).AsNoTracking().OrderBy(g => g.Name).ToArrayAsync(ct);
         if (groupId.HasValue && !groups.Any(g => g.Id == groupId)) throw Hidden();
-        var groupViews = new List<SupervisionGroupView>();
-        foreach (var g in groups)
-            groupViews.Add(new(g.Id, g.Name, await Cohort(new() { GroupId = g.Id, OrganizationId = actor.OrganizationId }).CountAsync(ct)));
+        var groupIds = groups.Select(g => g.Id).ToArray();
+        var counts = await (from m in db.GroupMemberships join u in db.Users on m.UserId equals u.Id
+            where groupIds.Contains(m.GroupId) && m.Kind == GroupMemberKind.Student && m.OrganizationId == actor.OrganizationId &&
+                u.IsActive && u.OrganizationId == actor.OrganizationId && db.UserRoles.Any(ur => ur.UserId == u.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.Name == RoleNames.Student))
+            group m by m.GroupId into g select new { Id = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Id, x => x.Count, ct);
+        var groupViews = groups.Select(g => new SupervisionGroupView(g.Id, g.Name, counts.GetValueOrDefault(g.Id))).ToArray();
         var assignments = await Assignments(actor).AsNoTracking().Where(a => !groupId.HasValue || a.GroupId == groupId).OrderByDescending(a => a.CreatedAt).ToArrayAsync(ct);
         var overviews = new List<AssignmentOverview>();
-        foreach (var a in assignments) overviews.Add((await BuildClassAsync(a, ct)).Assignment);
+        foreach (var snapshot in await LoadManyAsync(assignments, ct)) overviews.Add(ClassView(snapshot).Assignment);
         var published = await db.LessonPublications.CountAsync(p => p.ArchivedAt == null && db.Lessons.Any(l => l.Id == p.LessonId && l.TeacherId == actor.Id && l.OrganizationId == actor.OrganizationId), ct);
         await tx.CommitAsync(ct);
         return new(groupViews.ToArray(), overviews.ToArray(), published, overviews.Sum(a => a.Counts.PendingReviews), overviews.Sum(a => a.Counts.AttentionCases));
@@ -59,13 +62,24 @@ public sealed partial class SupervisionService(AulaTutorDbContext db, ICurrentAc
     private sealed record Snapshot(LessonAssignment Assignment, LessonVersion Version, LessonContent Content,
         string GroupName, AppUser[] Students, TutoringSession[] Sessions, LearningExercise[] Exercises,
         ExerciseAttempt[] Attempts, TeacherReview[] Reviews, TeacherReviewEntry[] Entries, ReviewEvidence[] Evidence);
-    private async Task<Snapshot> LoadAsync(LessonAssignment assignment, CancellationToken ct)
+    private async Task<Snapshot> LoadAsync(LessonAssignment assignment, CancellationToken ct) => (await LoadManyAsync([assignment], ct)).Single();
+    private async Task<Snapshot[]> LoadManyAsync(LessonAssignment[] assignments, CancellationToken ct)
     {
-        var version = await db.LessonVersions.AsNoTracking().SingleAsync(v => v.Id == assignment.LessonVersionId, ct);
-        var students = await Cohort(assignment).AsNoTracking().OrderBy(s => s.DisplayName).ThenBy(s => s.Id).ToArrayAsync(ct);
-        var eligible = Cohort(assignment).Select(u => u.Id);
-        var sessionsQuery = db.TutoringSessions.Where(s => s.Mode == TutoringMode.AssignedClass && s.AssignmentId == assignment.Id &&
-            s.LessonVersionId == assignment.LessonVersionId && eligible.Contains(s.StudentId));
+        if (assignments.Length == 0) return [];
+        var organization = assignments.Select(a => a.OrganizationId).Distinct().Single();
+        var assignmentIds = assignments.Select(a => a.Id).ToArray();
+        var groupIds = assignments.Select(a => a.GroupId).Distinct().ToArray();
+        var versionIds = assignments.Select(a => a.LessonVersionId).Distinct().ToArray();
+        var versions = await db.LessonVersions.AsNoTracking().Where(v => versionIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, ct);
+        var eligible = from m in db.GroupMemberships join u in db.Users on m.UserId equals u.Id
+            where groupIds.Contains(m.GroupId) && m.Kind == GroupMemberKind.Student && m.OrganizationId == organization && u.OrganizationId == organization && u.IsActive &&
+                db.UserRoles.Any(ur => ur.UserId == u.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.Name == RoleNames.Student))
+            select new { m.GroupId, Student = u };
+        var students = await eligible.AsNoTracking().OrderBy(x => x.Student.DisplayName).ThenBy(x => x.Student.Id).ToArrayAsync(ct);
+        var sessionsQuery = from s in db.TutoringSessions join a in db.LessonAssignments on s.AssignmentId equals a.Id
+            where assignmentIds.Contains(a.Id) && s.Mode == TutoringMode.AssignedClass && s.OrganizationId == organization && s.LessonVersionId == a.LessonVersionId &&
+                eligible.Any(m => m.GroupId == a.GroupId && m.Student.Id == s.StudentId)
+            select s;
         var sessions = await sessionsQuery.AsNoTracking().ToArrayAsync(ct);
         var ids = sessionsQuery.Select(s => s.Id);
         var exercises = await db.LearningExercises.AsNoTracking().Where(e => ids.Contains(e.SessionId)).OrderBy(e => e.Order).ToArrayAsync(ct);
@@ -73,8 +87,15 @@ public sealed partial class SupervisionService(AulaTutorDbContext db, ICurrentAc
         var reviews = await db.TeacherReviews.AsNoTracking().Where(r => ids.Contains(r.SessionId)).ToArrayAsync(ct);
         var entries = await db.TeacherReviewEntries.AsNoTracking().Where(r => ids.Contains(r.SessionId)).OrderByDescending(r => r.Revision).ToArrayAsync(ct);
         var evidence = await db.ReviewEvidence.AsNoTracking().Where(r => ids.Contains(r.SessionId)).ToArrayAsync(ct);
-        return new(assignment, version, LearningJson.Read<LessonContent>(version.ContentJson),
-            await db.Groups.Where(g => g.Id == assignment.GroupId).Select(g => g.Name).SingleAsync(ct), students, sessions, exercises, attempts, reviews, entries, evidence);
+        var names = await db.Groups.Where(g => groupIds.Contains(g.Id)).ToDictionaryAsync(g => g.Id, g => g.Name, ct);
+        return assignments.Select(a => {
+            var own = sessions.Where(s => s.AssignmentId == a.Id).ToArray(); var ownIds = own.Select(s => s.Id).ToHashSet();
+            var version = versions[a.LessonVersionId];
+            return new Snapshot(a, version, LearningJson.Read<LessonContent>(version.ContentJson), names[a.GroupId],
+                students.Where(s => s.GroupId == a.GroupId).Select(s => s.Student).ToArray(), own,
+                exercises.Where(e => ownIds.Contains(e.SessionId)).ToArray(), attempts.Where(e => ownIds.Contains(e.SessionId)).ToArray(),
+                reviews.Where(e => ownIds.Contains(e.SessionId)).ToArray(), entries.Where(e => ownIds.Contains(e.SessionId)).ToArray(), evidence.Where(e => ownIds.Contains(e.SessionId)).ToArray());
+        }).ToArray();
     }
     private async Task<ClassSupervision> BuildClassAsync(LessonAssignment assignment, CancellationToken ct)
     { var data = await LoadAsync(assignment, ct); return ClassView(data); }

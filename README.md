@@ -411,7 +411,7 @@ script de verificación hace llamadas reales: todos fuerzan Mock o servidor simu
 ./scripts/Verify.ps1 -Smoke -Http
 ```
 
-Restaura locks, compila, ejecuta 112 pruebas unitarias y 143 de integración, verifica
+Restaura locks, compila y ejecuta las pruebas unitarias/integración, verifica
 consistencia de migración, npm ci/TypeScript/contraste de temas/Angular, Compose, Git y dos recorridos
 reales: smoke de fundaciones y HTTP de identidad/tutoría Mock sobre HTTPS/PostgreSQL.
 La verificación de Iteración 6 conserva las 174 pruebas anteriores y añade 40
@@ -422,6 +422,13 @@ resultados en ITERATION_6.md. Iteración 7 conserva las 214 y añade 41 pruebas
 149 anteriores, 181 en total. Cierre en ITERATION_7.md. El salto histórico de 155
 a 174 corresponde a 19 unitarias de la corrección Groq intermedia, documentada en
 QA_GROQ_FIX.md y el commit f336578; no es una regresión de 6.
+La Iteración 8 conserva las 255 y añade 35 pruebas (290: 116 unitarias/174 integración)
+con cobertura de operación, cuotas persistentes,
+auditoría, carga y transporte. Http-Operations conserva las 181 y añade diez controles (191 en total)
+operativos. El runner reproducible `scripts/Test-E2E.ps1 -PlaywrightModule RUTA`
+usa Edge/Playwright ya instalados, datos aislados y Mock; incluye reinicio real sin
+duplicar turnos. No descarga navegador ni añade paquetes. Resultados/cantidades
+finales y métricas en ITERATION_8.md; procedimiento en OPERATIONS.md.
 Cada prueba de identidad crea/elimina su propia BD temporal; no usa InMemory ni
 omite pruebas sin PostgreSQL. Requiere credenciales locales con CREATE DATABASE.
 HTTP usa cuentas @example.invalid y contraseña aleatoria, sin sembrar usuarios en
@@ -450,9 +457,19 @@ Groq limita tanto peticiones como tokens; los límites exactos son por organizac
 
 ## Continuar el proyecto
 
+Iteración 8 completada: [cierre y métricas verificadas](docs/iterations/ITERATION_8.md).
+Correlación segura de respuestas y errores, cabeceras adicionales y
+readiness PostgreSQL para Admin en `/api/admin/operations/readiness`; no consulta IA.
+Las reservas PostgreSQL, auditoría mínima y operación se describen en
+[ADR-025](docs/decisions/ADR-025-cuotas-auditoria-y-resiliencia.md) y
+[OPERATIONS](docs/architecture/OPERATIONS.md). La verificación final se registra
+en ITERATION_8: 290 pruebas, 191 HTTP, 16 E2E, siete capturas y recuperación. No
+implica preparación aprobada para estudiantes reales; los riesgos previos se clasifican
+en el informe. API y Angular locales restauradas con Groq, sin consumir cuota real.
+
 Consultar AGENTS.md, los ADR, docs/architecture/OPEN_QUESTIONS.md, el plan de
 iteraciones y las guías de docs/design. Iteración 7 completada por nuevo encargo;
-su verificación se registra en ITERATION_7.md. No avanzar a 8 automáticamente.
+su verificación se registra en ITERATION_7.md. La Iteración 8 está cerrada; no avanzar a 9 ni UI-1.
 Conservar privacidad por modalidad, relación académica vigente e historial humano.
 
 Pendientes: confirmación de email, recuperación/MFA, invitaciones autoservicio y

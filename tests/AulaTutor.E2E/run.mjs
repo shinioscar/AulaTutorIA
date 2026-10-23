@@ -1,0 +1,189 @@
+// Existing local Edge + supplied Playwright module. No browser/package download.
+import { createRequire } from 'node:module';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const root = path.resolve(import.meta.dirname, '../..');
+const temporary = path.join(root, '.cache/e2e-temp'); await fs.mkdir(temporary, { recursive: true });
+process.env.TEMP = temporary; process.env.TMP = temporary;
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.AULATUTOR_PLAYWRIGHT_MODULE || 'playwright');
+const qa = JSON.parse(await fs.readFile(path.join(root, '.cache/http-qa.json'), 'utf8'));
+assert.match(qa.database, /^aulatutor_http_[a-f0-9]{32}$/);
+const origin = 'https://localhost:4200';
+const evidence = path.join(root, 'docs/iterations/evidence-8'); await fs.mkdir(evidence, { recursive: true });
+const results = []; const pageErrors = []; let step = 'startup'; let browser, lastPage;
+await fs.writeFile(path.join(root, 'artifacts/iteration-8-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
+const generationTimes = new WeakMap();
+async function rateLimit(page) {
+  const times = (generationTimes.get(page) || []).filter(t => Date.now() - t < 61000);
+  if (times.length >= 5) await new Promise(resolve => setTimeout(resolve, Math.max(0, times[0] + 61000 - Date.now())));
+  generationTimes.set(page, [...times.filter(t => Date.now() - t < 61000), Date.now()]);
+}
+async function check(name, action) { step = name; console.log('E2E: ' + name); await action(); results.push({ name, passed: true }); }
+async function login(email) {
+  const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage(); page.setDefaultTimeout(20000); page.on('dialog', d => d.accept());
+  page.on('pageerror', () => pageErrors.push('runtime error'));
+  await page.route('**/*', route => new URL(route.request().url()).hostname === 'localhost' ? route.continue() : route.abort());
+  await page.goto(origin + '/login'); await page.getByLabel('Correo electrónico').fill(email); await page.getByLabel('Contraseña', { exact: true }).fill(qa.password);
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click(); await page.waitForURL(origin + '/');
+  return { context, page };
+}
+async function api(context, method, url, data) {
+  const csrf = await (await context.request.get(origin + '/api/auth/csrf')).json();
+  const response = await context.request.fetch(origin + url, { method, data, headers: { 'X-XSRF-TOKEN': csrf.requestToken } });
+  assert.ok(response.ok(), `${method} ${url.replace(/[a-f0-9-]{36}/g,'{id}')} status ${response.status()}`);
+  return response.status() === 204 ? null : response.json();
+}
+async function mutation(page, name, pattern) {
+  lastPage = page;
+  if (pattern.test('/messages')) await rateLimit(page);
+  const [r] = await Promise.all([page.waitForResponse(r => r.request().method() !== 'GET' && pattern.test(r.url())),
+    page.getByRole('button', { name, exact: true }).click()]);
+  assert.ok(r.ok(), `${name}: ${r.status()}`); return r.json().catch(() => null);
+}
+async function capture(page, name, width = 1440, dark = false, focus = null) {
+  await page.setViewportSize({ width, height: width < 600 ? 900 : 1000 });
+  // Exercise the actual theme control and its persisted preference.
+  const toggle = page.getByRole('button', { name: 'Tema oscuro', exact: true });
+  if ((await toggle.getAttribute('aria-pressed') === 'true') !== dark) await toggle.click();
+  await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, dark ? 'dark' : 'light');
+  if (focus) await focus.scrollIntoViewIfNeeded();
+  const fit = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth, theme: document.documentElement.dataset.theme }));
+  assert.ok(fit.scroll <= fit.width + 1); results.push({ name: 'viewport-' + name, passed: true, ...fit });
+  await page.screenshot({ path: path.join(evidence, name + '.png'), fullPage: false, animations: 'disabled' });
+}
+try {
+  browser = await chromium.launch({ headless: true, executablePath: process.env.AULATUTOR_EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' });
+  const teacher = await login(qa.teacherEmail), student = await login(qa.studentEmail), admin = await login(qa.adminEmail);
+  const health = await (await teacher.context.request.get(origin + '/api/health')).json(); assert.equal(health.aiProvider, 'Mock');
+  // Let the retained HTTP harness's process rate windows expire; never change server limits for QA.
+  await new Promise(resolve => setTimeout(resolve, 61000));
+  let lessonId, assignment, sessionId, groupId, secondTeacher;
+  await check('A: browser registers teacher, admin approves and creates authorized group', async () => {
+    const email = 'e2e-' + crypto.randomUUID() + '@example.invalid'; const display = 'Docente E2E ' + crypto.randomUUID().slice(0,8);
+    const registration = await browser.newContext({ ignoreHTTPSErrors: true }); const p = await registration.newPage();
+    p.on('pageerror', () => pageErrors.push('runtime error'));
+    await p.route('**/*', route => new URL(route.request().url()).hostname === 'localhost' ? route.continue() : route.abort());
+    await p.goto(origin + '/register'); await p.getByLabel('Nombre visible').fill(display); await p.getByLabel('Correo electrónico').fill(email);
+    await p.getByLabel('Contraseña', { exact: true }).fill(qa.password); await p.getByLabel('Tipo de cuenta').selectOption('Teacher');
+    await mutation(p, 'Enviar registro', /\/auth\/register$/); await registration.close();
+    const pending = await login(email);
+    assert.equal((await pending.context.request.get(origin + '/api/groups/')).status(), 403);
+    await admin.page.goto(origin + '/admin/users'); await mutation(admin.page, 'Aprobar a ' + display, /\/teacher-decision$/);
+    assert.equal((await pending.context.request.get(origin + '/api/me')).status(), 401); await pending.context.close();
+    secondTeacher = await login(email);
+    const groupName = 'Grupo E2E ' + crypto.randomUUID().slice(0,8); await admin.page.goto(origin + '/groups');
+    await admin.page.getByLabel('Nombre del grupo', { exact: true }).fill(groupName); const group = await mutation(admin.page, 'Crear grupo', /\/api\/groups\/?$/); groupId = group.id;
+    await admin.page.getByRole('button', { name: new RegExp('^' + groupName) }).click();
+    for (const [actor, role] of [[teacher, 'Teacher'], [secondTeacher, 'Teacher'], [student, 'Student']]) {
+      const user = await api(actor.context, 'GET', '/api/me');
+      await admin.page.getByLabel('Usuario de la organización').selectOption(user.id); await admin.page.getByLabel('Relación con el grupo').selectOption(role);
+      await Promise.all([admin.page.waitForResponse(r => r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/admin/users'),
+        mutation(admin.page, 'Asociar al grupo', /\/members$/)]);
+      await admin.page.waitForFunction(() => document.querySelector('#member')?.value === '');
+    }
+  });
+  await check('B: browser creates, designs, applies, approves and publishes a lesson', async () => {
+    const p = teacher.page; await p.goto(origin + '/teacher/lessons'); await p.getByLabel('Título', { exact: true }).fill('Clase E2E Iteración 8');
+    await p.getByLabel('Asignatura o tema', { exact: true }).fill('SQL ficticio'); await p.getByRole('button', { name: 'Crear borrador', exact: true }).click();
+    await p.waitForURL(/\/teacher\/lessons\/[a-f0-9-]{36}$/); lessonId = p.url().split('/').at(-1);
+    await p.getByRole('button', { name: 'Diseñar con IA', exact: true }).click(); await p.getByLabel('Petición al asistente').fill('Propón una clase ficticia de SQL con dos actividades para comprobar el flujo.');
+    await mutation(p, 'Solicitar propuesta', /\/design$/); await mutation(p, 'Aplicar propuesta', /\/apply-proposal$/);
+    await p.getByRole('button', { name: 'Revisión y versiones', exact: true }).click();
+    await mutation(p, 'Pasar a revisión', /\/review$/); await mutation(p, 'Confirmar aprobación de esta revisión', /\/approve$/);
+    await mutation(p, 'Confirmar publicación de versión 1', /\/publish$/); await capture(p, 'teacher-published-light', 1440, false, p.getByRole('heading', { name: 'Versiones inmutables', exact: true }));
+  });
+  await check('B: browser assigns exact published version to authorized group', async () => {
+    const p = teacher.page; await p.getByRole('link', { name: 'Asignar versión 1 a un grupo', exact: true }).click();
+    await p.getByLabel('Grupo autorizado').selectOption(groupId);
+    assignment = await mutation(p, 'Confirmar asignación', /\/api\/teacher\/assignments\/?$/);
+  });
+  await check('Concurrent teachers create/read only their own authorized assignments', async () => {
+    const source = await api(teacher.context, 'GET', '/api/lessons/' + lessonId);
+    let other = await api(secondTeacher.context, 'POST', '/api/lessons/', { requestId: crypto.randomUUID(), content: { ...source.content, title: 'Segundo docente E2E' } });
+    for (const action of ['review','approve','publish']) other = await api(secondTeacher.context, 'POST', `/api/lessons/${other.id}/${action}`, { requestId: crypto.randomUUID(), revision: other.revision, targetId: action === 'publish' ? other.versions[0].id : null });
+    const [created, existing] = await Promise.all([
+      api(secondTeacher.context, 'POST', '/api/teacher/assignments/', { requestId: crypto.randomUUID(), lessonVersionId: other.versions[0].id, groupId, availableFrom: null, availableUntil: null }),
+      api(teacher.context, 'GET', '/api/teacher/assignments/')
+    ]);
+    assert.ok(existing.every(a => a.id !== created.id));
+    assert.equal((await teacher.context.request.get(origin + '/api/teacher/assignments/' + created.id)).status(), 404);
+    assert.equal((await secondTeacher.context.request.get(origin + '/api/teacher/assignments/' + assignment.id)).status(), 404);
+  });
+  await check('C: browser starts class; staged 429 preserves input; successful recovery, pause/resume and completion', async () => {
+    const p = student.page; await p.goto(origin + '/classes/' + assignment.id); await p.getByRole('button', { name: 'Iniciar clase', exact: true }).click();
+    await p.waitForURL(/\/tutoring\/[a-f0-9-]{36}$/); sessionId = p.url().split('/').at(-1);
+    await mutation(p, 'Comenzar conversación', /\/messages$/);
+    const input = p.getByLabel('Tu intento o pregunta'); await input.fill('Pregunta ficticia conservada ante cuota');
+    await p.route('**/api/tutoring-sessions/*/messages', route => route.fulfill({ status: 429, contentType: 'application/problem+json', body: JSON.stringify({ title: 'Cuota simulada para QA' }) }), { times: 1 });
+    await p.getByRole('button', { name: 'Enviar mensaje', exact: true }).click(); await p.getByText('Se alcanzó el límite de turnos.', { exact: false }).waitFor();
+    assert.equal(await input.inputValue(), 'Pregunta ficticia conservada ante cuota'); await capture(p, 'student-quota-dark-mobile', 390, true);
+    await capture(p, 'student-quota-input-dark-mobile', 390, true, input);
+    await mutation(p, 'Enviar mensaje', /\/messages$/);
+    await mutation(p, 'Necesito una pista', /\/messages$/);
+    await mutation(p, 'Pausar tutoría', /\/pause$/); await p.reload(); await mutation(p, 'Reanudar tutoría', /\/resume$/);
+    // Student answers through the UI using the teacher-approved fictitious test key only in this harness.
+    const lesson = await api(teacher.context, 'GET', '/api/lessons/' + lessonId);
+    const exercises = lesson.content.sections.flatMap(s => s.exercises);
+    for (const [index, exercise] of exercises.entries()) {
+      const formInput = p.locator('[name="exercise-answer"]'); await formInput.waitFor();
+      const value = exercise.activity.acceptedAnswers[0] || 'Respuesta ficticia para revisión humana';
+      if (await formInput.evaluate(e => e.tagName === 'SELECT')) await formInput.selectOption(value); else await formInput.fill(value);
+      await mutation(p, 'Registrar respuesta', /\/messages$/);
+      const next = p.getByRole('button', { name: 'Continuar clase', exact: true }); if (index < exercises.length - 1 && await next.count() && await next.isEnabled()) await mutation(p, 'Continuar clase', /\/messages$/);
+    }
+    const complete = p.getByRole('button', { name: 'Finalizar clase', exact: true });
+    assert.ok(await complete.isEnabled()); await mutation(p, 'Finalizar clase', /\/complete$/); await capture(p, 'student-completed-dark-mobile', 390, true, p.getByRole('heading', { name: 'Resumen de tu clase', exact: true }));
+  });
+  await check('D: teacher reviews actual attempts and student reads own feedback', async () => {
+    const user = await api(student.context, 'GET', '/api/me'); const p = teacher.page;
+    await p.goto(`${origin}/teacher/supervision/${assignment.id}/students/${user.id}`);
+    await p.getByLabel('Comentario para el estudiante').fill('Revisión E2E ficticia, con historial conservado.');
+    await mutation(p, 'Guardar decisión docente', /\/reviews$/); await capture(p, 'teacher-review-light', 1440, false, p.getByText('Revisión E2E ficticia, con historial conservado.', { exact: true })); await capture(p, 'teacher-review-dark-320', 320, true, p.getByText('Revisión E2E ficticia, con historial conservado.', { exact: true }));
+    await student.page.goto(origin + '/classes/' + assignment.id); await student.page.getByText('Revisión E2E ficticia, con historial conservado.', { exact: true }).waitFor();
+    await capture(student.page, 'student-feedback-light-mobile', 390, false, student.page.getByText('Revisión E2E ficticia, con historial conservado.', { exact: true }));
+    const forbidden = await admin.context.request.get(origin + '/api/tutoring-sessions/' + sessionId); assert.equal(forbidden.status(), 404);
+  });
+  await check('A/E: operational admin and autonomous tutoring isolation', async () => {
+    const op = await api(admin.context, 'GET', '/api/admin/operations/readiness'); assert.equal(op.database, true); assert.equal(op.aiAvailabilityChecked, false);
+    const owner = await login(qa.tutoringOwnerEmail);
+    await owner.page.goto(origin + '/tutoring/' + qa.completedLearningId); await owner.page.getByText('Historial privado:', { exact: false }).waitFor();
+    assert.equal((await teacher.context.request.get(origin + '/api/tutoring-sessions/' + qa.completedLearningId)).status(), 404);
+    assert.equal((await admin.context.request.get(origin + '/api/tutoring-sessions/' + qa.completedLearningId)).status(), 404);
+    await owner.context.close();
+  });
+  await check('F: lost HTTP response recovery reuses request and preserves evidence', async () => {
+    const session = await api(student.context, 'POST', '/api/tutoring-sessions/', { requestId: crypto.randomUUID(), topic: 'Recuperación ficticia', goal: 'Conservar el turno confirmado', level: 'Beginner', directReview: true });
+    const p = student.page; await p.goto(origin + '/tutoring/' + session.id);
+    await rateLimit(p);
+    await p.route('**/api/tutoring-sessions/*/messages', async route => { const response = await route.fetch(); assert.ok(response.ok()); await route.abort('failed'); }, { times: 1 });
+    await p.getByRole('button', { name: 'Comenzar conversación', exact: true }).click();
+    await p.getByRole('button', { name: 'Actualizar estado', exact: true }).click();
+    await p.getByText('Activa', { exact: true }).waitFor(); const read = await api(student.context, 'GET', '/api/tutoring-sessions/' + session.id);
+    assert.equal(read.turns.length, 1); assert.equal(read.messages.filter(m => m.role === 'Tutor').length, 1);
+  });
+  await check('Light/Dark reverse cycle, keyboard focus, reduced motion and private storage', async () => {
+    const p = teacher.page; const toggle = p.getByRole('button', { name: 'Tema oscuro', exact: true });
+    const original = await toggle.getAttribute('aria-pressed');
+    await toggle.click();
+    await p.waitForFunction(value => document.querySelector('app-theme-toggle button')?.getAttribute('aria-pressed') === value, original === 'true' ? 'false' : 'true');
+    await toggle.click();
+    await p.waitForFunction(value => document.querySelector('app-theme-toggle button')?.getAttribute('aria-pressed') === value, original);
+    assert.equal(await toggle.getAttribute('aria-pressed'), original);
+    await p.emulateMedia({ reducedMotion: 'reduce' }); await toggle.focus(); await p.keyboard.press('Tab');
+    const observed = await p.evaluate(() => ({ keys: Object.keys(localStorage), sessionKeys: Object.keys(sessionStorage),
+      outline: getComputedStyle(document.activeElement).outlineStyle, width: parseFloat(getComputedStyle(document.activeElement).outlineWidth),
+      reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }));
+    assert.ok(observed.keys.every(k => k === 'aulatutor.theme.v1')); assert.equal(observed.sessionKeys.length, 0); assert.notEqual(observed.outline, 'none'); assert.ok(observed.width >= 2); assert.ok(observed.reduced);
+  });
+  assert.equal(pageErrors.length, 0);
+  await fs.writeFile(path.join(root, 'artifacts/iteration-8-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, scope: 'Browser A/B/C/D and privacy/recovery; E diagnosis/plan/report covered by reproducible HTTPS harness and integration suite, then privacy in browser; 429 and response loss explicitly staged.' }, null, 2));
+  console.log(`E2E passed: ${results.length} checks; Mock only.`);
+} catch (error) {
+  const safe = String(error.message).split(qa.password).join('[redacted]');
+  await fs.writeFile(path.join(root, 'artifacts/iteration-8-e2e.json'), JSON.stringify({ status: 'failed', step, message: safe, checks: results }, null, 2));
+  if (lastPage && !lastPage.isClosed()) await lastPage.screenshot({ path: path.join(root, 'artifacts/iteration-8-e2e-failure.png'), animations: 'disabled' }).catch(() => {});
+  console.error(`E2E failed at ${step}: ${safe}`); process.exitCode = 1;
+} finally { if (browser) { for (const c of browser.contexts()) await c.clearCookies(); await browser.close(); } }

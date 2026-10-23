@@ -72,6 +72,7 @@ public sealed class GroupService(AulaTutorDbContext db, ICurrentActor current, U
             throw new AppException(400, "Tipo de membresía no válido.");
         await using var tx = await db.Database.BeginTransactionAsync();
         await AdminBootstrap.LockAsync(db);
+        await AdminAsync();
         var group = await FindAsync(id);
         if (group.IsArchived) throw new AppException(409, "El grupo está archivado.");
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == request.UserId && x.OrganizationId == group.OrganizationId);
@@ -89,9 +90,18 @@ public sealed class GroupService(AulaTutorDbContext db, ICurrentActor current, U
     public async Task RemoveMemberAsync(Guid id, Guid userId, string kind)
     {
         await AdminAsync();
+        await using var tx = await db.Database.BeginTransactionAsync();
+        await AdminBootstrap.LockAsync(db);
+        await AdminAsync();
         await FindAsync(id);
         if (!Enum.TryParse<GroupMemberKind>(kind, out var parsed) || !Enum.IsDefined(parsed)) throw new AppException(400, "Membresía no válida.");
-        await db.GroupMemberships.Where(m => m.GroupId == id && m.UserId == userId && m.Kind == parsed).ExecuteDeleteAsync();
+        var member = await db.GroupMemberships.SingleOrDefaultAsync(m => m.GroupId == id && m.UserId == userId && m.Kind == parsed);
+        if (member is not null)
+        {
+            db.GroupMemberships.Remove(member);
+            await db.SaveChangesAsync();
+        }
+        await tx.CommitAsync();
     }
     private async Task<AcademicGroup> ReadableAsync(Guid id)
     {
@@ -105,7 +115,10 @@ public sealed class GroupService(AulaTutorDbContext db, ICurrentActor current, U
     }
     private async Task AdminAsync()
     {
-        if (!(await current.GetAsync()).IsAdmin) throw new AppException(403, "Acceso administrativo requerido.");
+        var actor = await current.GetAsync();
+        if (!actor.IsAdmin || !await db.Users.AnyAsync(u => u.Id == actor.Id && u.OrganizationId == actor.OrganizationId && u.IsActive &&
+            db.UserRoles.Any(ur => ur.UserId == u.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.Name == RoleNames.Admin))))
+            throw new AppException(403, "Acceso administrativo requerido.");
     }
     private async Task<AcademicGroup> FindAsync(Guid id) =>
         await db.Groups.SingleOrDefaultAsync(x => x.Id == id && x.OrganizationId == PilotOrganization.Id) ?? throw IdentityService.Hidden();
