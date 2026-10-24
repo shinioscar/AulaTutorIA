@@ -54,6 +54,7 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
                     {
                         HttpStatusCode.Unauthorized => AiErrorCode.Authentication,
                         HttpStatusCode.Forbidden => AiErrorCode.Forbidden,
+                        HttpStatusCode.PaymentRequired => AiErrorCode.CreditsRequired,
                         HttpStatusCode.TooManyRequests => AiErrorCode.RateLimited,
                         _ when (int)response.StatusCode >= 500 => AiErrorCode.Unavailable,
                         _ => AiErrorCode.Rejected
@@ -96,10 +97,10 @@ public sealed class AiHttpTransport(IHttpClientFactory clients, IOptions<AiProvi
         try
         {
             var usage = root;
-            var field = provider == "Groq" ? "usage" : provider == "Gemini" ? "usageMetadata" : "";
+            var field = provider is "Groq" or "OpenRouter" or "Anthropic" ? "usage" : provider == "Gemini" ? "usageMetadata" : "";
             if (field.Length > 0 && !root.TryGetProperty(field, out usage)) return null;
-            var input = provider == "Groq" ? "prompt_tokens" : provider == "Gemini" ? "promptTokenCount" : "prompt_eval_count";
-            var output = provider == "Groq" ? "completion_tokens" : provider == "Gemini" ? "candidatesTokenCount" : "eval_count";
+            var input = provider is "Groq" or "OpenRouter" ? "prompt_tokens" : provider == "Anthropic" ? "input_tokens" : provider == "Gemini" ? "promptTokenCount" : "prompt_eval_count";
+            var output = provider is "Groq" or "OpenRouter" ? "completion_tokens" : provider == "Anthropic" ? "output_tokens" : provider == "Gemini" ? "candidatesTokenCount" : "eval_count";
             if (!usage.TryGetProperty(input, out var i) || !usage.TryGetProperty(output, out var o) || !i.TryGetInt32(out var a) || !o.TryGetInt32(out var b) || a < 0 || b < 0) return null;
             return new(a, b, false);
         }

@@ -27,11 +27,13 @@ public static class IdentityEndpoints
             await identity.RegisterAsync(request);
             return Results.Accepted(value: new { message = "Solicitud recibida. Puedes intentar iniciar sesión; las solicitudes docentes requieren aprobación." });
         }).AllowAnonymous().RequireRateLimiting("auth").WithSummary("Registro Student o solicitud Teacher pendiente; respuesta uniforme para cuentas existentes.");
-        api.MapPost("/auth/login", async (LoginRequest request, IIdentityService identity) =>
-            await identity.LoginAsync(request) ? Results.NoContent() : Results.Problem(statusCode: 401, title: "No se pudo iniciar sesión con las credenciales proporcionadas."))
+        api.MapPost("/auth/login", async (LoginRequest request, IIdentityService identity, AulaTutor.Infrastructure.Ai.PersonalAiOAuthService oauth, CancellationToken ct) => {
+            await oauth.CancelBrowserAsync(ct);
+            return await identity.LoginAsync(request) ? Results.NoContent() : Results.Problem(statusCode: 401, title: "No se pudo iniciar sesión con las credenciales proporcionadas."); })
             .AllowAnonymous().RequireRateLimiting("auth").WithSummary("Inicio mediante cookie Secure/HttpOnly; bloqueo tras 5 fallos y límite por IP.");
-        api.MapPost("/auth/logout", async (IIdentityService identity) =>
+        api.MapPost("/auth/logout", async (IIdentityService identity, AulaTutor.Infrastructure.Ai.PersonalAiOAuthService oauth, CancellationToken ct) =>
         {
+            await oauth.CancelBrowserAsync(ct);
             await identity.LogoutAsync(); return Results.NoContent();
         }).RequireAuthorization().WithSummary("Cierra sesión e invalida las cookies anteriores de la cuenta.");
         api.MapGet("/me", async (IIdentityService identity) => TypedResults.Ok(await identity.MeAsync()))

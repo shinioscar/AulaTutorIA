@@ -8,7 +8,7 @@ public static class AiMessageRoles
 }
 public sealed record AiResponseContract(string Format, string? JsonSchema = null, bool Strict = false);
 public sealed record AiTokenUsage(int InputTokens, int OutputTokens, bool IsEstimated);
-public sealed record AiHealthResult(bool IsHealthy, string ProviderId, string ModelId);
+public sealed record AiHealthResult(bool IsHealthy, string ProviderId, string ModelId, Guid? BindingId = null);
 
 public sealed record AiChatRequest(
     string UseCase,
@@ -31,7 +31,7 @@ public sealed record AiCapabilities(bool Json, bool JsonSchema, bool StrictJsonS
 // Future streaming boundary; transport implementation is deferred.
 public sealed record AiStreamChunk(string Text, bool IsFinal, AiTokenUsage? Usage = null);
 public enum AiErrorCode { Configuration, InvalidRequest, Unsupported, Authentication, Forbidden,
-    RateLimited, Unavailable, Connection, Timeout, InvalidResponse, Rejected }
+    RateLimited, Unavailable, Connection, Timeout, InvalidResponse, Rejected, CreditsRequired, PaymentAuthorizationRequired }
 public sealed class AiProviderException(AiErrorCode code, TimeSpan? retryAfter = null) : Exception(SafeMessage(code))
 {
     public AiErrorCode Code { get; } = code;
@@ -48,6 +48,8 @@ public sealed class AiProviderException(AiErrorCode code, TimeSpan? retryAfter =
         AiErrorCode.Unsupported => "El modelo no admite el formato solicitado.",
         AiErrorCode.InvalidRequest => "El contrato o los límites de la solicitud no son válidos.",
         AiErrorCode.Rejected => "El proveedor rechazó la solicitud.",
+        AiErrorCode.CreditsRequired => "Tu cuenta necesita créditos para este modelo.",
+        AiErrorCode.PaymentAuthorizationRequired => "Este modelo requiere autorización de pago. Elige uno gratuito o cambia tu selección.",
         _ => "La configuración del proveedor no es válida."
     };
 }

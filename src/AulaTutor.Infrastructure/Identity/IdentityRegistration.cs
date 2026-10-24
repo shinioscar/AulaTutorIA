@@ -39,6 +39,10 @@ public static class IdentityRegistration
             options.Cookie.Path = "/";
             options.ExpireTimeSpan = TimeSpan.FromHours(2);
             options.SlidingExpiration = false;
+            options.Events.OnSigningIn = context => {
+                context.Properties.Items.TryAdd(AulaTutor.Infrastructure.Ai.PersonalAiSession.Property, AulaTutor.Infrastructure.Ai.PersonalAiVault.Random());
+                return Task.CompletedTask;
+            };
             options.Events.OnRedirectToLogin = context => { context.Response.StatusCode = 401; return Task.CompletedTask; };
             options.Events.OnRedirectToAccessDenied = context => { context.Response.StatusCode = 403; return Task.CompletedTask; };
         });

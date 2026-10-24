@@ -67,7 +67,7 @@ public sealed partial class TutoringService(AulaTutorDbContext db, ICurrentActor
         var session = new TutoringSession { StudentId = actor.Id, OrganizationId = actor.OrganizationId,
             CreationKey = request.RequestId, Topic = request.Topic.Trim(), Goal = request.Goal.Trim(),
             Level = request.Level, DirectReview = request.DirectReview, PolicyVersion = TutoringOrchestrator.PolicyVersion,
-            ProviderId = health.ProviderId, ModelId = health.ModelId, CreatedAt = clock.GetUtcNow(), LastActivityAt = clock.GetUtcNow(),
+            ProviderId = health.ProviderId, ModelId = health.ModelId, AiBindingId = health.BindingId, CreatedAt = clock.GetUtcNow(), LastActivityAt = clock.GetUtcNow(),
             SourceRecommendationId = source?.Id, SourceReportId = source?.ReportId };
         db.TutoringSessions.Add(session); await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return await ViewAsync(session, ct);
@@ -151,7 +151,7 @@ public sealed partial class TutoringService(AulaTutorDbContext db, ICurrentActor
             }
             if (turn.Attempts >= 3) throw Conflict("Se agotaron los tres intentos de este turno. Cancélalo para continuar.");
             if (turn.RetryNotBefore > clock.GetUtcNow()) throw new AppException(429, "El proveedor pidió esperar. No reintentes todavía.");
-            var health = await provider.CheckHealthAsync(ct);
+            var health = await AiBinding.BindAsync(provider, session.AiBindingId, ct);
             if (health.ProviderId != session.ProviderId || health.ModelId != session.ModelId) throw Conflict("El proveedor o modelo de esta tutoría cambió. Restaura su configuración o crea otra tutoría.");
             lease = Guid.NewGuid(); turn.LeaseToken = lease; turn.LeaseExpiresAt = clock.GetUtcNow().AddSeconds(options.Value.TimeoutSeconds + 30);
             turn.State = TutoringTurnState.Pending; turn.Attempts++; turn.ErrorCode = null; turn.RetryNotBefore = null;
@@ -201,12 +201,15 @@ public sealed partial class TutoringService(AulaTutorDbContext db, ICurrentActor
         // Finish must cancel durably even when the student's group relationship was revoked.
         var session = await db.TutoringSessions.FromSqlInterpolated($"SELECT * FROM \"TutoringSessions\" WHERE \"Id\"={id} AND \"StudentId\"={actor.Id} AND \"OrganizationId\"={actor.OrganizationId} FOR UPDATE").SingleOrDefaultAsync(ct) ?? throw Hidden();
         var turn = await db.TutoringTurns.SingleAsync(t => t.SessionId == id && t.RequestId == requestId, ct);
+        if (session.AiBindingId.HasValue) await PersonalAiSession.LockAsync(db, ct);
         if (turn.LeaseToken != lease || turn.State != TutoringTurnState.Pending || session.PendingRequestId != requestId || turn.LeaseExpiresAt <= clock.GetUtcNow())
         { await tx.CommitAsync(ct); return; } // Fencing discards late results after cancel/recovery.
         var allowed = await db.Users.AnyAsync(u => u.Id == actor.Id && u.IsActive && u.OrganizationId == actor.OrganizationId, ct)
             && await db.UserRoles.AnyAsync(u => u.UserId == actor.Id && db.Roles.Any(r => r.Id == u.RoleId && r.Name == RoleNames.Student), ct);
         turn.DurationMs = duration;
         var academicAllowed = await assignedAccess.CanWorkAsync(session, ct);
+        var credentialAllowed = await PersonalAiProvider.CredentialActiveAsync(db, session.AiBindingId, actor.Id, ct);
+        if (!credentialAllowed) { reply = null; error = "Authentication"; }
         var accountAllowed = allowed; allowed = allowed && academicAllowed;
         if (!allowed) { turn.State = TutoringTurnState.Cancelled; turn.ErrorCode = "Canceled"; session.PendingRequestId = null; }
         else if (reply is null)

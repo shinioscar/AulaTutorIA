@@ -122,3 +122,7 @@ Fuentes primarias consultadas para transacciones y operación:
 [bloqueos PostgreSQL](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS),
 [respaldo lógico PostgreSQL](https://www.postgresql.org/docs/current/backup-dump.html) y
 [health checks ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-10.0).
+
+## Ampliación posterior BYOK-1
+
+[ADR-030](ADR-030-conexiones-personales-ia.md) implementa las conexiones personales autorizadas posteriormente. Reutiliza la admisión PostgreSQL por HTTP físico, con scope separado, atribución inmutable de conexión/revisión/huella/operación y agregación conservadora entre claves. La concurrencia global permanece compartida; rotar claves no reinicia presupuestos. Uso reportado ausente sigue null. [Detalle](../architecture/PERSONAL_AI.md).

@@ -17,6 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1_048_576);
 builder.Logging.ClearProviders();
 builder.Logging.AddJsonConsole();
+// Authorization codes must never enter request URL logs, even under verbose deployment settings.
+builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
     context.ProblemDetails.Extensions["correlationId"] = context.HttpContext.TraceIdentifier);
 builder.Services.AddOpenApi(options => options.DescribeIdentity());
@@ -39,6 +41,12 @@ if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("ai-connections", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.AddPolicy("ai-oauth-start", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 3, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("lessons", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.Identity?.Name ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -101,11 +109,12 @@ app.UseRateLimiter();
 // Preserve the foundation liveness contract; no database readiness assertion.
 app.MapGet("/api/health", async (IAiProvider provider, CancellationToken ct) =>
 {
-    var health = await provider.CheckHealthAsync(ct);
+    var health = await (provider is AulaTutor.Infrastructure.Ai.PersonalAiProvider p ? p.Institutional : provider).CheckHealthAsync(ct);
     return TypedResults.Ok(new ApiHealthResponse("ok", "AulaTutor IA", 1, health.ProviderId, health.ModelId));
 }).WithName("GetHealth").WithSummary("Estado básico de la API y configuración IA; sin llamadas al proveedor ni comprobación PostgreSQL.").AllowAnonymous();
 app.MapIdentityEndpoints();
 app.MapAiEndpoints();
+app.MapPersonalAiEndpoints();
 app.MapTutoringEndpoints();
 app.MapLessonEndpoints();
 app.MapAssignmentEndpoints();

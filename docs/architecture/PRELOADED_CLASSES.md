@@ -100,3 +100,7 @@ El reporte determinista assigned-summary-v1 permanece separado. Observaciones
 IA referenciadas se incorporan a la supervisión autorizada; una revisión humana
 es independiente y no sustituye resultados, ayudas o intentos. Sin notas oficiales
 ni equivalencia pedagógica garantizada con el tutor conversacional.
+
+## Ampliación BYOK-1
+
+La selección personal del Student se congela al iniciar la clase. Tarjetas, ayudas y cierre continúan locales y sin reservas incluso si después se desconecta la clave. La evaluación agrupada usa exclusivamente el vínculo original, con una reserva por intento físico y sin fallback. Revocarlo impide nuevas inferencias, sin borrar el reporte local ni la evidencia. [Contrato BYOK](PERSONAL_AI.md).

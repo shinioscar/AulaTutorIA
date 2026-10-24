@@ -25,8 +25,8 @@ public static class OperationalEndpoints
             if (!(await current.GetAsync()).IsAdmin) throw new AppException(403, "Se requiere un administrador activo.");
             var now = DateTimeOffset.UtcNow; var day = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
             var rows = await db.AiReservations.AsNoTracking().Where(r => r.CreatedAt >= day).ToArrayAsync(ct);
-            return TypedResults.Ok(new { sinceUtc = day, providers = rows.GroupBy(r => r.Provider).Select(g => new {
-                provider = g.Key, reservations = g.Count(), succeeded = g.Count(r => r.State == "Succeeded"), failed = g.Count(r => r.State == "Failed"),
+            return TypedResults.Ok(new { sinceUtc = day, providers = rows.GroupBy(r => new { r.Scope, r.Provider }).Select(g => new {
+                scope = g.Key.Scope, provider = g.Key.Provider, reservations = g.Count(), succeeded = g.Count(r => r.State == "Succeeded"), failed = g.Count(r => r.State == "Failed"),
                 uncertain = g.Count(r => r.State == "Uncertain" || r.State == "Reserved" && r.LeaseUntil <= now),
                 active = g.Count(r => r.LeaseUntil > now && r.State is "Reserved" or "Uncertain"),
                 unknownUsage = g.Count(r => !r.InputTokens.HasValue || !r.OutputTokens.HasValue),

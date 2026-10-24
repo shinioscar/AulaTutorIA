@@ -21,7 +21,7 @@
         @if(auth.hasRole('Admin')) {
           <a routerLink="/admin/users" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="users" />Administración</a>
         }
-        @if(auth.hasRole('Teacher') || auth.hasRole('Admin')) {
+        @if(auth.hasRole('Teacher') || auth.hasRole('Student') || auth.hasRole('Admin')) {
           <a [routerLink]="auth.hasRole('Admin')?'/admin/ai':'/ai-provider'" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="settings" />Proveedor de IA</a>
         }
         <button type="button" class="secondary logout" (click)="logout()">Cerrar sesión</button>

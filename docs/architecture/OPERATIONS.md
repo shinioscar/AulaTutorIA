@@ -105,3 +105,7 @@ y decidir explícitamente el cambio de conexión. No sobreescribir la base princ
 con el script de prueba. Tras una caída, GET recupera leases vencidos sin generar IA;
 un usuario examina el intento persistido y elige retry de la misma clave si procede.
 Un replay completado devuelve lo guardado. Reiniciar nunca implica refund externo.
+
+## Ampliación BYOK-1
+
+[ADR-030](../decisions/ADR-030-conexiones-personales-ia.md) y [guía operativa personal](PERSONAL_AI.md) documentan el anillo independiente de credenciales, parámetros Windows/Linux, respaldo separado y límites de rotación. Aplicar PersonalAiConnections mediante el comando explícito de migración; no se migra al arrancar HTTP. Usage conserva sus agregados y agrega scope por Institutional/Personal/PersonalQa, agrupado junto con provider. Una reserva fallida o incierta conserva cargo. El transporte QA personal solo admite Development+Mock+sin llamadas externas+BD aislada, y carece de fallback de red.

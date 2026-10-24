@@ -6,6 +6,7 @@ using AulaTutor.Application.Tutoring;
 using AulaTutor.Domain.Identity;
 using AulaTutor.Domain.Lessons;
 using AulaTutor.Domain.Tutoring;
+using AulaTutor.Infrastructure.Ai;
 using Microsoft.EntityFrameworkCore;
 
 namespace AulaTutor.Infrastructure.Lessons;
@@ -37,7 +38,7 @@ public sealed partial class LessonService
         if (op.Attempts >= 3) throw Conflict("Máximo tres ejecuciones. Cancela esta solicitud para continuar.");
         if (op.RetryNotBefore > clock.GetUtcNow()) throw new AppException(429, "Espera el plazo del proveedor antes de reintentar.");
         if (isNew && request.Retry) throw Conflict("No existe una solicitud que recuperar.");
-        var health = await provider.CheckHealthAsync(ct);
+        var health = await AiBinding.BindAsync(provider, op.AiBindingId, ct);
         if (health.ProviderId != op.ProviderId || health.ModelId != op.ModelId) throw Conflict("Cambió el proveedor/modelo. Restaura la configuración o crea otra solicitud tras cancelar.");
         op.LeaseToken = Guid.NewGuid(); op.LeaseExpiresAt = clock.GetUtcNow().AddSeconds(options.Value.TimeoutSeconds + 30);
         op.State = LessonOperationState.Pending; op.Attempts++; op.ErrorCode = null; op.RetryNotBefore = null;
@@ -62,7 +63,7 @@ public sealed partial class LessonService
                 var designBase = LearningJson.Read<LessonContent>(latestProposal?.ContentJson ?? draft.ContentJson);
                 if (designBase.Preloaded is not null && request.Action != "PreloadedPlan") throw Conflict("Esta clase contiene ayudas precargadas. Edítalas en el constructor; el diseño conversacional no puede eliminarlas implícitamente.");
                 op = new() { LessonId = id, RequestId = request.RequestId, Action = request.Action, Text = request.Text!.Trim(),
-                    InputHash = Hash(request.Action + "\n" + request.Text.Trim() + "\n"), DraftRevision = draft.Revision, ProviderId = health.ProviderId, ModelId = health.ModelId,
+                    InputHash = Hash(request.Action + "\n" + request.Text.Trim() + "\n"), DraftRevision = draft.Revision, ProviderId = health.ProviderId, ModelId = health.ModelId, AiBindingId = health.BindingId,
                     ContextJson = LearningJson.Write(new { draft = designBase, baseSource = latestProposal is null ? "SavedDraft" : "UnappliedProposal", proposalId = latestProposal?.Id, savedDraftRevision = draft.Revision, request = request.Text.Trim(), action = request.Action, conversation }), CreatedAt = clock.GetUtcNow() };
                 if (op.ContextJson.Length > 28000) throw new AppException(400, "El contexto de diseño supera el límite; reduce el borrador.");
             }
@@ -94,10 +95,12 @@ public sealed partial class LessonService
         db.ChangeTracker.Clear(); using var persistence = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var tx = await db.Database.BeginTransactionAsync(persistence.Token); await OwnedAsync(op.LessonId, actor, true, persistence.Token);
         var saved = await db.LessonOperations.SingleAsync(o => o.LessonId == op.LessonId && o.RequestId == op.RequestId, persistence.Token);
+        if (saved.AiBindingId.HasValue) await PersonalAiSession.LockAsync(db, persistence.Token);
         if (saved.State != LessonOperationState.Pending || saved.LeaseToken != lease || saved.LeaseExpiresAt <= clock.GetUtcNow()) { await tx.CommitAsync(persistence.Token); return; }
         var allowed = await db.Users.AnyAsync(u => u.Id == actor.Id && u.IsActive && u.OrganizationId == actor.OrganizationId && u.TeacherApproval == TeacherApproval.Approved, persistence.Token)
             && await db.UserRoles.AnyAsync(ur => ur.UserId == actor.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.Name == RoleNames.Teacher), persistence.Token);
         var simulation = saved.SimulationId is { } sid ? await db.LessonSimulations.SingleAsync(s => s.Id == sid && s.LessonId == saved.LessonId, persistence.Token) : null;
+        if (!await PersonalAiProvider.CredentialActiveAsync(db, saved.AiBindingId, actor.Id, persistence.Token)) { error = "Authentication"; proposal = null; reply = null; }
         if (!allowed || simulation is not null && (simulation.State != "Active" || simulation.PendingRequestId != saved.RequestId)) { saved.State = LessonOperationState.Cancelled; saved.ErrorCode = "Canceled"; }
         else if (error is not null) { saved.State = LessonOperationState.Failed; saved.ErrorCode = error; if (retry.HasValue) saved.RetryNotBefore = clock.GetUtcNow().AddSeconds(Math.Clamp(retry.Value.TotalSeconds, 0, 86400)); }
         else
@@ -127,7 +130,7 @@ public sealed partial class LessonService
             if (content.Preloaded is not null && LessonValidationRules.Review(content).Errors.Length > 0) throw Conflict("Completa los contenidos precargados antes de simular.");
             if (await db.LessonSimulations.CountAsync(s => s.LessonId == id, ct) >= 20) throw Conflict("Límite de veinte simulaciones del piloto.");
             var health = await provider.CheckHealthAsync(ct);
-            db.LessonSimulations.Add(new() { Id = request.RequestId, LessonId = id, DraftRevision = draft.Revision, ContentJson = draft.ContentJson, ProviderId = health.ProviderId, ModelId = health.ModelId, CreatedAt = clock.GetUtcNow() });
+            db.LessonSimulations.Add(new() { Id = request.RequestId, LessonId = id, DraftRevision = draft.Revision, ContentJson = draft.ContentJson, ProviderId = health.ProviderId, ModelId = health.ModelId, AiBindingId = health.BindingId, CreatedAt = clock.GetUtcNow() });
             l.State = LessonState.Simulation; Touch(l); await db.SaveChangesAsync(ct);
         }
         await tx.CommitAsync(ct); return await GetSimulationAsync(id, request.RequestId, ct);
@@ -168,7 +171,7 @@ public sealed partial class LessonService
                     if (sim.SectionIndex > content.Sections.Length) throw Conflict("El recorrido ya terminó.");
                 }
                 if (request.Action == "Answer" && exercise is null) throw Conflict("No hay un ejercicio actual.");
-                op = new() { LessonId = id, RequestId = request.RequestId, SimulationId = simulationId, Action = request.Action, Text = request.Text?.Trim() ?? "", InputHash = Hash(request.Action + "\n" + (request.Text?.Trim() ?? "") + "\n" + simulationId), DraftRevision = sim.DraftRevision, ProviderId = sim.ProviderId, ModelId = sim.ModelId, CreatedAt = clock.GetUtcNow() };
+                op = new() { LessonId = id, RequestId = request.RequestId, SimulationId = simulationId, Action = request.Action, Text = request.Text?.Trim() ?? "", InputHash = Hash(request.Action + "\n" + (request.Text?.Trim() ?? "") + "\n" + simulationId), DraftRevision = sim.DraftRevision, ProviderId = sim.ProviderId, ModelId = sim.ModelId, AiBindingId = sim.AiBindingId, CreatedAt = clock.GetUtcNow() };
                 if (request.Action == "Answer")
                 {
                     if (sim.Attempts >= 10) throw Conflict("Máximo diez respuestas por actividad.");
@@ -190,7 +193,7 @@ public sealed partial class LessonService
                         "Simplify" => aid is null ? "Recorrido finalizado." : PreloadedRules.Help(aid.Alternatives, helpIndex),
                         "Answer" => PreloadedRules.Feedback(aid!, op.Outcome!), _ => section?.Content ?? "Recorrido finalizado." };
                     if (request.Action is "Hint" or "Simplify") sim.HintCount++;
-                    op.ProviderId = "Application"; op.ModelId = "preloaded-local-v1"; op.State = LessonOperationState.Succeeded; op.Attempts = 1;
+                    op.ProviderId = "Application"; op.ModelId = "preloaded-local-v1"; op.AiBindingId = null; op.State = LessonOperationState.Succeeded; op.Attempts = 1;
                     db.LessonOperations.Add(op); sim.Revision++; await TeacherAsync(true);
                     await db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return await GetSimulationAsync(id, simulationId, ct);
                 }

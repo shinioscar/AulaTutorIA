@@ -9,6 +9,7 @@ namespace AulaTutor.Infrastructure.Ai;
 public sealed class AiDiagnostics(IAiProvider provider, IOptions<AiProviderOptions> options,
     ICurrentActor current, ILogger<AiDiagnostics> logger) : IAiDiagnostics
 {
+    private IAiProvider DiagnosticProvider => provider is PersonalAiProvider p ? p.Institutional : provider;
     private async Task RequireAdminAsync()
     {
         if (!(await current.GetAsync()).IsAdmin) throw new AppException(403, "Se requiere administración activa.");
@@ -16,8 +17,8 @@ public sealed class AiDiagnostics(IAiProvider provider, IOptions<AiProviderOptio
     public async Task<AiDiagnosticConfiguration> GetAsync(CancellationToken ct)
     {
         await RequireAdminAsync();
-        var health = await provider.CheckHealthAsync(ct);
-        return new(health.ProviderId, health.ModelId, health.IsHealthy, provider.Capabilities,
+        var health = await DiagnosticProvider.CheckHealthAsync(ct);
+        return new(health.ProviderId, health.ModelId, health.IsHealthy, DiagnosticProvider.Capabilities,
             options.Value.TimeoutSeconds, options.Value.MaxConcurrency, options.Value.MaxRetries);
     }
     public async Task<AiDiagnosticResult> TestAsync(CancellationToken ct)
@@ -26,7 +27,7 @@ public sealed class AiDiagnostics(IAiProvider provider, IOptions<AiProviderOptio
         var timer = Stopwatch.StartNew(); var correlation = Guid.NewGuid().ToString("N");
         try
         {
-            var result = await provider.GenerateAsync(new AiChatRequest("admin_diagnostic",
+            var result = await DiagnosticProvider.GenerateAsync(new AiChatRequest("admin_diagnostic",
                 [new("system", "Responde de forma breve. No solicites datos personales."), new("user", "Responde únicamente: Conexión de prueba correcta.")],
                 new("text"), correlation, 128, "diagnostic-v1"), ct);
             logger.LogInformation("AI diagnostic {Provider} {Model} {CorrelationId} diagnostic-v1 {DurationMs}ms {InputTokens} {OutputTokens} Success",

@@ -51,3 +51,7 @@ No hay endpoints de clases ni evaluación oficial.
 
 Contraseñas nuevas 5–128, sin composición obligatoria; política ADR-015. Modelo EF
 y hashes existentes conservados. Configuración IA/formatos/capacidades en ADR-014.
+
+## Ampliación BYOK-1
+
+[ADR-030](../decisions/ADR-030-conexiones-personales-ia.md) y [contrato personal](PERSONAL_AI.md) agregan gestión propia Teacher/Student. La sesión incorpora un identificador de autorización; la cookie principal sigue Strict. Login/logout cancelan el intento OAuth del navegador, y la finalización exige sesión/stamp originales y CSRF. Admin conserva exclusivamente sus rutas operativas salvo rol académico adicional.

@@ -21,6 +21,7 @@ public sealed class TutoringSession
     public string PolicyVersion { get; set; } = "tutoring-v1";
     public string ProviderId { get; set; } = "";
     public string ModelId { get; set; } = "";
+    public Guid? AiBindingId { get; set; }
     public TutoringState State { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LastActivityAt { get; set; }

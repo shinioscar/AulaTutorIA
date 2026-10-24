@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { RouterLink } from '@angular/router';
 
 interface Configuration {
   provider: string; model: string; configurationValid: boolean;
@@ -13,7 +14,7 @@ interface Diagnostic {
   usage:{inputTokens:number;outputTokens:number;isEstimated:boolean}|null;
   errorCode:string|null; error:string|null; retryAfterSeconds:number|null;
 }
-@Component({standalone:true, templateUrl:'./ai-page.html', styleUrl:'./ai-page.css'})
+@Component({standalone:true, imports:[RouterLink], templateUrl:'./ai-page.html', styleUrl:'./ai-page.css'})
 export class AiPage {
   private readonly http = inject(HttpClient);
   readonly auth = inject(AuthService);

@@ -90,3 +90,7 @@ compartición de versiones de reportes de 4 se regula separadamente. OpenAPI sol
 Las clases precargadas reutilizan estas sesiones y sus garantías; añaden la ruta
 local `/api/tutoring-sessions/{id}/cards`, sin proveedor, y evaluación FinalReport
 opcional posterior al cierre. [Contrato y límites](PRELOADED_CLASSES.md).
+
+## Ampliación BYOK-1
+
+[Conexiones personales](PERSONAL_AI.md) fijan conexión/revisión/modelo al crear la sesión. Cambiar selección afecta creaciones posteriores; revocar la conexión impide nueva inferencia y descarta resultados tardíos. Replays y evidencias persistidas se conservan. Las sesiones anteriores mantienen proveedor institucional. Errores seguros adicionales: CreditsRequired y PaymentAuthorizationRequired; nunca cambian de proveedor automáticamente.

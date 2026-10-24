@@ -14,7 +14,7 @@ $taskOriginalProvider=$env:Ai__Provider; $taskOriginalGroq=$env:Ai__Groq__ApiKey
 @{status='preparing';checks=@()} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/iteration-9-e2e.json" -Encoding utf8
 try {
     & "$PSScriptRoot/Prepare-Local.ps1"
-    & "$PSScriptRoot/Http-Identity.ps1" -KeepRunning
+    & "$PSScriptRoot/Http-Identity.ps1" -KeepRunning -PersonalAiSimulation
     $env:Ai__Provider='Mock';$env:Ai__Groq__ApiKey=$null;$env:Ai__Gemini__ApiKey=$null
     $taskCli=Join-Path $taskRoot 'src/AulaTutor.Web/node_modules/@angular/cli/bin/ng.js'
     $taskWeb=Start-Process -FilePath (Get-Command node).Source -ArgumentList @($taskCli,'serve','--host','localhost','--port','4200','--ssl','--ssl-cert','../../.cache/certs/localhost.pem','--ssl-key','../../.cache/certs/localhost.key','--proxy-config','proxy.conf.json') -WorkingDirectory "$taskRoot/src/AulaTutor.Web" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$taskRoot/.cache/e2e-web.log" -RedirectStandardError "$taskRoot/.cache/e2e-web-error.log"
@@ -28,6 +28,8 @@ try {
     node "$taskRoot/tests/AulaTutor.E2E/run.mjs"
     if($LASTEXITCODE -ne 0){throw 'Browser E2E failed; see the safe report in artifacts.'}
     & "$PSScriptRoot/Test-RestartRecovery.ps1"
+    $taskPrivateFixture=Get-Content -LiteralPath $taskStatePath -Raw | ConvertFrom-Json
+    & "$PSScriptRoot/test-byok-log-safety.ps1" -FixturePassword $taskPrivateFixture.password
     @{status='passed';elapsedMs=$taskSuiteWatch.Elapsed.TotalMilliseconds;scope='HTTP fixture, Angular startup, complete browser suite and real API restart; includes production rate-window waits'} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/iteration-9-e2e-suite.json" -Encoding utf8
     if($KeepRunning){
         $taskState=Get-Content -LiteralPath $taskStatePath -Raw | ConvertFrom-Json

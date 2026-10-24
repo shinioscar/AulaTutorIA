@@ -105,3 +105,5 @@ seguimiento y límites de verificación en [UX-2](../iterations/UX_2.md). Las cu
 referencias `references/ux-2/` orientan composición y jerarquía, sin autorizar sus
 funciones ni sus estadísticas ilustrativas. Este encargo amplía la disposición
 visual histórica UI-0/UI-1; los contratos académicos y de privacidad se mantienen.
+
+BYOK-1/ADR-030 amplía Proveedor de IA para Teacher aprobado y Student. La sección comparte tarjetas de conexión, formularios y selector de modelos; el diagnóstico operativo Admin conserva su permiso. Consentimiento y costo aparecen junto a la activación, y la información técnica ampliada queda en detalles desplegables. Temas y controles reutilizan los tokens existentes.

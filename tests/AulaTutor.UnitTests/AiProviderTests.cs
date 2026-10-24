@@ -55,8 +55,9 @@ public sealed class AiProviderTests
             ["Ai:Gemini:Model"]=settings.Gemini.Model,["Ai:Gemini:ApiKey"]=settings.Gemini.ApiKey,["Ai:Ollama:Model"]=settings.Ollama.Model
         }).Build();
         using var services = new ServiceCollection().AddLogging().AddInfrastructure(config).BuildServiceProvider();
-        Assert.IsType(expected,services.GetRequiredService<IAiProvider>());
-        Assert.False(services.GetRequiredService<IAiProvider>().Capabilities.StreamingImplemented);
+        var institutional=services.GetRequiredService<InstitutionalAiProvider>().Provider;
+        Assert.IsType(expected,institutional);
+        Assert.False(institutional.Capabilities.StreamingImplemented);
     }
 
     [Theory]
@@ -272,7 +273,7 @@ public sealed class AiProviderTests
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["Ai:Groq:ApiKey"]=Guid.NewGuid().ToString("N") }).Build();
         using var services = new ServiceCollection().AddLogging().AddInfrastructure(config).BuildServiceProvider();
-        Assert.IsType<MockAiProvider>(services.GetRequiredService<IAiProvider>());
+        Assert.IsType<MockAiProvider>(services.GetRequiredService<InstitutionalAiProvider>().Provider);
     }
 
     [Theory]

@@ -144,7 +144,7 @@ public sealed class AssignmentService(AulaTutorDbContext db, ICurrentActor curre
                 var health = await provider.CheckHealthAsync(ct); // Configuration only; no quota.
                 var s = new TutoringSession { StudentId = a.Id, OrganizationId = a.OrganizationId, CreationKey = r.RequestId, Mode = TutoringMode.AssignedClass,
                     AssignmentId = id, LessonVersionId = v.Id, Topic = c.Title, Goal = string.Join("; ", c.Objectives.Select(o => o.Text))[..Math.Min(500, string.Join("; ", c.Objectives.Select(o => o.Text)).Length)],
-                    Level = c.Level, DirectReview = true, ProviderId = health.ProviderId, ModelId = health.ModelId, CreatedAt = clock.GetUtcNow(), LastActivityAt = clock.GetUtcNow() };
+                    Level = c.Level, DirectReview = true, ProviderId = health.ProviderId, ModelId = health.ModelId, AiBindingId = health.BindingId, CreatedAt = clock.GetUtcNow(), LastActivityAt = clock.GetUtcNow() };
                 // Teacher free-form level is bounded separately from tutoring's enum.
                 s.Level = c.Level.Length <= 20 ? c.Level : c.Level[..20];
                 if (c.Preloaded is not null) s.PolicyVersion = "preloaded-class-v1";

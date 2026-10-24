@@ -16,27 +16,27 @@ export async function uxPolishQa({teacher,student,admin,assignment,api,capture,c
       }finally{p.off('request',record);}
     }
   });
-  await check('UX polish: teacher provider page reads health only, with recoverable connection failure',async()=>{
+  await check('UX polish/BYOK: teacher provider page reads own configuration without automatic inference',async()=>{
     const p=teacher.page,requests=[];
     const record=r=>{const route=new URL(r.url()).pathname;if(route.startsWith('/api/'))requests.push({route,method:r.method()});};
     p.on('request',record);
     try{
       await p.setViewportSize({width:1440,height:1000});await p.goto(origin+'/');
       await p.getByRole('navigation',{name:'Navegación principal',exact:true}).getByRole('link',{name:'Proveedor de IA',exact:true}).click();
-      await p.waitForURL(origin+'/ai-provider');await p.getByRole('definition').filter({hasText:'Mock'}).waitFor();
+      await p.waitForURL(origin+'/ai-provider');await p.getByRole('heading',{name:'Proveedor institucional',exact:true}).waitFor();
       assert.equal(await p.getByRole('button',{name:'Ejecutar prueba breve',exact:true}).count(),0);
-      assert.ok(requests.some(r=>r.route==='/api/health'));
+      assert.ok(requests.some(r=>r.route==='/api/ai-connections/'));
       assert.equal(requests.filter(r=>r.route.startsWith('/api/admin/')||r.method==='POST').length,0);
       for(const width of [320,390,768,1024,1440])for(const dark of [false,true])await capture(p,`polish-provider-teacher-${width}-${dark?'dark':'light'}`,width,dark);
-      await p.route('**/api/health',r=>r.fulfill({status:503,contentType:'application/json',body:'{}'}),{times:1});
+      await p.route('**/api/ai-connections/',r=>r.fulfill({status:503,contentType:'application/json',body:'{"title":"Conexión interrumpida. Intenta actualizar."}'}),{times:1});
       await p.getByRole('button',{name:'Actualizar estado',exact:true}).click();
       await p.getByText('Conexión interrumpida. Intenta actualizar.',{exact:true}).waitFor();
-      assert.equal(await p.getByRole('definition').count(),0);
-      await p.getByRole('button',{name:'Actualizar estado',exact:true}).click();await p.getByRole('definition').filter({hasText:'Mock'}).waitFor();
+      assert.equal(await p.getByRole('heading',{name:'Proveedor institucional',exact:true}).count(),0);
+      await p.getByRole('button',{name:'Actualizar estado',exact:true}).click();await p.getByRole('heading',{name:'Proveedor institucional',exact:true}).waitFor();
       assert.equal((await teacher.context.request.get(origin+'/api/admin/ai/')).status(),403);
     }finally{p.off('request',record);}
   });
-  await check('UX polish: admin diagnostic stays explicit and student provider routes stay guarded',async()=>{
+  await check('UX polish/BYOK: admin diagnostic stays explicit and Student has own provider page',async()=>{
     const p=admin.page;let probes=0;
     const record=r=>{if(r.url().endsWith('/api/admin/ai/test')&&r.method()==='POST')probes++;};p.on('request',record);
     try{
@@ -44,15 +44,17 @@ export async function uxPolishQa({teacher,student,admin,assignment,api,capture,c
       assert.equal(probes,0,'Opening configuration must not run a diagnostic');assert.equal(await p.locator('details[open]').count(),0);
       for(const width of [320,390,768,1024,1440])for(const dark of [false,true])await capture(p,`polish-provider-admin-${width}-${dark?'dark':'light'}`,width,dark);
       const health=await api(admin.context,'GET','/api/health');assert.equal(health.aiProvider,'Mock');
-      await p.getByRole('button',{name:'Ejecutar prueba breve',exact:true}).click();await p.getByRole('heading',{name:'Prueba completada',exact:true}).waitFor();assert.equal(probes,1);
+      await p.getByRole('button',{name:'Ejecutar prueba breve',exact:true}).click();await p.getByRole('heading',{name:'Prueba completada',exact:true}).waitFor();assert.equal(probes,1,'The explicit Admin probe makes exactly one request');
       await p.getByRole('button',{name:'Actualizar estado',exact:true}).click();
       await p.getByRole('heading',{name:'Prueba completada',exact:true}).waitFor({state:'hidden'});
       await p.getByRole('button',{name:'Ejecutar prueba breve',exact:true}).waitFor({state:'visible'});
       assert.equal(await p.getByRole('heading',{name:'Prueba completada',exact:true}).count(),0,'Refreshing clears the earlier diagnostic');assert.equal(probes,1,'Refreshing must not repeat the diagnostic');
     }finally{p.off('request',record);}
     await student.page.goto(origin+'/');const nav=student.page.getByRole('navigation',{name:'Navegación principal',exact:true});
-    assert.equal(await nav.getByRole('link',{name:'Proveedor de IA',exact:true}).count(),0);
-    for(const route of ['/ai-provider','/admin/ai']){await student.page.goto(origin+route);await student.page.waitForURL(origin+'/');}
+    await nav.getByRole('link',{name:'Proveedor de IA',exact:true}).waitFor({state:'visible'});
+    assert.equal(await nav.getByRole('link',{name:'Proveedor de IA',exact:true}).count(),1,'Student gets exactly one own-provider navigation entry');
+    await student.page.goto(origin+'/ai-provider');await student.page.getByRole('heading',{name:'Proveedor institucional',exact:true}).waitFor();
+    await student.page.goto(origin+'/admin/ai');await student.page.waitForURL(origin+'/');
     assert.equal((await student.context.request.get(origin+'/api/admin/ai/')).status(),403);
   });
   await check('UX polish: concise supervision retains actual report values and expandable details',async()=>{

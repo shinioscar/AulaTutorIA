@@ -1,4 +1,4 @@
-param([switch]$KeepRunning, [switch]$SetupOnly)
+param([switch]$KeepRunning, [switch]$SetupOnly, [switch]$PersonalAiSimulation)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/Initialize-Environment.ps1"
 . "$PSScriptRoot/Load-LocalConfiguration.ps1"
@@ -13,6 +13,8 @@ $originalConnection = $env:ConnectionStrings__AulaTutor
 $originalProvider = $env:Ai__Provider
 $originalGroqKey = $env:Ai__Groq__ApiKey
 $originalGeminiKey = $env:Ai__Gemini__ApiKey
+$originalPersonalSimulation = $env:PersonalAi__QaSimulation
+$originalExternalPolicy = $env:AiQuota__AllowExternalCalls
 $apiDll = Join-Path $projectRoot 'src/AulaTutor.Api/bin/Release/net10.0/AulaTutor.Api.dll'
 $apiRoot = 'https://localhost:7080'
 $qaPassword = 'Aa1!' + [Guid]::NewGuid().ToString('N')
@@ -62,6 +64,8 @@ try {
     $env:Ai__Provider = 'Mock'
     $env:Ai__Groq__ApiKey = $null
     $env:Ai__Gemini__ApiKey = $null
+    $env:PersonalAi__QaSimulation = $(if($PersonalAiSimulation){'true'}else{$null})
+    if($PersonalAiSimulation){$env:AiQuota__AllowExternalCalls='false'}
     foreach ($port in 5080,7080) { if (Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue) { throw "Port $port is occupied; stop only the project API before running HTTP validation." } }
     docker compose --env-file "$projectRoot/.env" -f "$projectRoot/deploy/compose.yaml" exec -T postgres psql -U $localValues['POSTGRES_USER'] -d postgres -c "CREATE DATABASE `"$databaseName`";"
     if ($LASTEXITCODE -ne 0) { throw 'Could not create isolated HTTP test database.' }
@@ -221,7 +225,7 @@ try {
     $checks | ConvertTo-Json | Set-Content "$artifactDir/results.json" -Encoding utf8
     $success = $true
     if ($KeepRunning) {
-        @{ database=$databaseName; processId=$apiProcess.Id; password=$qaPassword; adminEmail='admin@example.invalid'; teacherEmail='teacher@example.invalid'; studentEmail='student-a@example.invalid'; tutoringOwnerEmail='student-b@example.invalid'; completedTutoringId=$tutoring.id; completedLearningId=$learning.id; groupId=$group.id; foreignGroupId=$foreign.id } | ConvertTo-Json | Set-Content "$projectRoot/.cache/http-qa.json" -Encoding utf8
+        @{ database=$databaseName; processId=$apiProcess.Id; personalAiSimulation=[bool]$PersonalAiSimulation; password=$qaPassword; adminEmail='admin@example.invalid'; teacherEmail='teacher@example.invalid'; studentEmail='student-a@example.invalid'; tutoringOwnerEmail='student-b@example.invalid'; completedTutoringId=$tutoring.id; completedLearningId=$learning.id; groupId=$group.id; foreignGroupId=$foreign.id } | ConvertTo-Json | Set-Content "$projectRoot/.cache/http-qa.json" -Encoding utf8
         Write-Host 'HTTP checks passed. Isolated API retained for browser QA; private state in .cache/http-qa.json.'
     } else { Write-Host 'HTTP identity checks passed on real HTTPS API/PostgreSQL.' }
 } finally {
@@ -235,5 +239,7 @@ try {
     $env:Ai__Provider = $originalProvider
     $env:Ai__Groq__ApiKey = $originalGroqKey
     $env:Ai__Gemini__ApiKey = $originalGeminiKey
+    $env:PersonalAi__QaSimulation = $originalPersonalSimulation
+    $env:AiQuota__AllowExternalCalls = $originalExternalPolicy
     Remove-Item Env:BootstrapAdmin__Email,Env:BootstrapAdmin__Password,Env:BootstrapAdmin__DisplayName -ErrorAction SilentlyContinue
 }

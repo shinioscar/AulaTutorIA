@@ -13,5 +13,8 @@ export class AppIcon {
     chat:'M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z',
     settings:'M4 7h6m4 0h6M10 4h4v6h-4V4ZM4 17h10m4 0h2m-6-3h4v6h-4v-6Z',
     menu:'M4 6h16M4 12h16M4 18h16',
+    refresh:'M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1',
+    sparkles:'m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Zm7-1v4m-2-2h4',
+    'arrow-right':'M4 12h16m-6-6 6 6-6 6',
   };
 }

@@ -20,6 +20,7 @@ sobre los límites históricos de un ADR; no autorizan encargos nuevos.
 | Asignaciones/sesiones vinculadas | [ADR-023](../decisions/ADR-023-asignaciones-y-sesiones-vinculadas.md), [HTTP](../architecture/ASSIGNMENTS_HTTP.md); también reglas de turno/evidencia |
 | Supervisión/revisión/métricas | [ADR-024](../decisions/ADR-024-supervision-y-revision-humana.md), [HTTP](../architecture/SUPERVISION_HTTP.md); consultar ADR-023 para acceso/disponibilidad |
 | Proveedores/JSON/transporte/cuotas | [ADR-014](../decisions/ADR-014-proveedores-ia.md), [ADR-022](../decisions/ADR-022-formatos-groq-y-recuperacion.md), [presupuestos/auditoría ADR-025](../decisions/ADR-025-cuotas-auditoria-y-resiliencia.md), [operación](../architecture/OPERATIONS.md) |
+| Conexiones personales/OAuth/custodia | [ADR-030](../decisions/ADR-030-conexiones-personales-ia.md), [contrato y guía BYOK](../architecture/PERSONAL_AI.md), [auditoría/QA](../iterations/BYOK_1.md); también Identity, PostgreSQL, cuotas y contratos académicos de las filas anteriores |
 | Seguridad/resiliencia/auditoría | [ADR-012](../decisions/ADR-012-identidad-y-autorizacion.md), [ADR-013](../decisions/ADR-013-persistencia-y-bootstrap.md), [ADR-017](../decisions/ADR-017-integridad-de-turnos.md), [ADR-025](../decisions/ADR-025-cuotas-auditoria-y-resiliencia.md), [operación](../architecture/OPERATIONS.md); además permisos del módulo afectado |
 | Pruebas/despliegue/recuperación | [README: preparación y verificación](../../README.md), [OPERATIONS](../architecture/OPERATIONS.md), scripts existentes en scripts/; QA del recorrido afectado abajo |
 
@@ -57,3 +58,5 @@ Diagnóstico posterior de límites/errores: [QA de importación](../iterations/Q
   navegación y gráficos sobre los contratos actuales, con QA visual comparativa.
   [Afinado posterior](../iterations/UX_2_POLISH.md): redacción breve, Inicio por
   tareas y sección Proveedor de IA con los permisos existentes.
+- Conexiones personales implementadas y verificadas con simulación: [BYOK-1](../iterations/BYOK_1.md).
+  OAuth con cuenta real y requisitos de datos reales permanecen pendientes.

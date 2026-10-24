@@ -17,6 +17,11 @@
 - Corrección de importación posterior a 9: diagnóstico por campo/tamaño V1/V2 y
   restricciones compartidas en prompts; QA en docs/iterations/QA_IMPORT_DIAGNOSTICS.md.
   Se conservan límite 20000/escapes, revisión explícita y cero reparaciones IA.
+- UX-2 y afinado posterior cerrados: navegación, supervisión visual y redacción
+  breve (UX_2.md/UX_2_POLISH.md). BYOK-1 implementada por encargo: conexiones propias
+  Teacher/Student, OpenRouter PKCE y Gemini/Claude/Groq manuales (ADR-030,
+  PERSONAL_AI.md/BYOK_1.md). QA solo ficticia y simulada; autorización externa real
+  y requisitos institucionales continúan pendientes. No avanzar automáticamente.
 - Nunca modificar `AulaTutor_IA_Documento_Maestro_v1.0.md`. SHA256:
   `FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05`.
 - Leer siempre este archivo y las instrucciones aplicables al directorio afectado.

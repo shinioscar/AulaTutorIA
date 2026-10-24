@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { signedInGuard, adminGuard, studentGuard, teacherGuard } from './auth/auth.service';
+import { signedInGuard, adminGuard, studentGuard, teacherGuard, personalAiGuard } from './auth/auth.service';
 import { pendingChangesGuard } from './shared/pending-changes';
 
 export const routes: Routes = [
@@ -23,6 +23,7 @@ export const routes: Routes = [
   {path:'groups', canActivate:[signedInGuard], loadComponent:() => import('./groups/groups-page').then(m => m.GroupsPage)},
   {path:'admin/users', canActivate:[adminGuard], loadComponent:() => import('./admin/admin-page').then(m => m.AdminPage)},
   {path:'admin/ai', canActivate:[adminGuard], loadComponent:() => import('./ai/ai-page').then(m => m.AiPage)},
-  {path:'ai-provider', canActivate:[teacherGuard], loadComponent:() => import('./ai/ai-page').then(m => m.AiPage)},
+  {path:'ai-provider/return', loadComponent:() => import('./ai/ai-return-page').then(m => m.AiReturnPage)},
+  {path:'ai-provider', canActivate:[personalAiGuard], loadComponent:() => import('./ai/personal-ai-page').then(m => m.PersonalAiPage)},
   {path:'**', redirectTo:''},
 ];

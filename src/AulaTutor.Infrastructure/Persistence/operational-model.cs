@@ -44,7 +44,7 @@ public static class OperationalModel
         var correlation = http?.TraceIdentifier;
         if (correlation is null || !Guid.TryParseExact(correlation, "N", out _)) correlation = Guid.NewGuid().ToString("N");
         return db.ChangeTracker.Entries().Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
-            .Where(e => e.Entity is GroupMembership or AcademicGroup or LessonPublication or LessonAssignment or AssignmentChange or ReportShare or TeacherReviewEntry or IdentityUserRole<Guid> ||
+            .Where(e => e.Entity is PersonalAiConnection or PersonalAiSelection or PersonalAiOAuth or GroupMembership or AcademicGroup or LessonPublication or LessonAssignment or AssignmentChange or ReportShare or TeacherReviewEntry or IdentityUserRole<Guid> ||
                 e.Entity is AppUser && (e.State == EntityState.Added || e.Properties.Any(p => p.IsModified && !Equals(p.OriginalValue, p.CurrentValue) && p.Metadata.Name is "IsActive" or "TeacherApproval" or "SecurityStamp")))
             .Select(e => new AuditEvent { ActorId = actor, CreatedAt = DateTimeOffset.UtcNow,
                 Type = e.Entity switch {
@@ -54,7 +54,8 @@ public static class OperationalModel
                     AppUser => "SessionsRevoked",
                     IdentityUserRole<Guid> => "RoleChanged", GroupMembership => "MembershipChanged", AcademicGroup => "GroupChanged",
                     LessonPublication => "LessonPublicationChanged", LessonAssignment => "LessonAssignmentChanged", AssignmentChange => "AssignmentStateChanged",
-                    ReportShare => "ReportShareChanged", TeacherReviewEntry => "TeacherReviewRecorded", _ => "StateChanged"
+                    ReportShare => "ReportShareChanged", TeacherReviewEntry => "TeacherReviewRecorded",
+                    PersonalAiConnection => "PersonalAiConnectionChanged", PersonalAiSelection => "PersonalAiSelectionChanged", PersonalAiOAuth => "PersonalAiAuthorizationChanged", _ => "StateChanged"
                 }, ResourceId = string.Join(":", e.Metadata.FindPrimaryKey()!.Properties.Select(p => e.Property(p.Name).CurrentValue)),
                 CorrelationId = correlation, Change = e.State.ToString() }).ToArray();
     }

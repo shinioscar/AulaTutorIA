@@ -66,6 +66,7 @@ public sealed class LessonSimulation
     public string ContentJson { get; set; } = "{}";
     public string ProviderId { get; set; } = "";
     public string ModelId { get; set; } = "";
+    public Guid? AiBindingId { get; set; }
     public string State { get; set; } = "Active";
     public long Revision { get; set; }
     public int SectionIndex { get; set; }
@@ -89,6 +90,7 @@ public sealed class LessonOperation
     public string ContextJson { get; set; } = "{}";
     public string ProviderId { get; set; } = "";
     public string ModelId { get; set; } = "";
+    public Guid? AiBindingId { get; set; }
     public LessonOperationState State { get; set; }
     public Guid LeaseToken { get; set; }
     public DateTimeOffset LeaseExpiresAt { get; set; }

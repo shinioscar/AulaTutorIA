@@ -63,6 +63,10 @@ export const teacherGuard: CanActivateFn = async () => {
   await auth.load();
   return auth.hasRole('Teacher') && auth.user()?.isActive && auth.user()?.teacherApproval==='Approved' ? true : router.createUrlTree(['/']);
 };
+export const personalAiGuard: CanActivateFn = async () => {
+  const auth=inject(AuthService); const router=inject(Router); await auth.load();
+  return auth.user()?.isActive && (auth.hasRole('Student') || auth.hasRole('Teacher') && auth.user()?.teacherApproval==='Approved') ? true : router.createUrlTree(['/']);
+};
 
 export const sessionErrorInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);

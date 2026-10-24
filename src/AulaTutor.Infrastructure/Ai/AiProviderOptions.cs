@@ -27,7 +27,7 @@ public sealed class AiProviderOptions
         };
     }
     private static bool ValidRemote(RemoteAiOptions o) => ValidModel(o.Model) &&
-        o.ApiKey.Length is >= 8 and <= 512 && !o.ApiKey.Any(char.IsWhiteSpace) && !o.ApiKey.Any(char.IsControl);
+        o.ApiKey.Length is >= 8 and <= 4096 && !o.ApiKey.Any(char.IsWhiteSpace) && !o.ApiKey.Any(char.IsControl);
     private static bool ValidModel(string model) => Regex.IsMatch(model, @"\A[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,119}\z") && !model.Contains("..");
     public static bool ValidLocalUri(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
         uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo) &&

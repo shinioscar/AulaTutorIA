@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { academicPilot } from './academic-pilot.mjs';
 import { ux2Qa } from './ux2-qa.mjs';
 import { uxPolishQa } from './ux-polish-qa.mjs';
+import { byokQa } from './byok-qa.mjs';
 const suiteStarted=performance.now();
 const requestMetrics=[];
 const root = path.resolve(import.meta.dirname, '../..');
@@ -30,8 +31,8 @@ function metric(method,url,status,started){requestMetrics.push({method,route:new
 function measuredRequests(){const groups=new Map();for(const r of requestMetrics){const key=r.method+' '+r.route;groups.set(key,[...(groups.get(key)||[]),r]);}return [...groups].map(([route,rows])=>{const times=rows.map(r=>r.elapsedMs).sort((a,b)=>a-b),p=q=>times[Math.ceil(q*times.length)-1];return {route,n:rows.length,success:rows.filter(r=>r.status<400).length,errors:rows.filter(r=>r.status>=400).length,p50Ms:rows.length>=20?p(.5):null,p95Ms:rows.length>=20?p(.95):null,minMs:times[0],maxMs:times.at(-1)};});}
 async function login(email) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1440, height: 1000 } });
+  context.on('page',p=>p.on('pageerror',()=>pageErrors.push('runtime error')));
   const page = await context.newPage(); page.setDefaultTimeout(20000); page.on('dialog', d => d.accept());
-  page.on('pageerror', () => pageErrors.push('runtime error'));
   await page.route('**/*', route => new URL(route.request().url()).hostname === 'localhost' ? route.continue() : route.abort());
   await page.goto(origin + '/login'); await page.getByLabel('Correo electrónico').fill(email); await page.getByLabel('Contraseña', { exact: true }).fill(qa.password);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click(); await page.waitForURL(origin + '/');
@@ -384,6 +385,8 @@ try {
   await ux2Qa({teacher,student,admin,assignment:preloadedAssignment,api,capture,check,origin});
   await uxPolishQa({teacher,student,admin,assignment:preloadedAssignment,api,capture,check,origin});
   const pilot=await academicPilot({api,login,mutation,capture,check,qa,origin,root,browser,admin,student});
+  const byok=await byokQa({teacher,student,admin,assignment:preloadedAssignment,api,capture,check,origin,login,qa});
+  await fs.writeFile(path.join(root,'artifacts/byok-e2e.json'),JSON.stringify(byok,null,2));
   assert.equal(pageErrors.length, 0);
   await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, preloadedSessionId:preloadedSession, pilot,elapsedMs:performance.now()-suiteStarted,requestMetrics:measuredRequests(),requestMetricScope:'api helper requests exclude CSRF setup; mutation timings include click/render until response. Raw negative-security calls and staged-error clicks outside helpers excluded. Per-route percentiles only for n>=20, nearest rank. Not provider latency.',scope: 'Prior journeys retained plus authored SQL pilot and UX-2 responsive charts, drawers, role navigation and unsaved draft protection. Mock proves workflow, not pedagogy; 429/503 and lost responses explicitly staged.' }, null, 2));
   console.log(`E2E passed: ${results.length} checks; Mock only.`);

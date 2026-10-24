@@ -1,6 +1,7 @@
 <p class="eyebrow">INTELIGENCIA ARTIFICIAL</p>
 <h1>Proveedor de IA</h1>
 <p>Consulta el proveedor utilizado en AulaTutor.</p>
+@if(auth.hasRole('Teacher')||auth.hasRole('Student')){<p><a routerLink="/ai-provider">Mis conexiones personales →</a></p>}
 <p class="message" role="status">{{ message() }}</p>
 <section aria-labelledby="connection-title">
   <h2 id="connection-title">Conexión con AulaTutor</h2>

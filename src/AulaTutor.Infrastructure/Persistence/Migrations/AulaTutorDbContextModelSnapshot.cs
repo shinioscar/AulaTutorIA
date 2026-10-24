@@ -47,6 +47,50 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.ToTable("Groups");
                 });
 
+            modelBuilder.Entity("AulaTutor.Domain.Identity.AiInferenceBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("CredentialRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("PaidAccepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<bool>("StrictSchema")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId", "OwnerId", "OrganizationId");
+
+                    b.ToTable("AiInferenceBindings");
+                });
+
             modelBuilder.Entity("AulaTutor.Domain.Identity.AiReservation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -54,6 +98,9 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConnectionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("CorrelationId")
@@ -64,11 +111,22 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CredentialFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long?>("CredentialRevision")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("DurationMs")
                         .HasColumnType("bigint");
 
                     b.Property<int>("EstimatedTokens")
                         .HasColumnType("integer");
+
+                    b.Property<string>("ExternalAccount")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTimeOffset?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
@@ -87,6 +145,11 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
@@ -100,6 +163,11 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("RetryNotBefore")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("State")
                         .IsRequired()
@@ -119,6 +187,10 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrganizationId", "CreatedAt");
 
                     b.HasIndex("Provider", "CreatedAt");
+
+                    b.HasIndex("ConnectionId", "ActorId", "OrganizationId");
+
+                    b.HasIndex("Scope", "Provider", "CreatedAt");
 
                     b.ToTable("AiReservations", null, t =>
                         {
@@ -220,6 +292,229 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("ba70323d-37d1-44a9-8d93-a613fdb32dd0"),
                             Name = "Organización piloto"
+                        });
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Identity.PersonalAiConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("CredentialRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ExternalAccount")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PreferredModel")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ProtectedCredential")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("character varying(16000)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Workspace")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "OrganizationId");
+
+                    b.HasIndex("OwnerId", "Provider")
+                        .IsUnique();
+
+                    b.ToTable("PersonalAiConnections", t =>
+                        {
+                            t.HasCheckConstraint("CK_PersonalConnection_Provider", "\"Provider\" IN ('OpenRouter','Groq','Gemini','Anthropic')");
+
+                            t.HasCheckConstraint("CK_PersonalConnection_State", "\"Status\" IN ('Connected','Invalid','Disconnected') AND \"CredentialRevision\" > 0 AND \"Method\" IN ('Manual','OAuth')");
+                        });
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Identity.PersonalAiModel", b =>
+                {
+                    b.Property<string>("Provider")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Id")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Availability")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<DateTimeOffset>("CheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Compatible")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Free")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("PriceKnown")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("StrictSchema")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Provider", "Id");
+
+                    b.ToTable("PersonalAiModels");
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Identity.PersonalAiOAuth", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BrowserHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProtectedCode")
+                        .HasMaxLength(16000)
+                        .HasColumnType("character varying(16000)");
+
+                    b.Property<string>("ProtectedVerifier")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("character varying(16000)");
+
+                    b.Property<string>("SessionHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("StampHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("StateHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrowserHash");
+
+                    b.HasIndex("StateHash")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId", "ExpiresAt");
+
+                    b.HasIndex("OwnerId", "OrganizationId");
+
+                    b.ToTable("PersonalAiOAuths", t =>
+                        {
+                            t.HasCheckConstraint("CK_PersonalOAuth_State", "\"Status\" IN ('Pending','Returned','Exchanging','Succeeded','Failed','Canceled','Expired')");
+                        });
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Identity.PersonalAiSelection", b =>
+                {
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConnectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("PaidAccepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("OwnerId");
+
+                    b.HasIndex("OwnerId", "OrganizationId");
+
+                    b.HasIndex("ConnectionId", "OwnerId", "OrganizationId");
+
+                    b.ToTable("PersonalAiSelections", t =>
+                        {
+                            t.HasCheckConstraint("CK_PersonalSelection_Mode", "(\"Mode\" = 'Personal' AND \"ConnectionId\" IS NOT NULL AND \"Model\" IS NOT NULL) OR (\"Mode\" IN ('Institutional','None') AND \"ConnectionId\" IS NULL AND \"Model\" IS NULL)");
                         });
                 });
 
@@ -444,6 +739,9 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
 
+                    b.Property<Guid?>("AiBindingId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Attempts")
                         .HasColumnType("integer");
 
@@ -515,6 +813,8 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(40)");
 
                     b.HasKey("LessonId", "RequestId");
+
+                    b.HasIndex("AiBindingId");
 
                     b.HasIndex("SimulationId", "LessonId");
 
@@ -594,6 +894,9 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AiBindingId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("Answered")
                         .HasColumnType("boolean");
 
@@ -648,6 +951,8 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AiBindingId");
 
                     b.HasIndex("LessonId", "DraftRevision");
 
@@ -1319,6 +1624,9 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<Guid?>("AiBindingId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("AssignedActivity")
                         .HasColumnType("integer");
 
@@ -1429,6 +1737,8 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.HasIndex("StudentId", "LastActivityAt");
 
                     b.HasIndex("StudentId", "OrganizationId");
+
+                    b.HasIndex("AiBindingId", "StudentId", "OrganizationId");
 
                     b.HasIndex("AssignmentId", "LessonVersionId", "OrganizationId");
 
@@ -1757,6 +2067,16 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("AulaTutor.Domain.Identity.AiInferenceBinding", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Identity.PersonalAiConnection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId", "OwnerId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OwnerId", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AulaTutor.Domain.Identity.AiReservation", b =>
                 {
                     b.HasOne("AulaTutor.Domain.Identity.AcademicGroup", null)
@@ -1770,6 +2090,12 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("Id", "OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Identity.PersonalAiConnection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId", "ActorId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OwnerId", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("AulaTutor.Domain.Identity.GroupMembership", b =>
@@ -1787,6 +2113,42 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("Id", "OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Identity.PersonalAiConnection", b =>
+                {
+                    b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Identity.PersonalAiOAuth", b =>
+                {
+                    b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AulaTutor.Domain.Identity.PersonalAiSelection", b =>
+                {
+                    b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Identity.PersonalAiConnection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId", "OwnerId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OwnerId", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("AulaTutor.Domain.Lessons.AssignmentChange", b =>
@@ -1873,6 +2235,11 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("AulaTutor.Domain.Lessons.LessonOperation", b =>
                 {
+                    b.HasOne("AulaTutor.Domain.Identity.AiInferenceBinding", null)
+                        .WithMany()
+                        .HasForeignKey("AiBindingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AulaTutor.Domain.Lessons.Lesson", null)
                         .WithMany()
                         .HasForeignKey("LessonId")
@@ -1907,6 +2274,11 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("AulaTutor.Domain.Lessons.LessonSimulation", b =>
                 {
+                    b.HasOne("AulaTutor.Domain.Identity.AiInferenceBinding", null)
+                        .WithMany()
+                        .HasForeignKey("AiBindingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AulaTutor.Domain.Lessons.LessonDraftRevision", null)
                         .WithMany()
                         .HasForeignKey("LessonId", "DraftRevision")
@@ -2120,6 +2492,12 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("Id", "OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("AulaTutor.Domain.Identity.AiInferenceBinding", null)
+                        .WithMany()
+                        .HasForeignKey("AiBindingId", "StudentId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OwnerId", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("AulaTutor.Domain.Lessons.LessonAssignment", null)
                         .WithMany()

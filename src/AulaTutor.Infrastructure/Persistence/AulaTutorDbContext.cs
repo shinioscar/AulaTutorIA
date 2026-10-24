@@ -11,7 +11,13 @@ namespace AulaTutor.Infrastructure.Persistence;
 public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> options, Microsoft.AspNetCore.Http.IHttpContextAccessor? accessor = null)
     : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
+    internal string? RequestSecurityStamp => accessor?.HttpContext?.User.FindFirst("AspNet.Identity.SecurityStamp")?.Value;
     public DbSet<AiReservation> AiReservations => Set<AiReservation>();
+    public DbSet<PersonalAiConnection> PersonalAiConnections => Set<PersonalAiConnection>();
+    public DbSet<PersonalAiSelection> PersonalAiSelections => Set<PersonalAiSelection>();
+    public DbSet<AiInferenceBinding> AiInferenceBindings => Set<AiInferenceBinding>();
+    public DbSet<PersonalAiOAuth> PersonalAiOAuths => Set<PersonalAiOAuth>();
+    public DbSet<PersonalAiModel> PersonalAiModels => Set<PersonalAiModel>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => SaveChangesAsync(true, cancellationToken);
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
@@ -60,6 +66,7 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
     {
         base.OnModelCreating(builder);
         builder.ConfigureOperations();
+        builder.ConfigurePersonalAi();
         builder.ConfigureTutoring();
         builder.ConfigureLearning();
         builder.ConfigureLessons();

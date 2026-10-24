@@ -65,3 +65,7 @@ IA-2/ADR-028 añade PreloadedPlan y LessonImportV2, manteniendo V1. Modalidad y
 ayudas se congelan con el contenido académico; simulación precargada es local.
 Editor y resumen privados incluyen las ayudas completas. Student recibe solo las
 entregadas por el servidor. [Contrato precargado](PRELOADED_CLASSES.md).
+
+## Ampliación BYOK-1
+
+[Conexiones personales](PERSONAL_AI.md) fijan proveedor/modelo/conexión al crear cada operación y simulación. La simulación hereda su vínculo en turnos posteriores; cambiar selección no lo reemplaza. La propuesta sigue requiriendo aplicar o descartar expresamente. La simulación precargada utiliza Application/local sin inferencia ni reservas personales.

@@ -66,3 +66,7 @@ El cierre devuelve reporte local trazable (Application/deterministic), sin cuota
 nota oficial. Una entrega abierta NeedsReview no se muestra como verificación.
 No hay asignación individual, edición de destinos/versiones, eliminación física ni
 endpoints analíticos docentes en 6. No se modifica el contrato heredado de salud.
+
+## Ampliación BYOK-1
+
+La sesión asignada fija la selección del Student al iniciarse, según [PERSONAL_AI](PERSONAL_AI.md). Nunca usa claves del docente responsable. La admisión de cada intento físico revalida propietario, conexión/revisión y relación académica tras esperar el lock; el resultado tardío también se descarta ante revocación. Las reglas de disponibilidad, cierre, evidencia y supervisión conservan sus permisos.

@@ -94,3 +94,7 @@ no sustituye permisos de recursos ni cambia la privacidad de conversaciones.
 - [Ollama chat](https://docs.ollama.com/api/chat) y
   [Structured Outputs](https://docs.ollama.com/capabilities/structured-outputs):
   format, stream=false, métricas y ejemplo gpt-oss. No se instala/descarga un modelo.
+
+## Ampliación posterior BYOK-1
+
+[ADR-030](ADR-030-conexiones-personales-ia.md) autoriza conexiones opcionales por propietario: OpenRouter PKCE, Gemini/Groq manuales y Claude Messages. Reutilizan transporte y validación, con hosts fijos y selección explícita. Ollama institucional y OpenAI directo reservado conservan sus límites. Catálogo, versiones REST y fuentes vigentes en [PERSONAL_AI](../architecture/PERSONAL_AI.md).

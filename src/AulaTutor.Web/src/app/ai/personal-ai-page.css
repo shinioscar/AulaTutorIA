@@ -1,0 +1,32 @@
+:host { display:block; max-width:var(--layout-max); }
+.page-heading,.current-provider,.institutional-card,.provider-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-5); flex-wrap:wrap; }
+.page-heading { margin-bottom:var(--space-5); }
+.page-heading h1,.page-heading h2,.current-provider h2,.institutional-card h2,.provider-heading h2,.provider-heading h3 { margin:0; }
+.page-heading p { margin-bottom:0; }
+.current-provider { border-inline-start:4px solid var(--secondary); }
+.current-provider .eyebrow { margin-top:0; }
+.status-pill { border:1px solid var(--border); background:var(--surface-secondary); border-radius:var(--radius-pill); padding:var(--space-2) var(--space-3); color:var(--text-secondary); font-size:var(--font-small); }
+.openrouter-card { border-color:var(--primary); background:var(--info-surface); }
+.provider-heading { justify-content:flex-start; gap:var(--space-3); }
+.provider-heading .status-pill { margin-inline-start:auto; }
+.provider-mark { display:grid; place-items:center; width:3.25rem; height:3.25rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-medium); color:var(--primary); font-weight:var(--weight-bold); font-size:var(--font-large); flex-shrink:0; }
+.provider-mark.small { width:2.5rem; height:2.5rem; }
+.provider-heading .eyebrow { margin:0 0 var(--space-1); }
+.provider-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-5); }
+.provider-grid section { margin:0; display:flex; flex-direction:column; min-width:0; }
+.provider-grid .actions { margin-top:auto; padding-top:var(--space-4); }
+.provider-grid .actions button { width:100%; }
+.connection-status { color:var(--text-secondary); font-size:var(--font-small); margin-bottom:var(--space-4); }
+.actions { display:flex; gap:var(--space-3); flex-wrap:wrap; align-items:center; margin-top:var(--space-5); }
+.actions button { white-space:normal; }
+.model-id { overflow-wrap:anywhere; color:var(--text-secondary); }
+.connection-editor { border-color:var(--control-border); scroll-margin-block-start:var(--space-5); }
+.connection-editor form { margin-top:var(--space-5); }
+.connection-editor select { max-width:100%; }
+.consent { background:var(--surface-secondary); border-radius:var(--radius-medium); padding:var(--space-4); margin-top:var(--space-5); }
+.checkbox-row { display:flex; align-items:flex-start; gap:var(--space-3); min-height:44px; padding-block:var(--space-2); font-weight:var(--weight-medium); }
+.checkbox-row input { width:1.25rem; min-height:1.25rem; height:1.25rem; margin-top:var(--space-1); flex-shrink:0; }
+.institutional-card { margin-top:var(--space-6); }
+.institutional-card p { margin-bottom:0; }
+@media(max-width:900px) { .provider-grid { grid-template-columns:1fr; } .provider-grid .actions button { width:auto; } }
+@media(max-width:480px) { .actions { align-items:stretch; } .actions button,.page-heading>button { width:100%; } .provider-heading .status-pill { margin-inline-start:0; } .institutional-card>button { width:100%; } }

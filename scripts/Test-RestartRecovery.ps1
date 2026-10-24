@@ -22,6 +22,10 @@ function Invoke-Recovery([string]$method, [string]$route, $body = $null) {
 }
 $null = Invoke-Recovery POST '/api/auth/login' @{email=$taskState.studentEmail;password=$taskState.password}
 $taskBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskState.completedTutoringId)"
+$taskByokReport = Get-Content "$taskRoot/artifacts/byok-e2e.json" -Raw | ConvertFrom-Json
+if($taskByokReport.status -ne 'passed' -or $taskByokReport.studentSessionId -notmatch '^[a-f0-9-]{36}$'){throw 'Passed isolated BYOK E2E is required for custody recovery.'}
+$taskByokBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskByokReport.studentSessionId)"
+$taskConnectionsBefore = Invoke-Recovery GET '/api/ai-connections/'
 $taskCardsReport = Get-Content "$taskRoot/artifacts/iteration-9-e2e.json" -Raw | ConvertFrom-Json
 if($taskCardsReport.status -ne 'passed' -or $taskCardsReport.preloadedSessionId -notmatch '^[a-f0-9-]{36}$'){throw 'The passed preloaded E2E session is required for restart verification.'}
 $taskCardsBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskCardsReport.preloadedSessionId)"
@@ -42,7 +46,10 @@ Stop-Process -Id $taskState.processId
 $env:Ai__Provider='Mock'; $env:Ai__Groq__ApiKey=$null; $env:Ai__Gemini__ApiKey=$null
 $env:ConnectionStrings__AulaTutor += ';Database=' + $taskState.database
 $env:ASPNETCORE_ENVIRONMENT='Development'; $env:Logging__LogLevel__Default='Warning'
+$taskPreviousPersonalSimulation=$env:PersonalAi__QaSimulation; $taskPreviousExternalPolicy=$env:AiQuota__AllowExternalCalls
+if($taskState.personalAiSimulation){$env:PersonalAi__QaSimulation='true';$env:AiQuota__AllowExternalCalls='false'}
 $taskApi = Start-Process -FilePath (Get-Command dotnet).Source -ArgumentList @($taskDll,'--urls','https://localhost:7080;http://127.0.0.1:5080') -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput "$taskRoot/.cache/restart-qa.log" -RedirectStandardError "$taskRoot/.cache/restart-qa-error.log"
+$env:PersonalAi__QaSimulation=$taskPreviousPersonalSimulation; $env:AiQuota__AllowExternalCalls=$taskPreviousExternalPolicy
 $taskState.processId = $taskApi.Id
 $taskState | ConvertTo-Json | Set-Content -LiteralPath $taskStatePath -Encoding utf8
 $taskReady=$false
@@ -52,6 +59,16 @@ for($taskAttempt=0;$taskAttempt -lt 60;$taskAttempt++) {
 }
 if(-not $taskReady -or $taskHealth.aiProvider -ne 'Mock'){throw 'Restarted Mock API was not ready.'}
 $taskAfter = Invoke-Recovery GET "/api/tutoring-sessions/$($taskState.completedTutoringId)"
+$taskConnectionsAfter = Invoke-Recovery GET '/api/ai-connections/'
+if(($taskConnectionsBefore | ConvertTo-Json -Depth 16 -Compress) -ne ($taskConnectionsAfter | ConvertTo-Json -Depth 16 -Compress)){throw 'Own connection metadata changed across restart.'}
+$taskByokAfter = Invoke-Recovery GET "/api/tutoring-sessions/$($taskByokReport.studentSessionId)"
+if(($taskByokBefore | ConvertTo-Json -Depth 32 -Compress) -ne ($taskByokAfter | ConvertTo-Json -Depth 32 -Compress)){throw 'Personal session history changed across restart.'}
+$taskByokRequest = @{requestId=[Guid]::NewGuid().ToString();revision=$taskByokAfter.revision;action='Hint'}
+$taskByokContinued = Invoke-Recovery POST "/api/tutoring-sessions/$($taskByokAfter.id)/messages" $taskByokRequest
+if($taskByokContinued.turns[-1].state -ne 'Succeeded' -or $taskByokContinued.messages[-1].providerId -ne 'OpenRouter' -or $null -ne $taskByokContinued.messages[-1].usage){throw 'The durable personal credential could not resume its pinned session after restart.'}
+$taskByokReplay = Invoke-Recovery POST "/api/tutoring-sessions/$($taskByokAfter.id)/messages" $taskByokRequest
+if($taskByokReplay.turns.Count -ne $taskByokContinued.turns.Count -or $taskByokReplay.messages.Count -ne $taskByokContinued.messages.Count){throw 'Personal replay duplicated history after restart.'}
+@{status='passed';metadataPreserved=$true;historyPreserved=$true;credentialDecryptedAfterRestart=$true;provider='OpenRouter';transport='isolated-simulation';duplicateTurns=0} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/byok-restart.json" -Encoding utf8
 $taskCardsAfter = Invoke-Recovery GET "/api/tutoring-sessions/$($taskCardsReport.preloadedSessionId)"
 if($taskCardsAfter.policyVersion -ne 'preloaded-class-v1' -or $taskCardsAfter.state -ne 'Completed' -or
     ($taskCardsBefore.learning | ConvertTo-Json -Depth 32 -Compress) -ne ($taskCardsAfter.learning | ConvertTo-Json -Depth 32 -Compress) -or

@@ -8,6 +8,12 @@ public sealed class AiReservation
     public Guid? GroupId { get; set; }
     public string Provider { get; set; } = "";
     public string Model { get; set; } = "";
+    public Guid? ConnectionId { get; set; }
+    public long? CredentialRevision { get; set; }
+    public string Scope { get; set; } = "Institutional";
+    public string? CredentialFingerprint { get; set; }
+    public string? ExternalAccount { get; set; }
+    public string Operation { get; set; } = "legacy";
     public string CorrelationId { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LeaseUntil { get; set; }

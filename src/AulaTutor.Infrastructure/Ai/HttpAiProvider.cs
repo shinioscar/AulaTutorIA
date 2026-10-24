@@ -7,20 +7,23 @@ namespace AulaTutor.Infrastructure.Ai;
 
 public abstract class HttpAiProvider(AiHttpTransport transport, AiProviderOptions options) : IAiProvider
 {
+    protected AiProviderOptions Options => options;
     public abstract string ProviderId { get; }
     protected abstract string Model { get; }
     public abstract AiCapabilities Capabilities { get; }
     protected abstract HttpRequestMessage Build(AiChatRequest request, JsonElement? schema);
     protected abstract AiChatResult Parse(JsonElement response);
+    protected virtual bool ConfigurationValid => options.IsValid() && options.Provider == ProviderId;
+    protected virtual IEnumerable<string> Secrets => new[] { options.Groq.ApiKey, options.Gemini.ApiKey };
     public Task<AiHealthResult> CheckHealthAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        return Task.FromResult(new AiHealthResult(options.IsValid(), ProviderId, Model)); // Configuration only; no network.
+        return Task.FromResult(new AiHealthResult(ConfigurationValid, ProviderId, Model)); // Configuration only; no network.
     }
     public async Task<AiChatResult> GenerateAsync(AiChatRequest request, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (!options.IsValid() || options.Provider != ProviderId) throw new AiProviderException(AiErrorCode.Configuration);
+        if (!ConfigurationValid) throw new AiProviderException(AiErrorCode.Configuration);
         if (request.Messages.Count is < 1 or > 32 || request.Messages.Any(x => x.Role is not ("system" or "user" or "assistant") || string.IsNullOrWhiteSpace(x.Text)) ||
             request.Messages.Sum(x => (long)x.Text.Length) > 32000 || !request.Messages.Any(x => x.Role == "user") ||
             request.MaxOutputTokens < 1 || request.MaxOutputTokens > (request.UseCase is "lesson_plan" or "lesson_content" or "lesson_exercises" or "lesson_rubrics" or "lesson_preloadedplan" ? 4096 : 2048))
@@ -36,7 +39,7 @@ public abstract class HttpAiProvider(AiHttpTransport transport, AiProviderOption
         try { result = Parse(response.RootElement); }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException or FormatException)
         { throw new AiProviderException(AiErrorCode.InvalidResponse); }
-        var keys = new[] { options.Groq.ApiKey, options.Gemini.ApiKey }.Where(x => !string.IsNullOrEmpty(x));
+        var keys = Secrets.Where(x => !string.IsNullOrEmpty(x));
         if (string.IsNullOrWhiteSpace(result.Text) || result.Text.Length > 64000 || keys.Any(x => result.Text.Contains(x, StringComparison.Ordinal)))
             throw new AiProviderException(AiErrorCode.InvalidResponse);
         if (result.FinishReason is not ("stop" or "STOP")) throw new AiProviderException(AiErrorCode.InvalidResponse);
