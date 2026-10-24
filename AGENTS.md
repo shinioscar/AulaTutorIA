@@ -14,6 +14,9 @@
   ficticios, validación integral y guías/mediciones; completada: 338 .NET/191 HTTP/
   60 E2E, recuperación y demo aislada verificadas (ITERATION_9.md). Sin usuarios reales,
   llamadas IA reales ni nuevas integraciones. No avanzar automáticamente.
+- Corrección de importación posterior a 9: diagnóstico por campo/tamaño V1/V2 y
+  restricciones compartidas en prompts; QA en docs/iterations/QA_IMPORT_DIAGNOSTICS.md.
+  Se conservan límite 20000/escapes, revisión explícita y cero reparaciones IA.
 - Nunca modificar `AulaTutor_IA_Documento_Maestro_v1.0.md`. SHA256:
   `FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05`.
 - Leer siempre este archivo y las instrucciones aplicables al directorio afectado.

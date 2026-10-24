@@ -39,6 +39,7 @@ turnos, evaluación, supervisión, proveedores/cuotas y frontend: el cambio es t
 Importación externa docente IA-1: [ADR-027](../decisions/ADR-027-importacion-externa-de-clases.md)
 y [contrato/guía](../architecture/LESSON_IMPORT.md), junto con las filas de constructor,
 frontend y permisos. No conecta una API ni sustituye el motor estudiantil.
+Diagnóstico posterior de límites/errores: [QA de importación](../iterations/QA_IMPORT_DIAGNOSTICS.md).
 
 - Maestro inmutable en raíz: alcance/arquitectura. [Plan](../iterations/PLAN.md) y
   [preguntas abiertas](../architecture/OPEN_QUESTIONS.md): pendientes y límites.

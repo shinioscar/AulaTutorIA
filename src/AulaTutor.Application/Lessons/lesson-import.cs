@@ -18,6 +18,28 @@ public static class LessonImport
     public const string Format = "aulatutor-lesson-v1";
     public const int MaxCharacters = 32000;
     public static string Schema => LearningJson.Write(LearningOrchestrator.SchemaFor(typeof(LessonImportV1)));
+    private const string DesignConstraints = """
+        IDs ASCII alfanuméricos/guion/underscore de 1–40 caracteres, únicos entre objetivos,
+        secciones y ejercicios. Cada ejercicio referencia sectionId y objectiveId existentes;
+        cada objetivo tiene actividad. Máximo 12 objetivos, 12 secciones, 24 ejercicios y 8 por sección.
+        Límites por texto: title/subject y título de sección 160, description/prerequisites 1000,
+        level 100, methodology/instructions 1500, texto de objetivo 500, sección body 2500,
+        prompt de ejercicio 1500, publicRubric 600, criteria 1–6 textos de 300,
+        referenceSolution 1500, hintRules 600, explanation 1–1000 caracteres.
+        kind: MultipleChoice (2–5 opciones distintas, una acceptedAnswers idéntica a una opción),
+        TrueFalse (options exactamente ["Verdadero","Falso"], una acceptedAnswers de ellas),
+        ShortAnswer (options vacío, 1–8 acceptedAnswers), OpenResponse/Code (ambos arrays vacíos,
+        requieren revisión humana; no ejecutar código ni SQL). Cada opción/respuesta máximo 200.
+        Incluye referenceSolution privada, criterios y hintRules no vacíos en todos los ejercicios.
+        Entrada JSON máximo 32000 caracteres. La clase reconstruida, incluidas ayudas y estructura,
+        máximo 20000 en la representación interna del servidor: los escapes Unicode cuentan
+        (por ejemplo, una vocal acentuada puede ocupar seis caracteres como \u00E1).
+        No basta contar el JSON visible ni quitar espacios de indentación. Escribe de forma concisa,
+        evita repetir instrucciones y conserva margen: intenta no superar 12000 caracteres de
+        contenido JSON compacto visible. Ese margen orienta; AulaTutor valida el tamaño real.
+        No elimines objetivos ni actividades para reducir texto; acorta explicaciones redundantes.
+        Rellena todos los campos; arrays y objetos reales, no JSON serializado dentro de cadenas.
+        """;
     public static string Prompt(LessonExternalOptions o)
     {
         if (o is { Preloaded: true }) return PreloadedPrompt(o);
@@ -33,22 +55,9 @@ public static class LessonImport
             Mantén progresión de contenidos y actividades ordenadas; respuestas, criterios y
             pistas escalonadas consistentes. No incluyas soluciones en contenido público.
             Usa format="aulatutor-lesson-v1". lesson usa exactamente el esquema adjunto.
-            IDs ASCII alfanuméricos/guion/underscore de 1–40 caracteres, únicos en todo el plan.
-            Cada exercise referencia sectionId y objectiveId existentes; cada objetivo tiene actividad.
-            Límites: 12 objetivos, 12 secciones, 24 ejercicios totales, 8 por sección;
-            clase reconstruida máximo 20000 caracteres. Título/asignatura 160, descripción y
-            requisitos 1000, nivel 100, metodología/instrucciones 1500, objetivo 500,
-            sección body 2500, consigna 1500, publicRubric 600, criterios 1–6 de 300,
-            referenceSolution 1500, hintRules 600, explanation 1–1000 caracteres.
-            kind: MultipleChoice (2–5 opciones distintas, una acceptedAnswers idéntica a una opción),
-            TrueFalse (options exactamente ["Verdadero","Falso"], una acceptedAnswers de ellas),
-            ShortAnswer (options vacío, 1–8 acceptedAnswers), OpenResponse/Code (ambos arrays vacíos,
-            requieren revisión humana; no ejecutar código ni SQL). Cada opción/respuesta máximo 200.
-            Incluye referenceSolution privada, criterios y hintRules en todos los ejercicios.
             La cantidad de pistas orienta hintRules (texto), no crea campos extra ni arrays de pistas.
-            Rellena todos los campos; arrays y objetos reales, no texto serializado dentro de cadenas.
             JSON válido no certifica corrección pedagógica; el profesor debe revisar la clase.
-            """ + "\nOpciones docentes: " + LearningJson.Write(o) + "\nEsquema JSON: " + Schema;
+            """ + "\n" + DesignConstraints + "\nOpciones docentes: " + LearningJson.Write(o) + "\nEsquema JSON: " + Schema;
     }
 
     public static string PreloadedPrompt(LessonExternalOptions o)
@@ -57,10 +66,7 @@ public static class LessonImport
         if (o.ExerciseCount > 4 || o.HintCount is < 1 or > 3) throw new AppException(400, "Para preparar una clase precargada en una solicitud, usa 1–4 ejercicios y 1–3 pistas. Reduce el contenido si no cabe; no se generan partes automáticamente.");
         return "Prepara una clase precargada completa, breve y en español. Una actividad principal por paso. " +
             "Devuelve solo JSON completo sin Markdown. format=aulatutor-lesson-v2. Lesson conserva los campos de diseño existentes: " +
-            "IDs únicos, referencias sectionId/objectiveId válidas, todos los objetivos con actividad. " +
-            "Máximo 4 ejercicios, 12 secciones/objetivos y 20000 caracteres de contenido total. " +
-            "kind MultipleChoice (2–5 opciones, una respuesta exacta), TrueFalse (Verdadero/Falso, una respuesta), " +
-            "ShortAnswer (sin opciones, 1–8 respuestas privadas), OpenResponse/Code (ambos arrays vacíos, revisión humana). " +
+            "Máximo 4 ejercicios; todos los objetivos con actividad.\n" + DesignConstraints + "\n" +
             "Incluye referencia privada y criterios. Cada ayuda/introducción/feedback hasta 600 caracteres. " +
             "Hints y alternatives contienen textos terminados, 1–3 de cada tipo por ejercicio, nunca instrucciones para generar después. " +
             "Primera pista sin solución ni clave. CorrectFeedback e incorrectFeedback no deben revelar soluciones privadas. " +
@@ -115,7 +121,8 @@ public static class LessonImport
                 }
             }
             catch (JsonException) { errors.Add("No se pudo reconocer el formato de la clase. Usa el contrato completo, sin Markdown, campos extra, duplicados ni anidación excesiva."); }
-            catch (AppException) { errors.Add("Revisa los límites, identificadores únicos, referencias a objetivos/secciones y opciones compatibles con la respuesta de cada ejercicio."); }
+            // Validators produce safe, server-owned field paths/counts; do not hide actionable errors.
+            catch (AppException e) { errors.Add(e.Message); }
         }
         return new(null, errors.ToArray(), [], Correction(errors));
     }

@@ -41,6 +41,23 @@ de texto y ejercicio en [LESSONS_HTTP](LESSONS_HTTP.md). referenceSolution priva
 debe estar presente y no vacía. HintRules admite hasta 600 caracteres; la cantidad
 solicitada orienta este texto, sin garantizar un número de respuestas del tutor.
 
+El límite de 20000 se aplica a `LearningJson.Write(LessonContent)`, incluida la
+estructura y las ayudas de V2, con el escape Unicode existente. No cuenta solo
+texto visible ni coincide con el tamaño del sobre pegado: una vocal acentuada
+puede ocupar seis caracteres escapados. Quitar indentación no reduce ese tamaño.
+No se aumentó el límite ni se cambió la serialización. Ambos prompts incluyen los
+límites por campo y un margen orientativo de 12000 caracteres compactos visibles;
+ese margen no garantiza aceptación y el servidor sigue siendo la autoridad.
+
+Ante un exceso, el error indica tamaño interno, máximo y diferencia. Otros errores
+de dominio señalan campo/posición, límite o referencia que debe corregirse,
+incluidas ayudas V2 y primera pista con clave literal. Se informa el primer
+incumplimiento encontrado; al corregirlo pueden aparecer otros. No se reproducen
+textos, respuestas privadas ni referencias introducidas por el usuario en estos
+diagnósticos. Errores de sintaxis/forma JSON conservan el mensaje genérico seguro.
+Las instrucciones de corrección conservan V1/V2 y contienen ese mismo diagnóstico;
+no se reparan contenidos automáticamente ni se llama a IA.
+
 ## HTTP
 
 Las tres rutas exigen Teacher aprobado/activo, sesión HTTPS y CSRF:

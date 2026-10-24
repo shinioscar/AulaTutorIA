@@ -6,6 +6,10 @@ Iteración 9 completada como [piloto SQL interno con datos ficticios](docs/pilot
 guías de demostración y [criterios pendientes antes de usuarios reales](docs/pilot/READINESS.md).
 No autoriza despliegue real ni consumo externo durante QA.
 
+Corrección posterior: la importación V1/V2 indica el campo o tamaño interno que
+provoca el rechazo; los prompts incluyen límites compartidos y margen de brevedad.
+[Causa, verificación y límites](docs/iterations/QA_IMPORT_DIAGNOSTICS.md).
+
 IA-2 completada: clases precargadas con tarjetas, pistas y explicaciones locales,
 importación V2 compatible con V1 y evaluación IA final agrupada opcional. El tutor
 conversacional permanece disponible. Verificación: 335 pruebas .NET, 191 HTTP y

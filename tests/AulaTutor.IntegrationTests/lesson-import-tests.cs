@@ -16,6 +16,27 @@ public sealed partial class LessonTests
         content.Sections[1].Exercises[0]=e with {Rubric=e.Rubric with {ReferenceSolution="Ejemplo privado"}};
         return LearningJson.Write(new LessonImportV1(LessonImport.Format,LessonDesignPayload.FromProposal(new("Revisar",content))));
     }
+    [Fact] public async Task V2PreviewAndSaveExposeSameSafeDiagnosticWithoutWritingOrCallingProvider()
+    {
+        using var c = await Teacher();
+        var lesson = LearningJson.Read<LessonImportV1>(ImportJson()).Lesson;
+        lesson.Exercises[0] = lesson.Exercises[0] with { HintRules = new string('x', 601) };
+        var wire = new LessonImportV2(PreloadedRules.Format, lesson, new("Introducción",
+            lesson.Exercises.Select(e => new PreloadedExercise(e.Id, ["Orienta"], ["Otro ejemplo"], "Registrado", "Revisa", "Revisión humana", [], [])).ToArray()));
+        var json = LearningJson.Write(wire);
+        var preview = await c.PostAsJsonAsync("/api/lessons/import/preview", new LessonImportInput(json));
+        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+        var result = (await preview.Content.ReadFromJsonAsync<LessonImportPreview>())!;
+        Assert.Null(result.Content); var error = Assert.Single(result.Errors);
+        Assert.Contains("hintRules", error); Assert.Contains("601", error); Assert.Contains("600", error);
+        Assert.Contains(error, result.CorrectionInstructions);
+        var save = await c.PostAsJsonAsync("/api/lessons/import", new CreateImportedLessonRequest(Guid.NewGuid(), json));
+        Assert.Equal(HttpStatusCode.BadRequest, save.StatusCode);
+        Assert.Contains("hintRules", await save.Content.ReadAsStringAsync());
+        Assert.Empty((await c.GetFromJsonAsync<LessonItem[]>("/api/lessons/"))!); Assert.Equal(0, provider.Calls);
+        await using var scope = factory.Services.CreateAsyncScope();
+        Assert.Empty(await scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>().AuditEvents.Where(e => e.Type == "LessonImported").ToArrayAsync());
+    }
     [Fact] public async Task ImportedLessonUsesNormalEditSimulationApprovalPublicationAndImmutableVersions()
     {
         using var c=await Teacher();var input=new CreateImportedLessonRequest(Guid.NewGuid(),ImportJson());

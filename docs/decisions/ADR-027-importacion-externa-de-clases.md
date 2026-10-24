@@ -28,6 +28,15 @@ Errores de forma son genéricos; errores de actividad identificables indican nú
 o ID. La validación estructural no acredita calidad curricular ni ausencia de
 instrucciones hostiles en el texto: el contenido sigue siendo datos no confiables.
 
+Corrección posterior al piloto 9: los errores de dominio ya no se sustituyen por
+una lista genérica de posibles causas. Los validadores compartidos emiten rutas,
+posiciones y números seguros, sin reflejar valores de entrada. Un exceso de tamaño
+indica longitud interna/máximo/diferencia, conservando el límite de 20000 y los
+escapes originales. Los prompts V1/V2 comparten las restricciones por campo y
+explican la diferencia entre entrada y contenido serializado. No cambia el contrato,
+la política académica ni la validación estricta;
+[QA de corrección](../iterations/QA_IMPORT_DIAGNOSTICS.md).
+
 La vista previa no persiste. «Guardar borrador y abrir constructor» vuelve a validar
 en el servidor y reutiliza creación serializada por docente/requestId, historial
 inicial y cuota de clases. El actor se revalida después del advisory lock. Replays

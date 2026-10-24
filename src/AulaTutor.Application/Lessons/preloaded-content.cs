@@ -26,23 +26,40 @@ public static class PreloadedRules
     public static void Validate(LessonContent c, bool complete = false)
     {
         var p = c.Preloaded; if (p is null) return;
-        static void Check([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool ok) { if (!ok) throw new AppException(400, "Completa la introducción, pistas progresivas, explicaciones y retroalimentación precargada de cada ejercicio. Máximo tres ayudas de cada tipo, 600 caracteres por ayuda y 20000 en la clase."); }
-        bool Text(string? s) => s is not null && (!complete || !string.IsNullOrWhiteSpace(s)) && s.Length <= 600 && !s.Any(ch => char.IsControl(ch) && ch is not ('\n' or '\r' or '\t'));
-        Check(Text(p.Introduction) && p.Exercises is not null && p.Exercises.Length <= 24);
-        var exercises = c.Sections.SelectMany(s => s.Exercises).ToArray();
-        Check(p.Exercises!.All(a => a is not null) && p.Exercises.Length == exercises.Length && p.Exercises.Select(a => a.ExerciseId).Distinct().Count() == p.Exercises.Length);
-        foreach (var aid in p.Exercises)
+        static void Check([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool ok, string message)
+        { if (!ok) throw new AppException(400, message); }
+        void Text(string? s, string field)
         {
-            Check(aid is not null);
-            var e = exercises.SingleOrDefault(e => e.Id == aid!.ExerciseId);
-            Check(!complete || e is not null && !string.IsNullOrWhiteSpace(e.Rubric.ReferenceSolution));
-            Check(e is not null && aid!.Hints is {Length: <= 3} && aid.Alternatives is {Length: <= 3} && (!complete || aid.Hints.Length > 0 && aid.Alternatives.Length > 0) &&
-                aid.Hints.All(Text) && aid.Alternatives.All(Text) && Text(aid.CorrectFeedback) && Text(aid.IncorrectFeedback) && Text(aid.ReviewFeedback) &&
-                aid.CommonErrors is {Length: <= 3} && aid.CommonErrors.All(Text) && aid.ReinforcementSuggestions is {Length: <= 3} && aid.ReinforcementSuggestions.All(Text));
+            Check(s is not null && (!complete || !string.IsNullOrWhiteSpace(s)), $"{field}: incluye un texto terminado y no vacío.");
+            Check(s.Length <= 600, $"{field}: tiene {s.Length} caracteres; máximo 600.");
+            Check(!s.Any(ch => char.IsControl(ch) && ch is not ('\n' or '\r' or '\t')), $"{field}: elimina los caracteres de control no permitidos.");
+        }
+        void Texts(string[]? items, string field, bool required)
+        {
+            Check(items is not null && items.Length <= 3 && (!required || !complete || items.Length > 0), $"{field}: usa {(required && complete ? "1–3" : "0–3")} textos, cada uno de hasta 600 caracteres.");
+            for (var n = 0; n < items.Length; n++) Text(items[n], $"{field}[{n}]");
+        }
+        Text(p.Introduction, "preloaded.introduction");
+        Check(p.Exercises is not null && p.Exercises.Length <= 24, "preloaded.exercises: usa un array con máximo 24 ayudas de ejercicios.");
+        var exercises = c.Sections.SelectMany(s => s.Exercises).ToArray();
+        Check(p.Exercises.Length == exercises.Length, $"preloaded.exercises: debe contener una entrada por ejercicio; hay {p.Exercises.Length} entradas para {exercises.Length} ejercicios.");
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < p.Exercises.Length; i++)
+        {
+            var aid = p.Exercises[i]; var field = $"preloaded.exercises[{i}]";
+            Check(aid is not null, $"{field}: incluye el objeto completo de ayudas.");
+            Check(ids.Add(aid.ExerciseId), $"{field}.exerciseId: referencia repetida; incluye cada ejercicio exactamente una vez.");
+            var e = exercises.SingleOrDefault(e => e.Id == aid.ExerciseId);
+            Check(e is not null, $"{field}.exerciseId: debe coincidir con un id existente en lesson.exercises.");
+            Check(!complete || !string.IsNullOrWhiteSpace(e.Rubric.ReferenceSolution), $"{field}: el ejercicio asociado necesita referenceSolution privada.");
+            Texts(aid.Hints, field + ".hints", true); Texts(aid.Alternatives, field + ".alternatives", true);
+            Text(aid.CorrectFeedback, field + ".correctFeedback"); Text(aid.IncorrectFeedback, field + ".incorrectFeedback"); Text(aid.ReviewFeedback, field + ".reviewFeedback");
+            Texts(aid.CommonErrors, field + ".commonErrors", false); Texts(aid.ReinforcementSuggestions, field + ".reinforcementSuggestions", false);
             // Semantic disclosure still requires teacher review; reject obvious direct first-hint keys.
             Check(aid.Hints.Length == 0 || !e!.Activity.AcceptedAnswers.Any(a =>
                 string.Equals(a.Trim(), aid.Hints[0].Trim(), StringComparison.OrdinalIgnoreCase) ||
-                a.Trim().Length >= 3 && aid.Hints[0].Contains(a.Trim(), StringComparison.OrdinalIgnoreCase)));
+                a.Trim().Length >= 3 && aid.Hints[0].Contains(a.Trim(), StringComparison.OrdinalIgnoreCase)),
+                $"{field}.hints[0]: la primera pista contiene una respuesta privada literal. Reescríbela para orientar sin revelar la clave.");
         }
     }
     public static PreloadedExercise Aid(LessonContent c, string exerciseId) => c.Preloaded!.Exercises.Single(a => a.ExerciseId == exerciseId);
