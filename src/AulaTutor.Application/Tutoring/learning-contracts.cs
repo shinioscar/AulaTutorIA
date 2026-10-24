@@ -57,10 +57,10 @@ public static class ExerciseValidators
         string answer, IReadOnlyList<string> accepted, int hints)
     {
         if (kind is ExerciseKind.OpenResponse or ExerciseKind.Code)
-            return (AttemptOutcome.NeedsReview, "Unverified", "Respuesta registrada; requiere revisión. No se ejecutó código ni SQL.");
+            return (AttemptOutcome.NeedsReview, "Unverified", "Respuesta registrada. Pendiente de revisión docente.");
         if (accepted.Count == 0) return (AttemptOutcome.NotEvaluable, "Unverified", "No existe una regla verificable para este ejercicio.");
         var correct = accepted.Any(a => string.Equals(a.Trim().Normalize(), answer.Trim().Normalize(), StringComparison.OrdinalIgnoreCase));
         return (correct ? hints > 0 ? AttemptOutcome.CorrectWithHelp : AttemptOutcome.CorrectWithoutHelp : AttemptOutcome.Incorrect,
-            "Deterministic", correct ? "Coincide con la regla de este ejercicio; no certifica dominio del tema." : "No coincide con las alternativas aceptadas. Puedes volver a intentar.");
+            "Deterministic", correct ? "Coincide con la regla de este ejercicio." : "No coincide con las alternativas aceptadas. Puedes volver a intentar.");
     }
 }

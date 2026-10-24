@@ -7,7 +7,7 @@
     <label for="goal">Objetivo de aprendizaje</label><input id="goal" name="goal" [(ngModel)]="goal" required minlength="2" maxlength="500" placeholder="Qué te gustaría comprender o practicar">
     <label for="level">Nivel percibido</label><select id="level" name="level" [(ngModel)]="level"><option value="Beginner">Estoy empezando</option><option value="Intermediate">Tengo conocimientos previos</option><option value="Advanced">Busco profundizar</option></select>
     <label class="check-label"><input type="checkbox" name="directReview" [(ngModel)]="directReview"> Prefiero un repaso directo en vez de diagnóstico inicial</label>
-    <p class="note">Solo tú puedes consultar la conversación. Al comenzar o enviar un turno, el tema y el contexto reciente se envían al proveedor de IA configurado. Usa datos ficticios, sin información personal ni secretos. Las respuestas son orientativas.</p>
+    <p class="note">El tutor utilizará tu tema y tus mensajes para acompañarte con IA.</p>
     <button [disabled]="busy() || form.invalid">Crear tutoría privada</button>
     <button type="button" class="secondary" (click)="newRequest()" [disabled]="busy()">Preparar otra solicitud</button>
   </form>

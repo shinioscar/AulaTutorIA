@@ -1,0 +1,5 @@
+:host { display: block; max-width: var(--layout-max); }
+.provider-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--space-5); margin: var(--space-5) 0 var(--space-6); }
+.provider-facts div { min-width: 0; }
+.provider-facts dt { color: var(--text-secondary); font-size: var(--font-small); }
+.provider-facts dd { margin: var(--space-2) 0 0; font-size: var(--font-large); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }

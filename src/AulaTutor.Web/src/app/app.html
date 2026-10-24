@@ -20,7 +20,9 @@
         @if(user.roles.length) {<a routerLink="/groups" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="users" />Grupos</a>}
         @if(auth.hasRole('Admin')) {
           <a routerLink="/admin/users" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="users" />Administración</a>
-          <a routerLink="/admin/ai" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="settings" />Diagnóstico IA</a>
+        }
+        @if(auth.hasRole('Teacher') || auth.hasRole('Admin')) {
+          <a [routerLink]="auth.hasRole('Admin')?'/admin/ai':'/ai-provider'" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="settings" />Proveedor de IA</a>
         }
         <button type="button" class="secondary logout" (click)="logout()">Cerrar sesión</button>
       } @else {
@@ -40,6 +42,6 @@
       <p role="status" class="message">{{message()}}</p>
       <router-outlet />
     </main>
-    <footer>Acompañamiento académico · Piloto con datos ficticios</footer>
+    <footer>AulaTutor IA · Acompañamiento académico</footer>
   </div>
 </div>

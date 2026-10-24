@@ -22,14 +22,14 @@ import { ClassSupervision } from './supervision.service';
   </figure>
   <figure aria-labelledby="objectives-title">
     <figcaption id="objectives-title">Entregas por objetivo</figcaption>
-    <p class="note">Pares estudiante / actividad obligatoria que permiten avanzar.</p>
+    <p class="note">Actividades obligatorias entregadas / total del grupo.</p>
     @for(o of data().objectives;track o.id){
       <div class="objective-row"><span>{{o.text}}</span><strong>{{o.deliveredRequired}} / {{o.eligibleRequiredSlots}}</strong>
         <progress [value]="o.deliveredRequired" [max]="o.eligibleRequiredSlots || 1" [attr.aria-label]="o.text+': '+o.deliveredRequired+' de '+o.eligibleRequiredSlots+' entregas obligatorias' "></progress>
-        @if(!o.eligibleRequiredSlots){<small class="note">Sin oportunidades obligatorias en esta cohorte.</small>}
+        @if(!o.eligibleRequiredSlots){<small class="note">Sin actividades obligatorias para este grupo.</small>}
       </div>
     } @empty {<p class="chart-empty">Sin objetivos para representar.</p>}
-    <p class="note">Incluye abiertos entregados que requieren revisión humana. El avance no es una calificación.</p>
+
   </figure>
 </div>`,styleUrl:'./supervision-charts.css'})
 export class SupervisionCharts {

@@ -1,23 +1,27 @@
-<p class="eyebrow">ADMINISTRACIÓN · IA</p>
-<h1>Diagnóstico de IA</h1>
-<p>Consulta el proveedor activo y comprueba su conexión con una solicitud breve de prueba.</p>
+<p class="eyebrow">INTELIGENCIA ARTIFICIAL</p>
+<h1>Proveedor de IA</h1>
+<p>Consulta el proveedor utilizado en AulaTutor.</p>
 <p class="message" role="status">{{ message() }}</p>
+<section aria-labelledby="connection-title">
+  <h2 id="connection-title">Conexión con AulaTutor</h2>
+  @if(health(); as service){
+    <dl class="provider-facts"><div><dt>Servicio AulaTutor</dt><dd>{{service.status==='ok'?'Disponible':'Requiere atención'}}</dd></div><div><dt>Proveedor configurado</dt><dd>{{service.aiProvider}}</dd></div></dl>
+  }
+  @if(connectionError()){<p class="notice warning" role="status">{{connectionError()}}</p>}
+  <button type="button" class="secondary" (click)="load()" [disabled]="busy()">{{busy()?'Actualizando…':'Actualizar estado'}}</button>
+</section>
 @if (configuration(); as config) {
   <section aria-labelledby="provider-title">
-    <h2 id="provider-title">{{ config.provider }} · {{ config.model }}</h2>
-    <p>{{ config.configurationValid ? 'Configuración básica válida' : 'Configuración incompleta' }}. La consulta no comprueba disponibilidad ni consume cuota.</p>
-    <ul>
-      <li>JSON: {{ config.capabilities.json ? 'Disponible' : 'No disponible' }}</li>
-      <li>JSON Schema: {{ config.capabilities.jsonSchema ? 'Subconjunto validado' : 'No disponible' }}</li>
-      <li>JSON Schema estricto del proveedor: {{ config.capabilities.strictJsonSchema ? 'Disponible' : 'No garantizado' }}</li>
-      <li>Streaming: reservado para una iteración posterior.</li>
-    </ul>
-    <p class="note">Tiempo máximo: {{ config.timeoutSeconds }} s · Solicitudes simultáneas: {{ config.maxConcurrency }} · Reintentos: {{ config.maxRetries }}.</p>
-    <p>{{ config.provider === 'Mock' ? 'Mock funciona sin red ni credenciales.' : 'La prueba enviará texto fijo al proveedor activo y puede consumir cuota. No envía datos de estudiantes.' }}</p>
-    <div class="actions">
-      <button type="button" (click)="test()" [disabled]="busy() || !config.configurationValid">{{ busy() ? 'Procesando…' : 'Ejecutar prueba breve' }}</button>
-      <button type="button" class="secondary" (click)="load()" [disabled]="busy()">Actualizar configuración</button>
-    </div>
+    <h2 id="provider-title">Configuración y diagnóstico</h2>
+    <dl class="provider-facts">@if(!health()){<div><dt>Proveedor</dt><dd>{{ config.provider }}</dd></div>}<div><dt>Modelo</dt><dd>{{ config.model }}</dd></div><div><dt>Configuración</dt><dd>{{ config.configurationValid ? 'Válida' : 'Incompleta' }}</dd></div></dl>
+    <details><summary>Detalles técnicos</summary><dl class="provider-facts">
+      <div><dt>JSON</dt><dd>{{ config.capabilities.json ? 'Disponible' : 'No disponible' }}</dd></div>
+      <div><dt>JSON Schema</dt><dd>{{ config.capabilities.jsonSchema ? 'Subconjunto validado' : 'No disponible' }}</dd></div>
+      <div><dt>Esquema estricto</dt><dd>{{ config.capabilities.strictJsonSchema ? 'Disponible' : 'No disponible' }}</dd></div>
+      <div><dt>Tiempo máximo</dt><dd>{{ config.timeoutSeconds }} s</dd></div><div><dt>Solicitudes simultáneas</dt><dd>{{ config.maxConcurrency }}</dd></div><div><dt>Reintentos</dt><dd>{{ config.maxRetries }}</dd></div>
+    </dl></details>
+    <p class="note">{{ config.provider === 'Mock' ? 'Prueba local con el proveedor de simulación.' : 'La prueba envía un texto de diagnóstico al proveedor y puede consumir cuota.' }}</p>
+    <button type="button" (click)="test()" [disabled]="busy() || !config.configurationValid">{{ busy() ? 'Procesando…' : 'Ejecutar prueba breve' }}</button>
   </section>
 }
 @if (result(); as result) {
@@ -27,10 +31,10 @@
     @if (result.success) {
       <p class="notice ai-response">{{ result.text }}</p>
       @if (result.usage; as usage) { <p>Tokens de entrada: {{ usage.inputTokens }} · Salida: {{ usage.outputTokens }}{{ usage.isEstimated ? ' (estimados)' : ' (reportados)' }}</p> }
-      @else { <p>El proveedor no reportó consumo de tokens.</p> }
+      @else { <p>Consumo de tokens: sin reporte.</p> }
     } @else {
       <p class="message">{{ result.error }}</p>
-      @if (result.retryAfterSeconds !== null) { <p>Espera al menos {{ result.retryAfterSeconds }} segundos antes de reintentar.</p> }
+      @if (result.retryAfterSeconds !== null) { <p>Espera {{ result.retryAfterSeconds }} segundos antes de reintentar.</p> }
     }
   </section>
 }

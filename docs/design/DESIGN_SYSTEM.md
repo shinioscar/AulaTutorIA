@@ -37,8 +37,9 @@ marca. No se descarga ninguna fuente ni se instala una librería de iconos.
   por defecto. Lectura/escritura bloqueada conserva una interfaz operativa.
 - Cabecera, navegación, marca, botones, formularios, tarjetas, avisos, grupos,
   código, burbujas, ejercicio y reporte consumen tokens compartidos.
-- Inicio es la pantalla representativa adaptada: bienvenida académica, accesos
-  reales por rol, privacidad y lectura de salud/configuración existente.
+- Inicio presenta una bienvenida y accesos a tareas por rol. La salud/configuración
+  existente se consulta en Proveedor de IA; los detalles de consentimiento se
+  presentan junto a la acción correspondiente.
 
 No hay componentes duplicados por tema, rutas nuevas de negocio, módulos nuevos,
 framework visual, fuentes remotas, métricas inventadas ni cambios de permisos.

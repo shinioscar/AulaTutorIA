@@ -55,3 +55,5 @@ Diagnóstico posterior de límites/errores: [QA de importación](../iterations/Q
 
 - Rediseño UX-2 verificado: [UX-2](../iterations/UX_2.md), con auditoría,
   navegación y gráficos sobre los contratos actuales, con QA visual comparativa.
+  [Afinado posterior](../iterations/UX_2_POLISH.md): redacción breve, Inicio por
+  tareas y sección Proveedor de IA con los permisos existentes.

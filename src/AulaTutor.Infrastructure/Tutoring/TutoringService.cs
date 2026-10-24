@@ -98,7 +98,7 @@ public sealed partial class TutoringService(AulaTutorDbContext db, ICurrentActor
             "DiagnosticQuestion" => "Solicito una pregunta diagnóstica estructurada.",
             "AnalyzeDiagnosis" => "Finalizo el diagnóstico y solicito su análisis orientativo.",
             "ActivatePlan" => "Acepto el plan e inicio la tutoría personalizada aquí.",
-            "NextActivity" => "He trabajado la actividad y solicito continuar; esto no certifica dominio.",
+            "NextActivity" => "Continuar con la siguiente actividad.",
             "GenerateExercise" => "Solicito un ejercicio estructurado para practicar.",
             _ => "Solicito un reporte final orientativo basado en las evidencias guardadas." }
     };
@@ -264,7 +264,7 @@ public sealed partial class TutoringService(AulaTutorDbContext db, ICurrentActor
                 var stats = await learning.StatisticsAsync(id, ct);
                 var summary = $"Clase entregada: {session.Topic}. Versión {v.Number} ({v.Id}). Huella SHA-256: {v.ContentHash}. " +
                     $"Se registraron {stats.Attempts} intentos. {stats.NeedsReview} respuestas requieren revisión humana. " +
-                    "Las actividades obligatorias cumplen la regla de entrega del servidor; esto no verifica dominio ni produce una nota oficial.";
+                    "Actividades obligatorias entregadas.";
                 session.Summary = summary;
                 db.LearningReports.Add(new() { SessionId = id, Version = await db.LearningReports.CountAsync(r => r.SessionId == id, ct) + 1,
                     EvidenceRevision = session.EvidenceRevision, StatisticsJson = LearningJson.Write(stats),

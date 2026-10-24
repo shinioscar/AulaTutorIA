@@ -1,5 +1,5 @@
-<p class="eyebrow">ORGANIZACIÓN PILOTO</p><h1>{{ auth.hasRole('Admin') ? 'Gestión de grupos' : 'Mis grupos' }}</h1>
-<p>Solo se muestran los grupos a los que tienes acceso.</p>
+<p class="eyebrow">ORGANIZACIÓN ACADÉMICA</p><h1>{{ auth.hasRole('Admin') ? 'Gestión de grupos' : 'Mis grupos' }}</h1>
+<p>Consulta tus grupos académicos.</p>
 <p class="message" role="status">{{ message() }}</p>
 @if (auth.hasRole('Admin')) {
   <section><h2>Crear grupo académico</h2>
@@ -57,6 +57,6 @@
         <button [disabled]="busy() || memberForm.invalid">Asociar al grupo</button>
       </form>
     }
-    <p class="note">La membresía no permite consultar tutorías autónomas privadas.</p>
+
   </section>
 }

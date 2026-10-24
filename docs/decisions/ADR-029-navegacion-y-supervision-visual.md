@@ -45,3 +45,20 @@ decorativos locales; sin nuevas licencias, fuentes remotas o dependencias.
 Light/Dark comparten plantillas y tokens existentes. QA de cierre exige capturas
 reales inspeccionadas y comparación explícita con los cuatro conceptos, además
 de regresión técnica; compilar no acredita fidelidad visual ni certificación WCAG.
+
+## Afinado editorial y sección de proveedor
+
+Por encargo posterior a UX-2, Inicio se centra en accesos por rol y se retira la
+tarjeta de entorno local. Proveedor de IA agrupa el estado existente: Teacher
+aprobado accede por /ai-provider con teacherGuard y consulta solo /api/health;
+Admin conserva /admin/ai con adminGuard, configuración saneada y prueba explícita.
+Student y cuentas pendientes no reciben el enlace ni acceso a estas vistas.
+La salud de AulaTutor se rotula como servicio, sin atribuir disponibilidad al modelo.
+La pantalla queda como ubicación de futuras opciones; este cambio no implementa
+selección de proveedor, edición de claves ni nuevas integraciones.
+
+Se eliminan descargos repetidos y menciones de desarrollo de la interfaz. Etiquetas
+precisas conservan origen IA, revisiones y denominadores. Referencias técnicas y
+detalle de métricas se pliegan; consentimiento, cuota, recuperación y cambios
+pendientes siguen junto a sus acciones. Los límites de piloto real se mantienen
+en documentación y operación.

@@ -1,5 +1,5 @@
 <section class="form-card" aria-labelledby="auth-title">
-  <p class="eyebrow">IDENTIDAD · PILOTO</p>
+  <p class="eyebrow">TU CUENTA</p>
   <h1 id="auth-title">{{ register ? 'Crear una cuenta' : 'Iniciar sesión' }}</h1>
   <p>{{ register ? 'Regístrate como estudiante o solicita acceso docente.' : 'Accede a tu cuenta de AulaTutor IA.' }}</p>
   <form #form="ngForm" (ngSubmit)="submit()">
@@ -12,12 +12,12 @@
     <label for="password">Contraseña</label>
     <input id="password" name="password" [(ngModel)]="password" type="password" required [minlength]="register ? 5 : 1" maxlength="128" [autocomplete]="register ? 'new-password' : 'current-password'" [attr.aria-describedby]="register ? 'password-help' : null">
     @if (register) {
-      <p id="password-help" class="note">Mínimo 5 caracteres. Recomendamos una contraseña larga con mayúsculas, minúsculas, números y símbolos; no son obligatorios.</p>
+      <p id="password-help" class="note">Entre 5 y 128 caracteres. Elige una contraseña larga y única.</p>
       <label for="role">Tipo de cuenta</label>
       <select id="role" name="role" [(ngModel)]="requestedRole">
         <option value="Student">Estudiante</option><option value="Teacher">Solicitud docente</option>
       </select>
-      <p class="note">Solicitar acceso docente no otorga permisos hasta su aprobación.</p>
+      <p class="note">El acceso docente requiere aprobación de Administración.</p>
     }
     <button type="submit" [disabled]="busy() || form.invalid">{{ busy() ? 'Procesando…' : (register ? 'Enviar registro' : 'Entrar') }}</button>
   </form>

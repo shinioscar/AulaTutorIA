@@ -1,13 +1,32 @@
+@if(auth.user(); as user) {
+  <header class="home-heading"><p class="eyebrow">TU ESPACIO ACADÉMICO</p><h1>Hola, {{user.displayName}}</h1><p>Elige dónde continuar.</p></header>
+  @if(user.teacherApproval==='Pending'){<p class="notice warning">Tu solicitud docente está pendiente de aprobación.</p>}
+  @if(user.teacherApproval==='Rejected'){<p class="notice warning">Tu solicitud docente fue rechazada. Contacta con Administración.</p>}
+  <nav class="workspace-links" aria-label="Accesos de inicio">
+    @if(auth.hasRole('Student')){
+      <a routerLink="/classes"><strong>Mis clases</strong><span>Actividades y avance de tus clases asignadas.</span><span aria-hidden="true">→</span></a>
+      <a routerLink="/tutoring"><strong>Mis tutorías</strong><span>Preguntas, práctica y aprendizaje personalizado.</span><span aria-hidden="true">→</span></a>
+    }
+    @if(auth.hasRole('Teacher')){
+      <a routerLink="/teacher/supervision"><strong>Supervisión</strong><span>Avance, evidencias y revisión de tus estudiantes.</span><span aria-hidden="true">→</span></a>
+      <a routerLink="/teacher/lessons"><strong>{{auth.hasRole('Student')?'Mis clases docentes':'Mis clases'}}</strong><span>Crea y prepara tus clases.</span><span aria-hidden="true">→</span></a>
+      <a routerLink="/teacher/assignments"><strong>Asignaciones</strong><span>Organiza las clases de cada grupo.</span><span aria-hidden="true">→</span></a>
+      <a routerLink="/teacher/reports"><strong>Reportes compartidos</strong><span>Consulta los reportes que recibiste.</span><span aria-hidden="true">→</span></a>
+    }
+    @if(user.roles.length){<a routerLink="/groups"><strong>{{auth.hasRole('Admin')?'Grupos':'Mis grupos'}}</strong><span>Grupos y relaciones académicas.</span><span aria-hidden="true">→</span></a>}
+    @if(auth.hasRole('Admin')){
+      <a routerLink="/admin/users"><strong>Usuarios y permisos</strong><span>Cuentas, roles y solicitudes docentes.</span><span aria-hidden="true">→</span></a>
+      <a routerLink="/admin/ai"><strong>Proveedor de IA</strong><span>Configuración y diagnóstico.</span><span aria-hidden="true">→</span></a>
+    }
+  </nav>
+} @else {
 <section class="welcome" aria-labelledby="welcome-title">
   <div class="welcome-copy">
     <p class="eyebrow">APRENDE · PRACTICA · AVANZA</p>
     <h1 id="welcome-title">Tu aprendizaje,<br>con acompañamiento.</h1>
-    <p class="intro">Un espacio para hacer preguntas, comprender a tu ritmo y construir una ruta de aprendizaje con evidencias.</p>
+    <p class="intro">Pregunta, practica y aprende a tu ritmo.</p>
     <div class="actions">
-      @if(auth.hasRole('Student')) { <a class="button-link" routerLink="/tutoring">Ir a mis tutorías <span aria-hidden="true">→</span></a> }
-      @else if(auth.hasRole('Teacher')) { <a class="button-link" routerLink="/teacher/supervision">Supervisar mis clases <span aria-hidden="true">→</span></a> }
-      @else if(auth.hasRole('Admin')) { <a class="button-link" routerLink="/admin/users">Administrar usuarios <span aria-hidden="true">→</span></a> }
-      @else if(!auth.user()) { <a class="button-link" routerLink="/login">Iniciar sesión <span aria-hidden="true">→</span></a><a routerLink="/register">Crear una cuenta</a> }
+      <a class="button-link" routerLink="/login">Iniciar sesión <span aria-hidden="true">→</span></a><a routerLink="/register">Crear una cuenta</a>
     </div>
   </div>
   <div class="learning-symbol" aria-hidden="true">
@@ -20,41 +39,4 @@
     <span class="symbol-caption">Una pregunta.<br>Un paso adelante.</span>
   </div>
 </section>
-
-<div class="home-grid">
-  <section aria-labelledby="session-title" class="workspace-card">
-    <p class="eyebrow">TU ESPACIO</p>
-    @if(auth.user(); as user) {
-      <h2 id="session-title">Hola, {{user.displayName}}</h2>
-      <p>Elige dónde quieres continuar.</p>
-      <div class="role-tags">@for(role of user.roles; track role){<span class="role-tag">{{role==='Student'?'Estudiante':role==='Teacher'?'Docente':'Administración'}}</span>}</div>
-      @if(user.teacherApproval==='Pending'){<p class="notice warning">Tu solicitud docente está pendiente de aprobación administrativa.</p>}
-      @if(user.teacherApproval==='Rejected'){<p class="notice warning">Tu solicitud docente no fue aprobada. Consulta al administrador del piloto.</p>}
-      <div class="workspace-links">
-        @if(auth.hasRole('Student')){<a routerLink="/tutoring"><strong>Mis tutorías</strong><span>Diagnóstico, plan, conversación y resultados.</span><span aria-hidden="true">→</span></a><a routerLink="/classes"><strong>Mis clases asignadas</strong><span>Versiones aprobadas de tus grupos y progreso individual.</span><span aria-hidden="true">→</span></a>}
-        @if(auth.hasRole('Teacher')){<a routerLink="/teacher/supervision"><strong>Inicio docente</strong><span>Grupos, resultados, revisión y seguimiento humano.</span><span aria-hidden="true">→</span></a><a routerLink="/teacher/lessons"><strong>Mis clases</strong><span>Diseño, simulación y versiones aprobadas.</span><span aria-hidden="true">→</span></a><a routerLink="/teacher/reports"><strong>Reportes compartidos</strong><span>Versiones autorizadas por estudiantes relacionados.</span><span aria-hidden="true">→</span></a>}
-        @if(user.roles.length){<a routerLink="/groups"><strong>{{auth.hasRole('Admin')?'Grupos del piloto':'Mis grupos'}}</strong><span>Consulta según tu relación académica.</span><span aria-hidden="true">→</span></a>}
-        @if(auth.hasRole('Admin')){<a routerLink="/admin/users"><strong>Usuarios y aprobación docente</strong><span>Gestiona cuentas y permisos del piloto.</span><span aria-hidden="true">→</span></a><a routerLink="/admin/ai"><strong>Configuración IA</strong><span>Proveedor y diagnóstico administrativo.</span><span aria-hidden="true">→</span></a>}
-      </div>
-    } @else {
-      <h2 id="session-title">Aprender empieza con una pregunta</h2>
-      <p>Inicia sesión para retomar tus conversaciones, practicar y consultar tus resultados.</p>
-      <p class="note">El estudiante decide si comparte una versión de su reporte con un docente autorizado.</p>
-    }
-  </section>
-  <div class="supporting-cards">
-    <section aria-labelledby="privacy-title" class="privacy-card">
-      <span class="support-icon" aria-hidden="true">✓</span><h2 id="privacy-title">Tu conversación, tu espacio</h2>
-      <p>Las tutorías autónomas son privadas. Pertenecer a un grupo no autoriza a leer conversaciones personales.</p>
-      <p class="note">Las observaciones de IA son orientativas. AulaTutor no genera calificaciones oficiales.</p>
-    </section>
-    <section aria-labelledby="status-title" class="status-card">
-      <p class="eyebrow">CONEXIÓN CON AULATUTOR</p><h2 id="status-title">Estado del entorno local</h2>
-      <p role="status" aria-live="polite">{{status()}}</p>
-      @if(provider()){<p class="provider-label">Proveedor configurado <strong>{{provider()}}</strong></p>}
-      <p class="note">Esta comprobación consulta la API y su configuración. No genera IA ni mide la disponibilidad del proveedor o de la base de datos.</p>
-      <button type="button" class="secondary" (click)="checkHealth()" [disabled]="loading()">Comprobar conexión</button>
-    </section>
-  </div>
-</div>
-<p class="note pilot-note">Piloto con datos ficticios · Usa ejemplos académicos y evita información personal o secretos.</p>
+}

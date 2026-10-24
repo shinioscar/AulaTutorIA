@@ -37,7 +37,7 @@ public sealed class TutoringOrchestratorTests
         var turns=new[] {new TutoringTurn {Action=TutoringAction.Hint,State=TutoringTurnState.Succeeded},new TutoringTurn {Action=TutoringAction.Message,State=TutoringTurnState.Cancelled}};
         var summary=TutoringOrchestrator.Summarize(Session(),turns);
         Assert.Contains("1 turnos",summary);Assert.Contains("1 pistas",summary);
-        Assert.Contains("sin llamada adicional",summary);Assert.Contains("no certifican",summary);
+        Assert.Contains(Session().Topic,summary);Assert.Contains(Session().Goal,summary);
     }
     private sealed class SchemaProvider : IAiProvider
     {

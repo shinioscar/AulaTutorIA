@@ -40,6 +40,19 @@ no borrar respuestas pendientes por un 429. Mantener controles de cancelación y
 recuperación de la misma solicitud. No almacenar contenido académico o credenciales
 en storage por conveniencia visual. Solo la preferencia de tema está autorizada.
 
+## Redacción y densidad visual
+
+Usar títulos concretos y descripciones breves de la función. Evitar aclaraciones
+repetidas de lo que una pantalla o métrica no representa. Identificar cada dato
+por su unidad, origen y denominador, sin añadir un descargo en cada tarjeta.
+Las referencias técnicas extensas y las métricas secundarias van en detalles
+plegables. La pantalla inicial prioriza accesos a tareas según el rol.
+
+Conservar la información necesaria al decidir: destinatario y versión al compartir,
+alcance de revocación, visibilidad del feedback, cuota antes de solicitar IA,
+recuperación de envíos y cambios sin guardar. Mostrarla junto a su acción, con
+texto breve. La simplificación editorial no cambia permisos, resultados ni evidencias.
+
 Avisos: `.notice`, con variantes info/success/warning/danger. No transformar cualquier
 estado de revisión en alarma ni dar falso éxito con verde. Mensajes de backend
 conservan su significado; roles, estado de sesión y resultado son conceptos distintos.
@@ -119,4 +132,4 @@ individual vigente; cerrar/recargar invalida las respuestas pendientes.
 Gráficos de UX-2: SVG para estados disjuntos de una asignación, tabla equivalente,
 y progress con cantidad y denominador para entregas por objetivo. No sumar
 estudiantes entre asignaciones ni confundir entregas NeedsReview con aciertos.
-Ver auditoría y verificación pendiente en [UX-2](../iterations/UX_2.md).
+Ver auditoría y verificación en [UX-2](../iterations/UX_2.md).

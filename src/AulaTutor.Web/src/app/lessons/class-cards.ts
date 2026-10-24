@@ -11,7 +11,7 @@ import { ReportCard } from '../tutoring/report-card';
 <p>{{a.class.teacherName}} · {{a.class.groupName}}</p><p class="note">El docente responsable puede revisar las respuestas, intentos, ayudas y evaluación de esta clase.</p>
 @if(a.unavailableReason){<p class="notice warning" role="status">{{a.unavailableReason}}</p>}
 <progress class="class-progress" [value]="a.class.deliveredRequired" [max]="a.class.totalRequired||1" [attr.aria-label]="'Actividades obligatorias entregadas: '+a.class.deliveredRequired+' de '+a.class.totalRequired"></progress><p>Obligatorias entregadas: {{a.class.deliveredRequired}} / {{a.class.totalRequired}} · {{s.state==='Completed'?'Finalizada':s.state==='Paused'?'Pausada':'Tu recorrido'}}</p>
-<p class="note">Las actividades y ayudas no solicitan IA. Entregar o coincidir con una regla no certifica dominio.</p></header>
+</header>
 
 @if(error()){<p class="notice danger" role="alert">{{error()}}</p>}
 <div class="cards-layout"><section class="exercise-card" aria-labelledby="card-title">
@@ -20,7 +20,7 @@ import { ReportCard } from '../tutoring/report-card';
 @if(s.state==='Active'){
 <form (ngSubmit)="act('SubmitAttempt')"><fieldset [disabled]="blocked()"><legend>Tu respuesta</legend>
 @if(e.options.length){@for(o of e.options;track $index){<label class="option"><input type="radio" name="answer" [value]="o" [(ngModel)]="answer"/>{{o}}</label>}}
-@else{<label for="card-answer">{{e.kind==='Code'?'Código o SQL (no se ejecuta)':'Respuesta'}}</label><textarea id="card-answer" name="answer" [(ngModel)]="answer" maxlength="2000" rows="5"></textarea>}
+@else{<label for="card-answer">{{e.kind==='Code'?'Código o SQL':'Respuesta'}}</label><textarea id="card-answer" name="answer" [(ngModel)]="answer" maxlength="2000" rows="5"></textarea>}
 <button type="submit" [disabled]="!answer.trim()">Registrar respuesta</button></fieldset></form>
 <button type="button" class="secondary" (click)="act('NextActivity')" [disabled]="blocked()">Siguiente actividad</button>}
 }
@@ -28,12 +28,12 @@ import { ReportCard } from '../tutoring/report-card';
 @for(m of feedback();track m.id){<section class="notice info"><app-safe-response [text]="m.text"/></section>}
 @if(s.state==='Active'){<div class="actions"><button type="button" class="secondary" (click)="transition('pause')" [disabled]="blocked()">Pausar clase</button><button type="button" (click)="transition('complete')" [disabled]="blocked()||!a.canComplete">Finalizar clase precargada</button></div>}
 @if(s.state==='Paused'){<button type="button" (click)="transition('resume')" [disabled]="blocked()">Continuar clase</button>}
-@if(s.state==='Completed'){<h2>Tu resultado</h2><app-safe-response [text]="s.summary??''"/>
+@if(s.state==='Completed'){<h2>Tu resultado</h2>@if(!s.learning.reports.length){<app-safe-response [text]="s.summary??''"/>}
 @for(r of s.learning.reports;track r.id){<app-report-card [report]="r"/>}
-<p>La evaluación IA es preliminar y opcional. El resultado local está disponible aunque no haya cuota.</p>
+<p>Puedes solicitar una evaluación adicional con IA.</p>
 @if(!evaluated()){<button type="button" (click)="act('FinalReport')" [disabled]="blocked()">Solicitar evaluación cualitativa final con IA</button>}
 }
-</section><aside aria-label="Ayudas de la actividad"><details open><summary>Pistas y explicaciones</summary><p>Solo recibirás cada ayuda cuando la solicites.</p>
+</section><aside aria-label="Ayudas de la actividad"><details open><summary>Pistas y explicaciones</summary>
 @if(s.state==='Active'&&exercise()){<button type="button" (click)="act('Hint')" [disabled]="blocked()">Dame una pista</button><button type="button" class="secondary" (click)="act('Simplify')" [disabled]="blocked()">Otra explicación</button>}
 @for(m of helps();track m.id){<article><app-safe-response [text]="m.text"/></article>}
 </details>@for(m of introductions();track m.id){<details class="class-introduction"><summary>Introducción de la clase</summary><app-safe-response [text]="m.text"/></details>}<button type="button" class="secondary" (click)="refresh.emit()">Consultar estado</button>

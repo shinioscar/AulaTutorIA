@@ -23,5 +23,6 @@ export const routes: Routes = [
   {path:'groups', canActivate:[signedInGuard], loadComponent:() => import('./groups/groups-page').then(m => m.GroupsPage)},
   {path:'admin/users', canActivate:[adminGuard], loadComponent:() => import('./admin/admin-page').then(m => m.AdminPage)},
   {path:'admin/ai', canActivate:[adminGuard], loadComponent:() => import('./ai/ai-page').then(m => m.AiPage)},
+  {path:'ai-provider', canActivate:[teacherGuard], loadComponent:() => import('./ai/ai-page').then(m => m.AiPage)},
   {path:'**', redirectTo:''},
 ];

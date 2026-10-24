@@ -11,7 +11,7 @@ export class AppIcon {
     assignment:'M8 3H5v18h14V3h-3M8 2h8v4H8V2Zm0 9h8m-8 5h5',
     users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-4M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-8a4 4 0 0 1 0 8',
     chat:'M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z',
-    settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-9 4h2m14 0h2M12 3v2m0 14v2M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2',
+    settings:'M4 7h6m4 0h6M10 4h4v6h-4V4ZM4 17h10m4 0h2m-6-3h4v6h-4v-6Z',
     menu:'M4 6h16M4 12h16M4 18h16',
   };
 }

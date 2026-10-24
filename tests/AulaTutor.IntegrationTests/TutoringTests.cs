@@ -82,7 +82,7 @@ public sealed class TutoringTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Conflict,(await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/messages",Turn(session,"Message","No permitido"))).StatusCode);
         var resumed=await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/resume",new TutoringTransitionRequest(session.Revision));session=(await resumed.Content.ReadFromJsonAsync<TutoringSessionView>())!;
         var completed=await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/complete",new TutoringTransitionRequest(session.Revision));Assert.Equal(HttpStatusCode.OK,completed.StatusCode);session=(await completed.Content.ReadFromJsonAsync<TutoringSessionView>())!;
-        Assert.Equal("Completed",session.State);Assert.NotNull(session.CompletedAt);Assert.Contains("sin llamada adicional",session.Summary);Assert.Equal(4,provider.Calls);
+        Assert.Equal("Completed",session.State);Assert.NotNull(session.CompletedAt);Assert.Contains("Tutoría finalizada",session.Summary);Assert.Equal(4,provider.Calls);
         Assert.Equal(HttpStatusCode.Conflict,(await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/messages",Turn(session,"Message","Otro"))).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict,(await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/resume",new TutoringTransitionRequest(session.Revision))).StatusCode);
         Assert.Equal(HttpStatusCode.OK,(await reopened.PostAsJsonAsync($"/api/tutoring-sessions/{session.Id}/complete",new TutoringTransitionRequest(0))).StatusCode);

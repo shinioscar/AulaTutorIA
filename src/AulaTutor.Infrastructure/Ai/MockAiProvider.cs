@@ -38,7 +38,7 @@ public sealed class MockAiProvider : IAiProvider
                     payload.Exercises.Select(e => new PreloadedExercise(e.Id,
                         ["[Mock] Compara un caso con varios ejemplos.", "[Mock] Piensa qué evidencia adicional pedirías.", "[Mock] Revisa si la afirmación es suficiente."],
                         ["[Mock] Un ejemplo aislado aporta evidencia limitada.", "[Mock] Compara situaciones distintas antes de concluir."],
-                        "[Mock] Coincide con la regla; no certifica dominio.", "[Mock] Revisa el alcance de la afirmación.",
+                        "[Mock] Coincide con la regla.", "[Mock] Revisa el alcance de la afirmación.",
                         "[Mock] Entrega registrada, pendiente de revisión humana.", ["[Mock] Distingue un caso de una conclusión general."],
                         ["[Mock] Practica con otro ejemplo similar antes de consultar al docente."])).ToArray());
                 return Task.FromResult(new AiChatResult(LearningJson.Write(new LessonImportV2(PreloadedRules.Format, payload, aids)), ProviderId, ModelId, null, null, "stop"));

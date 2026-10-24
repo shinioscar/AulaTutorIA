@@ -34,14 +34,14 @@ export async function academicPilot(h) {
     manual=await save(manual,{...content,title:'SQL conversacional · referencia ficticia',preloaded:null});await p.reload();
     await p.getByLabel('Descripción',{exact:true}).fill('Referencia SQL ficticia revisada manualmente; el código no se ejecuta.');await mutation(p,'Guardar borrador',/\/draft$/);
     manual=await publish(await api(teacher.context,'GET','/api/lessons/'+manual.id));scenario.classes.conversational=await assign(manual);
-    await p.goto(origin+'/teacher/lessons/new/ai');await p.getByLabel('Clase precargada: tarjetas y ayudas sin IA durante los ejercicios',{exact:true}).check();
+    await p.goto(origin+'/teacher/lessons/new/ai');await p.getByLabel('Clase con tarjetas y ayudas preparadas',{exact:true}).check();
     await p.getByLabel('Tema de la clase',{exact:true}).fill('Procedimientos SQL Server del piloto ficticio');await p.getByRole('button',{name:'Generar con IA integrada',exact:true}).click();await p.waitForURL(/mode=ai/);
     await mutation(p,'Aplicar propuesta',/\/apply-proposal$/);let generated=await api(teacher.context,'GET','/api/lessons/'+p.url().split('/').at(-1));
     // Mock is generic. A visible teacher edit supplies the authored SQL reference, not a claim of LLM quality.
     generated=await save(generated,{...content,title:'SQL precargada · referencia ficticia'});await p.reload();await p.getByRole('button',{name:'3. Revisar y publicar',exact:true}).click();
     await mutation(p,'Simular como estudiante',/\/simulations$/);await p.waitForURL(/\/simulations\//);await mutation(p,'Comenzar enseñanza simulada',/\/messages$/);await mutation(p,'Pedir pista',/\/messages$/);await mutation(p,'Detener simulación',/\/stop$/);
     generated=await publish(await api(teacher.context,'GET','/api/lessons/'+generated.id));scenario.classes.preloaded=await assign(generated);
-    await p.goto(origin+'/teacher/lessons/new/ai');await p.getByLabel('Clase precargada: tarjetas y ayudas sin IA durante los ejercicios',{exact:true}).check();await p.getByLabel('Tema de la clase',{exact:true}).fill('Procedimientos SQL Server');
+    await p.goto(origin+'/teacher/lessons/new/ai');await p.getByLabel('Clase con tarjetas y ayudas preparadas',{exact:true}).check();await p.getByLabel('Tema de la clase',{exact:true}).fill('Procedimientos SQL Server');
     await p.getByRole('button',{name:'Usar ChatGPT',exact:true}).click();assert.ok((await p.getByLabel('Instrucciones para la herramienta externa').inputValue()).includes('aulatutor-lesson-v2'));
     const importedWire=structuredClone(wire);importedWire.lesson.title='SQL importada V2 · referencia ficticia';await p.getByLabel('Clase generada',{exact:true}).fill(JSON.stringify(importedWire));await mutation(p,'Validar y revisar',/\/import\/preview$/);
     await capture(p,'pilot-external-preview-light-1440',1440,false,p.getByRole('heading',{name:'3. Revisar la clase',exact:true}));
@@ -60,7 +60,7 @@ export async function academicPilot(h) {
     for(let i=0;i<4;i++){
       const e=a.learning.exercises.find(x=>x.id===a.assignedClass.currentExerciseId);
       if(i===1){await mutation(p,'Dame una pista',/\/cards$/);await mutation(p,'Pausar clase',/\/pause$/);await p.reload();await mutation(p,'Continuar clase',/\/resume$/);}
-      if(e.options.length)await p.getByLabel(answer(e.approvedExerciseId),{exact:true}).check();else await p.getByLabel(e.kind==='Code'?'Código o SQL (no se ejecuta)':'Respuesta',{exact:true}).fill(answer(e.approvedExerciseId));
+      if(e.options.length)await p.getByLabel(answer(e.approvedExerciseId),{exact:true}).check();else await p.getByLabel(e.kind==='Code'?'Código o SQL':'Respuesta',{exact:true}).fill(answer(e.approvedExerciseId));
       await mutation(p,'Registrar respuesta',/\/cards$/);if(i<3)await mutation(p,'Siguiente actividad',/\/cards$/);a=await read(student,id);
     }
     await mutation(p,'Finalizar clase precargada',/\/complete$/);a=await read(student,id);assert.equal(unexpectedAi,0);assert.equal(a.learning.attempts.length,4);assert.equal(a.learning.attempts.filter(x=>x.outcome==='NeedsReview').length,1);
@@ -82,8 +82,9 @@ export async function academicPilot(h) {
     await p.route('**/api/tutoring-sessions/*/messages',route=>route.fulfill({status:503,contentType:'application/problem+json',body:'{"title":"Proveedor indisponible simulado; reporte local conservado"}'}),{times:1});
     await p.getByRole('button',{name:'Solicitar evaluación cualitativa final con IA',exact:true}).click();await p.getByRole('button',{name:'Recuperar misma solicitud',exact:true}).waitFor();assert.equal((await read(other,b.id)).learning.reports.length,1);
     await mutation(p,'Recuperar misma solicitud',/\/messages$/);b=await read(other,b.id);assert.equal(b.learning.reports.length,2);assert.deepEqual(b.learning.attempts,bSnapshot);await p.reload();assert.deepEqual((await read(other,b.id)).learning.reports,b.learning.reports);
+    await p.locator('app-report-card').filter({hasText:'preloaded-evaluation-v1'}).getByText('Origen del reporte',{exact:true}).click();
     await capture(p,'pilot-result-dark-390',390,true,p.getByText('preloaded-evaluation-v1',{exact:false}));await capture(p,'pilot-result-light-1440',1440,false,p.getByText('preloaded-evaluation-v1',{exact:false}));
-    await student.page.getByRole('button',{name:'Solicitar evaluación cualitativa final con IA',exact:true}).click();await student.page.getByText('preloaded-evaluation-v1',{exact:false}).waitFor();a=await read(student,a.id);assert.deepEqual(a.learning.attempts,aSnapshot);
+    await student.page.getByRole('button',{name:'Solicitar evaluación cualitativa final con IA',exact:true}).click();await student.page.locator('app-report-card').filter({hasText:'preloaded-evaluation-v1'}).getByText('Origen del reporte',{exact:true}).click();await student.page.getByText('preloaded-evaluation-v1',{exact:false}).waitFor();a=await read(student,a.id);assert.deepEqual(a.learning.attempts,aSnapshot);
   });
   await check('9 D: SQL supervisor sees denominators, attention, references and independent feedback',async()=>{
     const groupView=await api(teacher.context,'GET',`/api/teacher/supervision/assignments/${scenario.classes.preloaded.id}`);assert.equal(groupView.assignment.counts.eligibleStudents,3);assert.equal(groupView.assignment.counts.completed,2);assert.equal(groupView.assignment.counts.notOpened,1);assert.equal(groupView.objectives.reduce((n,o)=>n+o.eligibleRequiredSlots,0),12);assert.equal(groupView.objectives.reduce((n,o)=>n+o.deliveredRequired,0),8);assert.ok(groupView.cases.length>=2);

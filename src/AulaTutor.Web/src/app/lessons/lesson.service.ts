@@ -14,7 +14,7 @@ export interface SimulationView {id:string;lessonId:string;draftRevision:number;
 export const emptyLesson = ():LessonContent => ({title:'',subject:'',description:'',prerequisites:'',level:'',durationMinutes:0,methodology:'',instructions:'',objectives:[],sections:[]});
 export const lessonState = (state:string):string => ({Draft:'Borrador',Simulation:'En simulación',InReview:'En revisión',Approved:'Aprobada',Published:'Publicada',Archived:'Archivada',Active:'Activa',Stopped:'Detenida',Pending:'Pendiente',Succeeded:'Completada',Failed:'Fallida',Cancelled:'Cancelada',Applied:'Aplicada',Discarded:'Descartada'}[state]??state);
 export const outcomeLabel = (outcome:string):string => ({CorrectWithoutHelp:'Coincide con la regla, sin ayuda',CorrectWithHelp:'Coincide con la regla, con ayuda',Incorrect:'No coincide con la regla',NeedsReview:'Requiere revisión humana',NotEvaluable:'Sin regla verificable'}[outcome]??outcome);
-export const exerciseKind = (kind:string):string => ({MultipleChoice:'Opción múltiple',TrueFalse:'Verdadero/falso',ShortAnswer:'Respuesta corta',OpenResponse:'Respuesta abierta',Code:'Código o SQL sin ejecución'}[kind]??kind);
+export const exerciseKind = (kind:string):string => ({MultipleChoice:'Opción múltiple',TrueFalse:'Verdadero/falso',ShortAnswer:'Respuesta corta',OpenResponse:'Respuesta abierta',Code:'Código o SQL'}[kind]??kind);
 export const lessonAction = (action:string):string => ({Start:'Inicio',Next:'Avance',Answer:'Respuesta',Message:'Duda',Hint:'Pista',Simplify:'Simplificación',PreloadedPlan:'Clase precargada completa',Plan:'Plan completo',Content:'Contenido',Exercises:'Ejercicios',Rubrics:'Rúbricas'}[action]??action);
 @Injectable({providedIn:'root'})
 export class LessonService {

@@ -5,6 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { academicPilot } from './academic-pilot.mjs';
 import { ux2Qa } from './ux2-qa.mjs';
+import { uxPolishQa } from './ux-polish-qa.mjs';
 const suiteStarted=performance.now();
 const requestMetrics=[];
 const root = path.resolve(import.meta.dirname, '../..');
@@ -101,8 +102,8 @@ try {
     await teacher.page.goto(origin+'/teacher/lessons/'+legacy.id);
     await teacher.page.getByRole('button',{name:'3. Revisar y publicar',exact:true}).click();
     await teacher.page.getByRole('button',{name:'Ver versión 1',exact:true}).click();
-    await teacher.page.getByRole('heading',{name:'Contenido congelado · versión 1',exact:true}).waitFor();
-    await capture(teacher.page,'existing-versions-light',1440,false,teacher.page.getByRole('heading',{name:'Versiones inmutables',exact:true}));
+    await teacher.page.getByRole('heading',{name:'Contenido · versión 1',exact:true}).waitFor();
+    await capture(teacher.page,'existing-versions-light',1440,false,teacher.page.getByRole('heading',{name:'Versiones de la clase',exact:true}));
     const after=await api(teacher.context,'GET','/api/lessons/'+legacy.id);assert.deepEqual(after.versions,legacy.versions);
   });
   await check('B: browser creates, designs, applies, approves and publishes a lesson', async () => {
@@ -174,7 +175,7 @@ try {
     await p.waitForURL(/\/teacher\/lessons\/[a-f0-9-]{36}$/); lessonId = p.url().split('/').at(-1);
     await p.getByRole('button', { name: '3. Revisar y publicar', exact: true }).click();
     await mutation(p, 'Pasar a revisión', /\/review$/); await mutation(p, 'Confirmar aprobación de esta revisión', /\/approve$/);
-    await mutation(p, 'Confirmar publicación de versión 1', /\/publish$/); await capture(p, 'teacher-published-light', 1440, false, p.getByRole('heading', { name: 'Versiones inmutables', exact: true }));
+    await mutation(p, 'Confirmar publicación de versión 1', /\/publish$/); await capture(p, 'teacher-published-light', 1440, false, p.getByRole('heading', { name: 'Versiones de la clase', exact: true }));
   });
   await check('IA-1: shared options, copy, safe correction, preview, imported edit/simulation/publication', async () => {
     const p=teacher.page;
@@ -332,7 +333,7 @@ try {
     const example=await fs.readFile(path.join(root,'docs/architecture/examples/lesson-import-v2.json'),'utf8');
     const preview=await api(teacher.context,'POST','/api/lessons/import/preview',{json:example});assert.equal(preview.errors.length,0);assert.ok(preview.content.preloaded);
     const p=teacher.page;await p.goto(origin+'/teacher/lessons/new/ai');
-    await p.getByLabel('Clase precargada: tarjetas y ayudas sin IA durante los ejercicios',{exact:true}).check();
+    await p.getByLabel('Clase con tarjetas y ayudas preparadas',{exact:true}).check();
     await p.getByLabel('Tema de la clase',{exact:true}).fill('Clase precargada IA-2 ficticia');
     await p.getByRole('button',{name:'Generar con IA integrada',exact:true}).click();await p.waitForURL(/mode=ai/);
     await mutation(p,'Aplicar propuesta',/\/apply-proposal$/);
@@ -372,15 +373,16 @@ try {
   });
   await check('IA-2 C/D: grouped preliminary evaluation, reload without regeneration and independent human review',async()=>{
     const p=student.page;await mutation(p,'Solicitar evaluación cualitativa final con IA',/\/messages$/);
-    await p.getByText('preloaded-evaluation-v1',{exact:false}).waitFor();const before=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);
+    await p.locator('app-report-card').filter({hasText:'preloaded-evaluation-v1'}).getByText('Origen del reporte',{exact:true}).click();await p.getByText('preloaded-evaluation-v1',{exact:false}).waitFor();const before=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);
     assert.equal(before.learning.reports.length,2);await p.reload();const after=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.deepEqual(after.learning.reports,before.learning.reports);
-    await capture(p,'cards-evaluation-light-1440',1440,false,p.getByText('preloaded-evaluation-v1',{exact:false}));
+    await p.locator('app-report-card').filter({hasText:'preloaded-evaluation-v1'}).getByText('Origen del reporte',{exact:true}).click();await capture(p,'cards-evaluation-light-1440',1440,false,p.getByText('preloaded-evaluation-v1',{exact:false}));
     const user=await api(student.context,'GET','/api/me');const data=await api(teacher.context,'GET',`/api/teacher/supervision/assignments/${preloadedAssignment.id}/students/${user.id}`);assert.ok(data.aiObservations.length>0);
     await teacher.page.goto(`${origin}/teacher/supervision/${preloadedAssignment.id}/students/${user.id}`);
     await teacher.page.getByLabel('Comentario para el estudiante').fill('Revisión humana IA-2 independiente de la evaluación preliminar.');await mutation(teacher.page,'Guardar decisión docente',/\/reviews$/);
     const reviewed=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.deepEqual(reviewed.learning.attempts,after.learning.attempts);
   });
   await ux2Qa({teacher,student,admin,assignment:preloadedAssignment,api,capture,check,origin});
+  await uxPolishQa({teacher,student,admin,assignment:preloadedAssignment,api,capture,check,origin});
   const pilot=await academicPilot({api,login,mutation,capture,check,qa,origin,root,browser,admin,student});
   assert.equal(pageErrors.length, 0);
   await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, preloadedSessionId:preloadedSession, pilot,elapsedMs:performance.now()-suiteStarted,requestMetrics:measuredRequests(),requestMetricScope:'api helper requests exclude CSRF setup; mutation timings include click/render until response. Raw negative-security calls and staged-error clicks outside helpers excluded. Per-route percentiles only for n>=20, nearest rank. Not provider latency.',scope: 'Prior journeys retained plus authored SQL pilot and UX-2 responsive charts, drawers, role navigation and unsaved draft protection. Mock proves workflow, not pedagogy; 429/503 and lost responses explicitly staged.' }, null, 2));

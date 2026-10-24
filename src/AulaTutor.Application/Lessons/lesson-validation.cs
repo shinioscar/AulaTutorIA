@@ -87,10 +87,9 @@ public static class LessonValidationRules
             try { LearningOrchestrator.ValidateExercise(e.Activity); }
             catch (Exception ex) when (ex is JsonException or NullReferenceException) { errors.Add($"Actividad {e.Id}: completa consigna, rúbrica, opciones y regla privada válida."); }
             if (e.Rubric.Criteria.Length == 0 || e.Rubric.Criteria.Any(string.IsNullOrWhiteSpace) || string.IsNullOrWhiteSpace(e.Rubric.HintRules)) errors.Add($"Actividad {e.Id}: completa criterios y reglas de pistas.");
-            if (e.Activity.Kind is "OpenResponse" or "Code") warnings.Add($"Actividad {e.Id}: evaluación orientativa; requiere revisión humana. No se ejecuta código ni SQL.");
+            if (e.Activity.Kind is "OpenResponse" or "Code") warnings.Add($"Actividad {e.Id}: requiere revisión humana.");
         }
         foreach (var o in p.Objectives.Where(o => !exercises.Any(e => e.ObjectiveId == o.Id))) errors.Add($"Objetivo {o.Id}: falta una actividad asociada.");
-        warnings.Add("La aprobación es responsabilidad docente; una regla válida no certifica corrección curricular ni dominio.");
         return new(errors.ToArray(), warnings.ToArray());
     }
 }

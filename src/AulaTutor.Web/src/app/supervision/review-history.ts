@@ -6,7 +6,7 @@ import { TeacherReview, supervisionLabel } from './supervision.service';
 @Component({selector:'app-review-history',imports:[DatePipe,SafeResponse],template:`
 @for(r of reviews();track r.id){<article><h3>{{r.target}}</h3>
   @for(h of r.history;track h.id){<details [open]="$first"><summary>Decisión docente {{h.revision}} · {{h.authorName}} · {{h.createdAt|date:'short'}} · {{label(h.state)}}</summary>
-    <p>{{label(h.attention)}} · {{label(h.outcome)}} · Sin calificación oficial</p>
+    <p>{{label(h.attention)}} · {{label(h.outcome)}}</p>
     <app-safe-response [text]="h.comment"/>
     @if(h.observation){<h4>Observación pedagógica</h4><app-safe-response [text]="h.observation"/>}
     @if(h.recommendation){<h4>Recomendación de refuerzo</h4><app-safe-response [text]="h.recommendation"/>}

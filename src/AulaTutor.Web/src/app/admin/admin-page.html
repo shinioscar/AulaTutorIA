@@ -1,5 +1,5 @@
-<p class="eyebrow">ADMINISTRACIÓN · PILOTO</p><h1>Usuarios y permisos</h1>
-<p>Aprueba solicitudes docentes, administra roles y habilita cuentas. Estos permisos no conceden acceso a conversaciones privadas.</p>
+<p class="eyebrow">ADMINISTRACIÓN</p><h1>Usuarios y permisos</h1>
+<p>Gestiona cuentas, roles y solicitudes docentes.</p>
 <p role="status" class="message">{{ message() }}</p>
 <div class="user-grid">
   @for (user of users(); track user.id) {
@@ -16,7 +16,7 @@
       <h3>Roles activos</h3>
       <div class="actions">
         @for (role of roles; track role) {
-          <button type="button" class="secondary" [attr.aria-pressed]="user.roles.includes(role)" (click)="toggleRole(user,role)" [disabled]="busy() || (role === 'Teacher' && user.teacherApproval !== 'Approved') || (role === 'Admin' && user.id === auth.user()?.id)">{{ user.roles.includes(role) ? 'Retirar' : 'Dar' }} {{ role }}</button>
+          <button type="button" class="secondary" [attr.aria-pressed]="user.roles.includes(role)" (click)="toggleRole(user,role)" [disabled]="busy() || (role === 'Teacher' && user.teacherApproval !== 'Approved') || (role === 'Admin' && user.id === auth.user()?.id)">{{ user.roles.includes(role) ? 'Retirar' : 'Dar' }} {{ role==='Teacher'?'acceso docente':role==='Student'?'acceso de estudiante':'acceso administrativo' }}</button>
         }
       </div>
       <button type="button" class="secondary" (click)="toggleStatus(user)" [disabled]="busy() || user.id === auth.user()?.id">{{ user.isActive ? 'Desactivar cuenta' : 'Activar cuenta' }}</button>

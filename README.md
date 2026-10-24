@@ -2,6 +2,7 @@
 
 UX-2 completada: navegación por rol, biblioteca visual y supervisión con
 gráficos de datos autorizados. [Cierre y comparación visual](docs/iterations/UX_2.md).
+[Afinado de textos e Inicio y sección Proveedor de IA](docs/iterations/UX_2_POLISH.md).
 
 Iteración 9 completada como [piloto SQL interno con datos ficticios](docs/pilot/README.md):
 338 pruebas .NET, 191 HTTP y 60 comprobaciones E2E aprobadas, sin cuota IA real.

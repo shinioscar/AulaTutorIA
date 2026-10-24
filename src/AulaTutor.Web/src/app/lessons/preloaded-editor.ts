@@ -4,11 +4,11 @@ import { LessonContent,PreloadedExercise } from './lesson.service';
 
 @Component({selector:'app-preloaded-editor',imports:[FormsModule],template:`
 <details><summary>Contenido precargado y modalidad</summary>
-<p>{{content().preloaded?'Tarjetas: actividades y ayudas locales sin IA durante los ejercicios.':'Clase conversacional. Importar V1 no añade pistas terminadas.'}}</p>
+<p>{{content().preloaded?'Tarjetas con actividades y ayudas preparadas.':'Clase conversacional con apoyo de IA.'}}</p>
 @if(!content().preloaded){<button type="button" class="secondary" (click)="enable()">Preparar modalidad precargada</button>}
 @else{<button type="button" class="secondary" (click)="content().preloaded=null;changed.emit()">Volver a modalidad conversacional en este borrador</button>
 @if(content().preloaded;as p){<label>Introducción (hasta 600 caracteres)<textarea name="preloaded-intro" [(ngModel)]="p.introduction" maxlength="600" (ngModelChange)="changed.emit()"></textarea></label>
-<p>Completa las ayudas de cada actividad. Las primeras pistas y el feedback no deben revelar claves o soluciones; revisión docente obligatoria.</p>
+<p>Prepara pistas graduales y revisa las ayudas antes de publicar.</p>
 @for(e of activities();track e.id){@if(aid(e.id);as a){<fieldset><legend>{{e.activity.prompt||e.id}}</legend>
 <label>Pistas progresivas (una por línea, 1–3, hasta 600 caracteres cada una)<textarea [name]="e.id+'-pre-hints'" [ngModel]="a.hints.join('\n')" (ngModelChange)="lines(a,'hints',$event)"></textarea></label>
 <label>Explicaciones alternativas (una por línea, 1–3)<textarea [name]="e.id+'-pre-alts'" [ngModel]="a.alternatives.join('\n')" (ngModelChange)="lines(a,'alternatives',$event)"></textarea></label>

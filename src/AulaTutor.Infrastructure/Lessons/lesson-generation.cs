@@ -138,7 +138,7 @@ public sealed partial class LessonService
         var sim = await db.LessonSimulations.AsNoTracking().SingleOrDefaultAsync(s => s.Id == simulationId && s.LessonId == id, ct) ?? throw Hidden();
         var content = LearningJson.Read<LessonContent>(sim.ContentJson); var section = content.Sections.ElementAtOrDefault(sim.SectionIndex); var exercise = section?.Exercises.ElementAtOrDefault(sim.ExerciseIndex);
         var ops = await db.LessonOperations.AsNoTracking().Where(o => o.LessonId == id && o.SimulationId == simulationId).OrderBy(o => o.CreatedAt).ThenBy(o => o.RequestId).ToArrayAsync(ct);
-        var view = new LessonSimulationView(sim.Id, id, sim.DraftRevision, sim.State, sim.Revision, content.Title, section?.Title ?? "Recorrido trabajado", section?.Content ?? "Puedes detener la simulación; el recorrido no certifica dominio.",
+        var view = new LessonSimulationView(sim.Id, id, sim.DraftRevision, sim.State, sim.Revision, content.Title, section?.Title ?? "Recorrido trabajado", section?.Content ?? "Recorrido completado. Puedes finalizar la simulación.",
             exercise is null ? null : new SimulationExerciseView(exercise.Id, exercise.Activity.Kind, exercise.Activity.Prompt, exercise.Activity.Options), sim.SectionIndex, content.Sections.Length, sim.HintCount, sim.Answered, ops.Select(OperationView).ToArray(), content.Preloaded is not null);
         await tx.CommitAsync(ct); return view;
     }

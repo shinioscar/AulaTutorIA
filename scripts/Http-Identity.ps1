@@ -157,7 +157,7 @@ try {
     Assert-Status (Invoke-Api $student.Session GET "/api/tutoring-sessions/$($tutoring.id)") 200 'Stored tutoring reopened'
     $completed = Invoke-Api $student.Session POST "/api/tutoring-sessions/$($tutoring.id)/complete" @{revision=$tutoring.revision}
     Assert-Status $completed 200 'Tutoring completion'
-    if (($completed.Content | ConvertFrom-Json).summary -notmatch 'sin llamada adicional') { throw 'Descriptive summary missing.' }
+    if (($completed.Content | ConvertFrom-Json).summary -notmatch 'Tutoría finalizada') { throw 'Descriptive summary missing.' }
     # Complete Iteration 4 A/B/C against the actual HTTPS API and PostgreSQL, Mock only.
     Assert-Status (Invoke-Api $admin PUT "/api/groups/$($group.id)/members" @{userId=$other.User.id;kind='Student'}) 204 'Learning student relationship'
     $learningCreate = Invoke-Api $other.Session POST '/api/tutoring-sessions/' @{requestId=[Guid]::NewGuid().ToString();topic='Fracciones';goal='Explicar y practicar fracciones';level='Beginner'}

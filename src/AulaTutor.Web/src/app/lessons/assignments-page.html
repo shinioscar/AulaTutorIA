@@ -1,5 +1,5 @@
 <a routerLink="/teacher/lessons">← Mis clases</a>
-<h1>Asignar clases publicadas</h1><p>Elige una versión concreta y un grupo autorizado. Las publicaciones futuras no cambiarán esa asignación.</p>
+<h1>Asignar clases publicadas</h1><p>Elige la versión de una clase y el grupo que la recibirá.</p>
 @if(error()){<p role="alert" class="notice danger">{{error()}}</p>}<p role="status">{{busy()?'Procesando…':notice()}}</p>
 <form (ngSubmit)="create()"><h2>Nueva asignación</h2>
   <label for="assignment-version">Clase y versión publicada</label><select id="assignment-version" name="version" [(ngModel)]="versionId" required [disabled]="busy()"><option value="">Selecciona una versión</option>@for(v of versions();track v.versionId){<option [value]="v.versionId">{{v.title}} · versión {{v.number}}{{older(v)?' · anterior':''}}</option>}</select>
@@ -8,7 +8,7 @@
   <label for="assignment-group">Grupo autorizado</label><select id="assignment-group" name="group" [(ngModel)]="groupId" required [disabled]="busy()"><option value="">Selecciona un grupo</option>@for(g of groups();track g.id){<option [value]="g.id">{{g.name}}</option>}</select>
   @if(!groups().length&&!busy()){<p>El administrador debe relacionarte con un grupo vigente.</p>}
   <div class="field-grid"><div><label for="assignment-from">Disponible desde (opcional)</label><input id="assignment-from" name="from" type="datetime-local" [(ngModel)]="from" [disabled]="busy()"/></div><div><label for="assignment-until">Disponible hasta (opcional)</label><input id="assignment-until" name="until" type="datetime-local" [(ngModel)]="until" [disabled]="busy()"/></div></div>
-  <p class="note">Fechas en tu horario local. Sin fechas, disponibilidad inmediata. Desactivar, retirar o cerrar el plazo conserva el trabajo en solo lectura mientras siga la relación académica.</p>
+  <p class="note">Fechas en tu horario local. Deja los campos vacíos para disponibilidad inmediata.</p>
   <button [disabled]="busy()||!selected()||!groupId">Confirmar asignación</button>
 </form>
 <h2>Asignaciones realizadas</h2><button type="button" class="secondary" (click)="load()" [disabled]="busy()">Actualizar asignaciones</button>
@@ -18,4 +18,4 @@
   @if(a.state!=='Withdrawn'){<div class="actions"><button type="button" class="secondary" (click)="edit(a)" [disabled]="busy()">Cambiar disponibilidad</button><button type="button" class="secondary" (click)="command(a,a.state==='Active'?'deactivate':'activate')" [disabled]="busy()">{{a.state==='Active'?'Desactivar asignación':'Reactivar asignación'}}</button><button type="button" class="secondary" (click)="command(a,'withdraw')" [disabled]="busy()">Retirar asignación</button></div>}
   @if(editing?.id===a.id){<form (ngSubmit)="command(a,'schedule')"><label [for]="a.id+'-from'">Nueva apertura</label><input [id]="a.id+'-from'" name="editFrom" type="datetime-local" [(ngModel)]="editFrom"/><label [for]="a.id+'-until'">Nuevo cierre</label><input [id]="a.id+'-until'" name="editUntil" type="datetime-local" [(ngModel)]="editUntil"/><button [disabled]="busy()">Guardar disponibilidad</button><button type="button" class="secondary" (click)="editing=null">Cerrar edición</button></form>}
   <details><summary>Historial de cambios · {{a.changes.length}}</summary>@for(c of a.changes;track $index){<p>{{c.changedAt|date:'short'}} · {{state(c.state)}} · {{c.action==='create'?'Creación':c.action==='schedule'?'Disponibilidad':c.action==='activate'?'Reactivación':c.action==='deactivate'?'Desactivación':'Retiro'}}</p>}</details>
-</article>}@empty{<p>No tienes asignaciones. Se conservan también las retiradas.</p>}
+</article>}@empty{<p>Todavía no tienes asignaciones.</p>}

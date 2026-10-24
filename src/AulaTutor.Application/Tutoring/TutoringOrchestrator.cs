@@ -102,7 +102,5 @@ public sealed class TutoringOrchestrator(IAiProvider provider)
         $"Se completaron {turns.Count(x => x.State == TutoringTurnState.Succeeded && x.Action != TutoringAction.FinalReport)} turnos de conversación; " +
         $"se solicitaron {turns.Count(x => x.Action == TutoringAction.Hint)} pistas y {turns.Count(x => x.Action == TutoringAction.Simplify)} explicaciones más sencillas.\n\n" +
         (string.IsNullOrWhiteSpace(session.CurrentFocus) ? "" : $"Último foco sugerido por IA: {session.CurrentFocus}\n\n") +
-        "Resumen descriptivo generado por la aplicación a partir del registro, sin llamada adicional de IA. " +
-        "Los turnos fallidos o cancelados permanecen en el historial. Repasa las preguntas y ejercicios de la conversación. " +
-        "Este resumen y la retroalimentación no certifican dominio ni constituyen una calificación oficial.";
+        "Repasa las preguntas y ejercicios de tu conversación.";
 }
