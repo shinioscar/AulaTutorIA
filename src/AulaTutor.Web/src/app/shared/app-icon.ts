@@ -1,0 +1,17 @@
+import { Component, input } from '@angular/core';
+
+/** Local interface symbols, independent of academic content. */
+@Component({selector:'app-icon',template:`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="paths[name()] || paths['book']"/></svg>`,styles:`:host{display:inline-flex;flex-shrink:0;width:1.35rem;height:1.35rem}svg{width:100%;height:100%}`})
+export class AppIcon {
+  readonly name=input('book');
+  readonly paths:Record<string,string>={
+    home:'m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9',
+    book:'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Zm0 0v14',
+    chart:'M4 20V10m8 10V4m8 16v-7',
+    assignment:'M8 3H5v18h14V3h-3M8 2h8v4H8V2Zm0 9h8m-8 5h5',
+    users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-4M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-8a4 4 0 0 1 0 8',
+    chat:'M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z',
+    settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-9 4h2m14 0h2M12 3v2m0 14v2M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2',
+    menu:'M4 6h16M4 12h16M4 18h16',
+  };
+}

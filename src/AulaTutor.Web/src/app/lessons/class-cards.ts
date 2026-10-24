@@ -10,13 +10,13 @@ import { ReportCard } from '../tutoring/report-card';
 <header><p class="eyebrow">Clase precargada · Versión {{a.class.versionNumber}}</p><h1>{{s.topic}}</h1><p>{{s.goal}}</p>
 <p>{{a.class.teacherName}} · {{a.class.groupName}}</p><p class="note">El docente responsable puede revisar las respuestas, intentos, ayudas y evaluación de esta clase.</p>
 @if(a.unavailableReason){<p class="notice warning" role="status">{{a.unavailableReason}}</p>}
-<p>Obligatorias entregadas: {{a.class.deliveredRequired}} / {{a.class.totalRequired}} · {{s.state==='Completed'?'Finalizada':s.state==='Paused'?'Pausada':'Tu recorrido'}}</p>
+<progress class="class-progress" [value]="a.class.deliveredRequired" [max]="a.class.totalRequired||1" [attr.aria-label]="'Actividades obligatorias entregadas: '+a.class.deliveredRequired+' de '+a.class.totalRequired"></progress><p>Obligatorias entregadas: {{a.class.deliveredRequired}} / {{a.class.totalRequired}} · {{s.state==='Completed'?'Finalizada':s.state==='Paused'?'Pausada':'Tu recorrido'}}</p>
 <p class="note">Las actividades y ayudas no solicitan IA. Entregar o coincidir con una regla no certifica dominio.</p></header>
-@for(m of introductions();track m.id){<details [open]="exercise()?.order===0"><summary>Introducción de la clase</summary><app-safe-response [text]="m.text"/></details>}
+
 @if(error()){<p class="notice danger" role="alert">{{error()}}</p>}
 <div class="cards-layout"><section class="exercise-card" aria-labelledby="card-title">
-<h2 id="card-title">{{a.sectionTitle}}</h2><app-safe-response [text]="a.sectionContent"/>
-@if(exercise();as e){<p><strong>Objetivo:</strong> {{objective(e.approvedObjectiveId)}}</p><p>Actividad {{e.order+1}} · {{e.required?'Obligatoria':'Opcional'}}</p><app-safe-response [text]="e.prompt"/>
+<h2 id="card-title">{{a.sectionTitle}}</h2><details class="activity-material"><summary>Material de esta actividad</summary><app-safe-response [text]="a.sectionContent"/></details>
+@if(exercise();as e){@if(objective(e.approvedObjectiveId)!==s.goal){<p><strong>Objetivo:</strong> {{objective(e.approvedObjectiveId)}}</p>}<p>Actividad {{e.order+1}} · {{e.required?'Obligatoria':'Opcional'}}</p><div class="activity-prompt"><app-safe-response [text]="e.prompt"/></div>
 @if(s.state==='Active'){
 <form (ngSubmit)="act('SubmitAttempt')"><fieldset [disabled]="blocked()"><legend>Tu respuesta</legend>
 @if(e.options.length){@for(o of e.options;track $index){<label class="option"><input type="radio" name="answer" [value]="o" [(ngModel)]="answer"/>{{o}}</label>}}
@@ -36,7 +36,7 @@ import { ReportCard } from '../tutoring/report-card';
 </section><aside aria-label="Ayudas de la actividad"><details open><summary>Pistas y explicaciones</summary><p>Solo recibirás cada ayuda cuando la solicites.</p>
 @if(s.state==='Active'&&exercise()){<button type="button" (click)="act('Hint')" [disabled]="blocked()">Dame una pista</button><button type="button" class="secondary" (click)="act('Simplify')" [disabled]="blocked()">Otra explicación</button>}
 @for(m of helps();track m.id){<article><app-safe-response [text]="m.text"/></article>}
-</details><button type="button" class="secondary" (click)="refresh.emit()">Consultar estado</button>
+</details>@for(m of introductions();track m.id){<details class="class-introduction"><summary>Introducción de la clase</summary><app-safe-response [text]="m.text"/></details>}<button type="button" class="secondary" (click)="refresh.emit()">Consultar estado</button>
 @if(uncertain()){<p role="status">No se confirmó el envío; conservamos tu respuesta.</p><button type="button" (click)="recover()" [disabled]="busy()">Recuperar misma solicitud</button>}
 @if(s.pendingRequestId;as key){@for(t of s.turns;track t.requestId){@if(t.requestId===key){<p role="status">{{t.error||'Evaluación pendiente. Puedes consultar el resultado local.'}}</p>@if(t.canRetry){<button type="button" (click)="act('FinalReport',true)" [disabled]="busy()">Reintentar evaluación</button>}<button type="button" class="secondary" (click)="cancel()" [disabled]="busy()">Cancelar evaluación pendiente</button>}}}
 </aside></div><p role="status">{{busy()?'Guardando…':''}}</p>`})

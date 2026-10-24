@@ -1,22 +1,45 @@
 <a class="skip-link" href="#content">Saltar al contenido</a>
-<header class="app-header">
-  <a class="brand" routerLink="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Zm0 0v14"/></svg></span><span>AulaTutor IA</span></a>
-  <nav aria-label="Navegación principal">
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Inicio</a>
-    @if (auth.user(); as user) {
-      @if(auth.hasRole('Student')){<a routerLink="/tutoring" routerLinkActive="active">Tutorías</a><a routerLink="/classes" routerLinkActive="active">Mis clases</a>}
-      @if(auth.hasRole('Teacher')){<a routerLink="/teacher/supervision" routerLinkActive="active">Supervisión docente</a><a routerLink="/teacher/lessons" routerLinkActive="active">Mis clases docentes</a><a routerLink="/teacher/assignments" routerLinkActive="active">Asignaciones</a><a routerLink="/teacher/reports" routerLinkActive="active">Reportes compartidos</a>}
-      @if (user.roles.length) { <a routerLink="/groups" routerLinkActive="active">Grupos</a> }
-      @if (auth.hasRole('Admin')) { <a routerLink="/admin/users" routerLinkActive="active">Administración</a><a routerLink="/admin/ai" routerLinkActive="active">Diagnóstico IA</a> }
-      <button type="button" class="secondary" (click)="logout()">Cerrar sesión</button>
-    } @else {
-      <a routerLink="/login" routerLinkActive="active">Entrar</a><a routerLink="/register" routerLinkActive="active">Registro</a>
-    }
-  </nav>
-  <app-theme-toggle />
-</header>
-<main id="content" tabindex="-1">
-  <p role="status" class="message">{{ message() }}</p>
-  <router-outlet />
-</main>
-<footer>Acompañamiento académico · Piloto con datos ficticios</footer>
+<div class="app-shell">
+  <header class="app-header">
+    <a class="brand" routerLink="/"><span class="brand-mark"><app-icon name="book" /></span><span>AulaTutor <span class="brand-accent">IA</span></span></a>
+    <button #menuButton class="secondary menu-toggle" type="button" aria-controls="main-navigation" [attr.aria-expanded]="menuOpen()" (click)="menuOpen.set(!menuOpen())"><app-icon name="menu" /> Menú</button>
+    <nav id="main-navigation" aria-label="Navegación principal" [class.menu-open]="menuOpen()" (keydown.escape)="menuOpen.set(false); menuButton.focus()" (click)="closeNavigation()">
+      <p class="nav-caption">Espacio de aprendizaje</p>
+      <a routerLink="/" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{exact:true}"><app-icon name="home" />Inicio</a>
+      @if(auth.user(); as user) {
+        @if(auth.hasRole('Student')) {
+          <a routerLink="/classes" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="book" />Mis clases</a>
+          <a routerLink="/tutoring" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="chat" />Tutorías</a>
+        }
+        @if(auth.hasRole('Teacher')) {
+          <a routerLink="/teacher/lessons" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="book" />Mis clases docentes</a>
+          <a routerLink="/teacher/assignments" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="assignment" />Asignaciones</a>
+          <a routerLink="/teacher/supervision" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="chart" />Supervisión docente</a>
+          <a routerLink="/teacher/reports" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="chat" />Reportes compartidos</a>
+        }
+        @if(user.roles.length) {<a routerLink="/groups" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="users" />Grupos</a>}
+        @if(auth.hasRole('Admin')) {
+          <a routerLink="/admin/users" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="users" />Administración</a>
+          <a routerLink="/admin/ai" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="settings" />Diagnóstico IA</a>
+        }
+        <button type="button" class="secondary logout" (click)="logout()">Cerrar sesión</button>
+      } @else {
+        <a routerLink="/login" routerLinkActive="active" ariaCurrentWhenActive="page">Entrar</a>
+        <a routerLink="/register" routerLinkActive="active" ariaCurrentWhenActive="page">Registro</a>
+      }
+    </nav>
+    <p class="sidebar-note">Aprender con claridad.<br>Enseñar con evidencia.</p>
+  </header>
+  <div class="app-workspace">
+    <div class="workspace-bar">
+      <span class="workspace-context">Tu espacio académico</span>
+      <app-theme-toggle />
+      @if(auth.user(); as user){<span class="user-identity"><span class="user-monogram" aria-hidden="true">{{user.displayName.slice(0,1)}}</span><span>{{user.displayName}}<small>{{roleText(user.roles)}}</small></span></span>}
+    </div>
+    <main id="content" tabindex="-1">
+      <p role="status" class="message">{{message()}}</p>
+      <router-outlet />
+    </main>
+    <footer>Acompañamiento académico · Piloto con datos ficticios</footer>
+  </div>
+</div>

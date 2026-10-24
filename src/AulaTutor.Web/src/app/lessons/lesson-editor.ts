@@ -1,10 +1,10 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { Observable, Subscription } from 'rxjs';
-import { LessonContent, LessonExercise, LessonService, LessonView, LessonOperation, LessonVersion, emptyLesson, lessonState, lessonAction } from './lesson.service';
+import { LessonContent, LessonExercise, LessonService, LessonView, LessonOperation, LessonVersion, emptyLesson, lessonState, lessonAction, exerciseKind } from './lesson.service';
 import { SafeResponse } from '../tutoring/safe-response';
 import { LessonSummary } from './lesson-summary';
 import { PreloadedEditor } from './preloaded-editor';
@@ -17,15 +17,17 @@ export class LessonEditor {
   readonly generating=signal(false);private designRequest:Subscription|null=null;
   readonly generationNotice=signal(this.route.snapshot.queryParamMap.get('generation')==='check');
   private mutationEpoch=0;
-  readonly actionLabel=lessonAction;
+  readonly actionLabel=lessonAction;readonly kindLabel=exerciseKind;
   readonly aiError=aiErrorMessage;readonly now=signal(Date.now());
   constructor(){if(this.route.snapshot.queryParamMap.get('mode')==='ai')this.tab.set('design');this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe(p=>{this.id=p.get('id')??'';this.dirty.set(false);this.version.set(null);this.refresh();});this.timer=setInterval(()=>{this.now.set(Date.now());if((this.generating()||this.lesson()?.operations.some(o=>o.isGenerating))&&!this.polling)this.poll();},2000);this.destroy.onDestroy(()=>clearInterval(this.timer));}
   editable(){return ['Draft','Simulation','InReview'].includes(this.lesson()?.state??'');}
   changed(){this.dirty.set(true);this.notice.set('Cambios sin guardar');}
+  hasUnsavedChanges(){return this.dirty();}
+  @HostListener('window:beforeunload',['$event']) beforeUnload(event:BeforeUnloadEvent){if(this.dirty())event.preventDefault();}
   private accept(l:LessonView,replace=false){if(this.lesson()?.id===l.id&&(this.lesson()?.revision??-1)>l.revision)return;if(!this.lesson()&&this.route.snapshot.queryParamMap.get('mode')==='ai')this.prompt=l.content.instructions;this.lesson.set(l);if(replace||!this.dirty()){this.content=structuredClone(l.content);this.dirty.set(false);}}
   private run(obs:Observable<LessonView>,notice:string,replace=false,mutation=true){if(this.busy())return;const epoch=mutation?++this.mutationEpoch:this.mutationEpoch;this.busy.set(true);this.error.set('');obs.pipe(takeUntilDestroyed(this.destroy)).subscribe({next:l=>{if(mutation){this.mutationEpoch++;this.accept(l,replace);}else if(epoch===this.mutationEpoch)this.accept(l,replace);this.busy.set(false);this.notice.set(notice);},error:e=>{if(mutation)this.mutationEpoch++;this.busy.set(false);this.error.set(e.error?.title??'No se completó la operación. Conservamos tus cambios; consulta el estado guardado.');}});}
   refresh(){this.run(this.service.get(this.id),'Estado guardado actualizado.',false,false);}
-  discardLocal(){this.dirty.set(false);this.refresh();}
+  discardLocal(){if(this.dirty()&&!window.confirm('¿Descartar los cambios locales y recuperar el borrador guardado?'))return;this.dirty.set(false);this.refresh();}
   private poll(){const epoch=this.mutationEpoch;this.polling=true;this.service.get(this.id).pipe(takeUntilDestroyed(this.destroy)).subscribe({next:l=>{if(epoch===this.mutationEpoch)this.accept(l);this.polling=false;},error:()=>{this.polling=false;}});}
   save(){const l=this.lesson();if(l)this.run(this.service.save(this.id,l.revision,this.content),'Borrador guardado.',true);}
   command(action:string,targetId:string|null=null){const l=this.lesson();if(!l||this.dirty())return;this.run(this.service.command(this.id,action,l.revision,targetId),'Operación guardada.',true);}

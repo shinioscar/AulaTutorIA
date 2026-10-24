@@ -34,7 +34,10 @@ const pairs = [
   ['text-primary','chat-tutor',4.5], ['text-primary','chat-student',4.5], ['text-secondary','chat-tutor',4.5], ['text-secondary','chat-student',4.5],
   ['code-text','code-background',4.5], ['code-inline-text','code-inline-background',4.5],
   ['focus','background',3], ['focus','surface',3], ['focus','surface-secondary',3], ['focus','surface-hover',3],
-  ['control-border','surface',3], ['control-border','surface-secondary',3], ['progress-fill','progress-track',3]
+  ['control-border','surface',3], ['control-border','surface-secondary',3], ['progress-fill','progress-track',3],
+  // UX-2 chart segments are decorative with a text table, but remain visible on their surface.
+  ['chart-primary','surface',3], ['chart-accent','surface',3], ['success','surface',3],
+  ['warning','surface',3], ['chart-primary','progress-track',3]
 ];
 const results = [];
 for (const [theme,tokens] of [['light',light],['dark',dark]]) {

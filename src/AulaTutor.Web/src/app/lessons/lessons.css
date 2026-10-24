@@ -12,3 +12,34 @@
 @media(max-width:640px){.creation-grid,.lesson-grid{grid-template-columns:1fr;gap:var(--space-4)}.creation-card,.lesson-card{padding:var(--space-4)}}
 .editor-steps{margin-block:var(--space-6)}.editor-steps [aria-current='step']{border-color:var(--primary);background:var(--info-surface);color:var(--info);font-weight:var(--weight-bold)}.ai-adjustments{margin-block:var(--space-4)}
 .creation-form label:has(input[type='checkbox']){display:flex;align-items:center;gap:var(--space-3);min-height:var(--target-min)}.creation-form input[type='checkbox']{width:var(--space-6);flex:0 0 var(--space-6);min-height:var(--target-min)}
+
+.library{background:transparent;border:0;padding:0;margin:0;box-shadow:none}
+.creation-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--space-2) var(--space-5);background:var(--info-surface);border-color:var(--border)}
+.creation-card:nth-child(2){background:var(--success-surface)}
+.creation-card .creation-icon{grid-row:1/4;align-self:center;background:var(--surface);width:var(--space-16);height:var(--space-16);border-radius:var(--radius-pill)}
+.creation-card h2,.creation-card p{margin:0}
+.creation-card h2{font-size:var(--font-large)}
+.creation-card>span:last-child{grid-column:2}
+.lesson-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr));gap:var(--space-4)}
+.lesson-card{padding:var(--space-4);overflow:hidden;transition:border-color var(--duration-fast) var(--ease-standard),box-shadow var(--duration-fast) var(--ease-standard)}
+.lesson-card:hover{border-color:var(--primary)}
+.lesson-cover{display:grid;place-items:center;height:6rem;background:var(--info-surface);color:var(--info);margin:calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-4);border-bottom:1px solid var(--border)}
+.lesson-cover svg{height:5rem;width:10rem}
+.lesson-card h3 a{text-decoration:none;color:var(--text-primary)}
+.lesson-badge[data-state='Published']{background:var(--success-surface);color:var(--success)}
+.lesson-badge[data-state='Draft'],.lesson-badge[data-state='InReview']{background:var(--warning-surface);color:var(--warning)}
+.creation-layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.8fr);align-items:start;gap:var(--space-6);margin-top:var(--space-5)}
+.creation-layout .creation-form{max-width:none;margin:0}
+.creation-guide{position:sticky;top:var(--space-6);padding:var(--space-6);border:1px solid var(--border);border-radius:var(--radius-large);background:var(--surface)}
+.creation-guide dl{margin-block:var(--space-5)}
+.creation-guide dl div{display:flex;justify-content:space-between;gap:var(--space-4);padding-block:var(--space-3);border-bottom:1px solid var(--border)}
+.creation-guide dt{color:var(--text-secondary)}.creation-guide dd{margin:0;font-weight:var(--weight-semibold);text-align:right}
+.creation-roadmap{padding-left:var(--space-5)}.creation-roadmap li{padding-left:var(--space-2);margin-bottom:var(--space-5)}.creation-roadmap p{margin-block:var(--space-1);color:var(--text-secondary);font-size:var(--font-small)}
+.activity-preview{display:block;color:var(--text-secondary);font-weight:var(--weight-medium);font-size:var(--font-small);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1199px){.creation-layout{grid-template-columns:minmax(0,1fr)}.creation-guide{position:static}}
+@media(max-width:639px){.creation-card{padding:var(--space-4);gap:var(--space-3)}.creation-card .creation-icon{width:var(--space-10);height:var(--space-10)}.creation-guide{padding:var(--space-4)}}
+
+.creation-form h1{font-size:clamp(1.8rem,3vw,2.5rem)}
+.creation-form textarea{min-height:6rem}
+.creation-form>p{margin-block:var(--space-3)}
+.creation-card:hover{border-color:var(--primary)}

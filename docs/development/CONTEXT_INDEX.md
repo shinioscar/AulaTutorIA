@@ -10,7 +10,7 @@ sobre los límites históricos de un ADR; no autorizan encargos nuevos.
 | Tarea | Reglas/decisiones y contratos que consultar |
 |---|---|
 | Arquitectura/backend/API | [Mapa](../architecture/README.md), [ADR-001–010](../decisions/ADR-001-010.md), [fundaciones](../decisions/ADR-011-fundaciones.md); contrato de la fila funcional |
-| Frontend/UX/temas | [Diseño](../design/DESIGN_SYSTEM.md), [tokens](../design/THEME_TOKENS.md), [componentes](../design/COMPONENT_GUIDELINES.md), [ADR-020](../decisions/ADR-020-temas-y-sistema-visual.md), [UX docente ADR-026](../decisions/ADR-026-creacion-docente-progresiva.md) |
+| Frontend/UX/temas | [Diseño](../design/DESIGN_SYSTEM.md), [tokens](../design/THEME_TOKENS.md), [componentes](../design/COMPONENT_GUIDELINES.md), [ADR-020](../decisions/ADR-020-temas-y-sistema-visual.md), [UX docente ADR-026](../decisions/ADR-026-creacion-docente-progresiva.md), [navegación/gráficos UX-2 ADR-029](../decisions/ADR-029-navegacion-y-supervision-visual.md) |
 | Identity/permisos/grupos | [ADR-012](../decisions/ADR-012-identidad-y-autorizacion.md), [bootstrap/BD ADR-013](../decisions/ADR-013-persistencia-y-bootstrap.md), [contraseña/búsqueda ADR-015](../decisions/ADR-015-contrasenas-y-busqueda.md), [HTTP](../architecture/IDENTITY_HTTP.md) |
 | PostgreSQL/migraciones | [ADR-013](../decisions/ADR-013-persistencia-y-bootstrap.md), [integridad/leases ADR-017](../decisions/ADR-017-integridad-de-turnos.md), ADR del módulo (021/023/024/025 abajo), [operación/backup](../architecture/OPERATIONS.md); migraciones existentes en src/AulaTutor.Infrastructure/Persistence/Migrations |
 | Tutoría privada/política/turnos | [ADR-016](../decisions/ADR-016-tutorias-privadas.md), [ADR-017](../decisions/ADR-017-integridad-de-turnos.md), [formatos/recuperación ADR-022](../decisions/ADR-022-formatos-groq-y-recuperacion.md), [HTTP](../architecture/TUTORING_HTTP.md) |
@@ -52,3 +52,6 @@ Diagnóstico posterior de límites/errores: [QA de importación](../iterations/Q
   concreto, no cargar todos. El historial Git conserva el AGENTS anterior en 1966caf.
 - [OPT-1](../iterations/OPT_1.md) explica la clasificación/preservación y la medición;
   consultarlo para auditar esta reorganización, no como contexto obligatorio diario.
+
+- Rediseño UX-2 verificado: [UX-2](../iterations/UX_2.md), con auditoría,
+  navegación y gráficos sobre los contratos actuales, con QA visual comparativa.

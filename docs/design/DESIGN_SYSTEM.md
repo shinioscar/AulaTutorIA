@@ -66,11 +66,12 @@ Admin ve metadatos operativos, sin permiso implícito sobre conversaciones/repor
 
 ## Responsive y accesibilidad
 
-UI-0 conserva la navegación de cabecera: en escritorio se distribuye horizontalmente;
-en tablet/móvil, marca/tema en primera fila y enlaces con ajuste de línea en la segunda.
-No se sustituye ahora por un sidebar completo. Futura navegación lateral: colapsable
-en tablet y drawer etiquetado en móvil, con foco controlado, Escape y retorno de foco.
-Se deben conservar filtros de rol y la ruta activa; el menú nunca concede autorización.
+UX-2 amplía la disposición UI-0/UI-1 por encargo explícito (ADR-029): sidebar
+con rutas existentes y estado activo en escritorio; por debajo de 1024 px,
+menú desplegable en flujo normal con aria-expanded, Escape y retorno de foco.
+Marca, identidad y tema conservan orientación. Al elegir una ruta, el foco vuelve
+al contenido. El menú filtra capacidades del actor y nunca concede autorización.
+
 
 Tamaño táctil de botones/enlaces de navegación: mínimo 44 px. Foco visible de 3 px,
 teclado nativo, labels de formulario y estados con texto; el color nunca sustituye
@@ -97,3 +98,9 @@ Usar esta guía y COMPONENT_GUIDELINES.md antes de nuevas pantallas. Añadir tok
 solo cuando el significado nuevo lo requiera; no copiar colores del mockup en un
 componente. Cualquier dashboard posterior mantiene privacidad y datos verificables,
 reutiliza ambos temas y registra excepciones visuales. UI-0 no autoriza Iteración 5.
+
+Rediseño UX-2 implementado: navegación lateral, resúmenes y detalle por rol;
+seguimiento y límites de verificación en [UX-2](../iterations/UX_2.md). Las cuatro
+referencias `references/ux-2/` orientan composición y jerarquía, sin autorizar sus
+funciones ni sus estadísticas ilustrativas. Este encargo amplía la disposición
+visual histórica UI-0/UI-1; los contratos académicos y de privacidad se mantienen.

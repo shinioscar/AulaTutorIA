@@ -1,0 +1,20 @@
+:host{display:block;min-width:0}
+.chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-5);margin-block:var(--space-6)}
+figure{margin:0;padding:var(--space-5);border:1px solid var(--border);border-radius:var(--radius-large);background:var(--surface);box-shadow:var(--shadow-card);min-width:0}
+figcaption{font-weight:var(--weight-bold);font-size:var(--font-large)}
+.distribution{display:grid;grid-template-columns:minmax(7rem,1fr) minmax(0,1.4fr);gap:var(--space-3);align-items:center}
+svg{width:100%;max-width:12rem;justify-self:center}
+.ring-track{stroke:var(--progress-track)}
+.ring-total{fill:var(--text-primary);font-size:22px;font-weight:var(--weight-bold)}
+.ring-label{fill:var(--text-secondary);font-size:9px}
+.completed{stroke:var(--success);background:var(--success)}.active{stroke:var(--chart-primary);background:var(--chart-primary)}.paused{stroke:var(--warning);background:var(--warning)}.created{stroke:var(--chart-accent);background:var(--chart-accent)}.unopened{stroke:var(--text-secondary);background:var(--text-secondary)}
+
+.legend{display:inline-block;width:.6rem;height:.6rem;margin-right:var(--space-2);border-radius:var(--radius-pill)}
+th,td{font-size:var(--font-small);padding:var(--space-2) 0;background:var(--surface);font-weight:var(--weight-medium)}td{text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--weight-bold)}
+.objective-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-2);margin-block:var(--space-4);font-size:var(--font-small)}
+progress{width:100%;height:.7rem;grid-column:1/-1;border:0;border-radius:var(--radius-pill);overflow:hidden}
+progress::-webkit-progress-bar{background:var(--progress-track)}progress::-webkit-progress-value{background:var(--progress-fill)}progress::-moz-progress-bar{background:var(--progress-fill)}
+.chart-empty{padding-block:var(--space-8);color:var(--text-secondary)}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media(max-width:1199px){.chart-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:389px){.distribution{grid-template-columns:minmax(0,1fr)}svg{max-width:9rem}}

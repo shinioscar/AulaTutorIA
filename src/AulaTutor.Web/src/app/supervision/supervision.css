@@ -6,3 +6,28 @@
 .check input{width:var(--space-5);min-height:var(--space-5);flex-shrink:0}
 fieldset{margin-block:var(--space-4)}
 a{display:inline-flex;align-items:center;min-height:var(--target-min)}
+.student-list{margin-block:var(--space-5)}
+.student-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) minmax(0,1fr) auto;align-items:center;gap:var(--space-4);background:var(--surface);border:0;border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:var(--space-4) 0}
+.student-row h3,.student-row p{margin-block:var(--space-2)}
+.student-row progress{width:100%;height:.6rem}
+.student-row .lesson-badge{font-size:var(--font-xs)}
+.drawer-tabs{margin-block:var(--space-5);gap:var(--space-2)}
+[aria-pressed='true']{background:var(--info-surface);color:var(--info);border-color:var(--info)}
+@media(max-width:1199px){.student-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:599px){.student-row{grid-template-columns:minmax(0,1fr);gap:var(--space-2)}}
+
+.overview-metrics p{background:var(--surface);border-top:3px solid var(--primary);margin-block:var(--space-3);padding:var(--space-5);box-shadow:var(--shadow-card)}
+.overview-metrics p:nth-child(2){border-top-color:var(--success)}.overview-metrics p:nth-child(3){border-top-color:var(--warning)}.overview-metrics p:nth-child(4){border-top-color:var(--accent)}
+.overview-metrics strong{font-size:var(--font-heading);margin-top:var(--space-3)}
+.assignment-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,18rem),1fr));gap:var(--space-4);margin-block:var(--space-5)}
+.assignment-card{margin:0;background:var(--surface);padding:var(--space-5);display:flex;flex-direction:column}
+.assignment-card progress{width:100%}.assignment-card a{margin-top:auto}
+
+.attention-case{border:1px solid var(--border);border-radius:var(--radius-medium);padding:var(--space-3);margin-block:var(--space-3);background:var(--surface)}
+.attention-case article{background:var(--surface-secondary)}
+
+.participation-detail{padding:var(--space-3) var(--space-5);border:1px solid var(--border);border-radius:var(--radius-large);background:var(--surface);margin-block:var(--space-5)}
+
+.overview-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1199px){.overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:599px){.overview-metrics{grid-template-columns:minmax(0,1fr)}}

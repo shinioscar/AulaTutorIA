@@ -1,8 +1,9 @@
 import { Routes } from '@angular/router';
 import { signedInGuard, adminGuard, studentGuard, teacherGuard } from './auth/auth.service';
+import { pendingChangesGuard } from './shared/pending-changes';
 
 export const routes: Routes = [
-  {path:'teacher/supervision/:id/students/:studentId',canActivate:[teacherGuard],loadComponent:()=>import('./supervision/supervision-page').then(m=>m.SupervisionPage)},
+  {path:'teacher/supervision/:id/students/:studentId',canActivate:[teacherGuard],canDeactivate:[pendingChangesGuard],loadComponent:()=>import('./supervision/supervision-page').then(m=>m.SupervisionPage)},
   {path:'teacher/supervision/:id',canActivate:[teacherGuard],loadComponent:()=>import('./supervision/supervision-page').then(m=>m.SupervisionPage)},
   {path:'teacher/supervision',canActivate:[teacherGuard],loadComponent:()=>import('./supervision/supervision-page').then(m=>m.SupervisionPage)},
   {path:'teacher/assignments',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/assignments-page').then(m=>m.AssignmentsPage)},
@@ -11,7 +12,7 @@ export const routes: Routes = [
   {path:'teacher/lessons/:id/simulations/:simulationId',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lesson-simulation').then(m=>m.LessonSimulation)},
   {path:'teacher/lessons/new/manual',canActivate:[teacherGuard],data:{mode:'manual'},loadComponent:()=>import('./lessons/lesson-create').then(m=>m.LessonCreate)},
   {path:'teacher/lessons/new/ai',canActivate:[teacherGuard],data:{mode:'ai'},loadComponent:()=>import('./lessons/lesson-create').then(m=>m.LessonCreate)},
-  {path:'teacher/lessons/:id',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lesson-editor').then(m=>m.LessonEditor)},
+  {path:'teacher/lessons/:id',canActivate:[teacherGuard],canDeactivate:[pendingChangesGuard],loadComponent:()=>import('./lessons/lesson-editor').then(m=>m.LessonEditor)},
   {path:'teacher/lessons',canActivate:[teacherGuard],loadComponent:()=>import('./lessons/lessons-page').then(m=>m.LessonsPage)},
   {path:'teacher/reports',canActivate:[signedInGuard],loadComponent:()=>import('./tutoring/shared-reports-page').then(m=>m.SharedReportsPage)},
   {path:'tutoring',canActivate:[studentGuard],loadComponent:()=>import('./tutoring/sessions-page').then(m=>m.SessionsPage)},

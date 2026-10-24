@@ -80,7 +80,7 @@ supondría rediseño fuera de UI-0. Los componentes nuevos usan estas escalas.
 
 ## Comprobación
 
-`npm run check:theme` ejecuta `scripts/verify-theme.mjs`: 35 pares en cada tema,
+`npm run check:theme` ejecuta `scripts/verify-theme.mjs`: 40 pares en cada tema,
 comparación sin redondear con 4.5:1/3:1, colores centralizados y tokens referenciados
 existentes. `node scripts/verify-theme.mjs --report` guarda resultados privados
 reproducibles en artifacts/ui-0/contrast.json. Integrado en Verify.ps1.
@@ -96,3 +96,8 @@ reproducibles en artifacts/ui-0/contrast.json. Integrado en Verify.ps1.
 
 Estas mediciones de tokens no sustituyen pruebas de contenido real, teclado,
 contraste compuesto ni una auditoría completa de accesibilidad.
+
+UX-2 añade cinco verificaciones por tema: chart-primary, chart-accent, success y
+warning sobre surface, más chart-primary sobre progress-track (mínimo 3:1).
+El segmento text-secondary ya supera el control de texto de 4.5:1 existente.
+Las etiquetas y la tabla siguen siendo necesarias para interpretar los valores.

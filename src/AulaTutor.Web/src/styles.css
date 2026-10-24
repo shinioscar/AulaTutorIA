@@ -1,4 +1,5 @@
 @import './styles/theme-tokens.css';
+@import './styles/app-shell.css';
 
 :root { font-family: var(--font-sans); color: var(--text-primary); background: var(--background); }
 * { box-sizing: border-box; }
@@ -62,3 +63,8 @@ progress { accent-color: var(--progress-fill); background: var(--progress-track)
 @media(max-width: 900px) { .app-header { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); } .app-header nav { grid-row: 2; grid-column: 1 / -1; justify-content: flex-start; gap: var(--space-1); } .app-header app-theme-toggle { grid-row: 1; grid-column: 2; } }
 @media(max-width: 600px) { main { margin: var(--space-4) auto; } section { padding: var(--space-4); } .actions { gap: var(--space-3); } nav { font-size: var(--font-small); } }
 @media(prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; scroll-behavior: auto !important; } }
+
+progress{appearance:none;width:100%;height:.7rem;border:0;border-radius:var(--radius-pill);overflow:hidden}
+progress::-webkit-progress-bar{background:var(--progress-track)}
+progress::-webkit-progress-value{background:var(--progress-fill)}
+progress::-moz-progress-bar{background:var(--progress-fill)}

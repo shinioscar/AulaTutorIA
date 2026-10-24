@@ -7,9 +7,9 @@ plantillas, no elegir colores por rol, no usar CSS hex/rgb/hsl en componentes.
 
 Marca y botón de tema visibles antes y después de autenticación. Enlaces solo a
 rutas existentes y capacidades del actor; backend sigue autorizando cada recurso.
-La ruta activa tiene subrayado y peso, además de color. En móvil, enlaces ajustan
-líneas con áreas táctiles de 44 px. La futura sidebar/drawer debe ser etiquetada,
-mostrar ruta activa y gestionar foco/Escape sin ocultar acciones esenciales.
+La ruta activa tiene borde y peso, además de color. UX-2 utiliza sidebar en
+escritorio y menú desplegable en móvil, con áreas táctiles de 44 px, etiqueta,
+aria-expanded, Escape y retorno de foco; ver ADR-029.
 
 ThemeToggle es un botón nativo: nombre accesible estable «Tema oscuro», aria-pressed
 indica si está activo, icono decorativo y etiqueta visible estable «Oscuro», incluida
@@ -103,3 +103,20 @@ decisiones humanas; denominadores explícitos, sin porcentajes de dominio. Selec
 de revisión usan labels explícitos separados de opciones; tablas se sustituyen
 por tarjetas legibles en móvil. Feedback Student conserva autor/fecha/historial.
 No es un rediseño completo de dashboards. QA específico en iterations/QA_7.md.
+
+## Evolución UX-2
+
+El encargo UX-2 autoriza navegación lateral y detalle superpuesto sobre las rutas
+existentes. El shell conserva filtrado por rol; en móvil utiliza un desplegable
+nativo en el flujo, con aria-expanded, Escape y retorno al botón. Al elegir una
+ruta, el foco vuelve al área principal. La apertura no guarda preferencias nuevas.
+
+`DetailDrawer` usa dialog nativo: fondo inerte, ciclo explícito de Tab/Shift+Tab, Escape, cierre visible,
+scroll interno y retorno de foco. En Supervisión es solo lectura; registrar una
+revisión se realiza en su página completa. Cada apertura consulta el endpoint
+individual vigente; cerrar/recargar invalida las respuestas pendientes.
+
+Gráficos de UX-2: SVG para estados disjuntos de una asignación, tabla equivalente,
+y progress con cantidad y denominador para entregas por objetivo. No sumar
+estudiantes entre asignaciones ni confundir entregas NeedsReview con aciertos.
+Ver auditoría y verificación pendiente en [UX-2](../iterations/UX_2.md).

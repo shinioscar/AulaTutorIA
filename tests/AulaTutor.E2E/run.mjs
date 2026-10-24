@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { academicPilot } from './academic-pilot.mjs';
+import { ux2Qa } from './ux2-qa.mjs';
 const suiteStarted=performance.now();
 const requestMetrics=[];
 const root = path.resolve(import.meta.dirname, '../..');
@@ -14,7 +15,7 @@ const { chromium } = require(process.env.AULATUTOR_PLAYWRIGHT_MODULE || 'playwri
 const qa = JSON.parse(await fs.readFile(path.join(root, '.cache/http-qa.json'), 'utf8'));
 assert.match(qa.database, /^aulatutor_http_[a-f0-9]{32}$/);
 const origin = 'https://localhost:4200';
-const evidence = path.join(root, 'docs/iterations/evidence-9'); await fs.mkdir(evidence, { recursive: true });
+const evidence = path.join(root, process.env.AULATUTOR_E2E_EVIDENCE || 'docs/iterations/evidence-ux-2'); await fs.mkdir(evidence, { recursive: true });
 const results = []; const pageErrors = []; let step = 'startup'; let browser, lastPage;
 await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'running', checks: [] }));
 const generationTimes = new WeakMap();
@@ -54,7 +55,7 @@ async function mutation(page, name, pattern) {
 async function capture(page, name, width = 1440, dark = false, focus = null) {
   await page.setViewportSize({ width, height: width < 600 ? 900 : 1000 });
   // Exercise the actual theme control and its persisted preference.
-  const toggle = page.getByRole('button', { name: 'Tema oscuro', exact: true });
+  const toggle = page.locator('app-theme-toggle button'); // Read current theme even while a native dialog makes the shell inert.
   if ((await toggle.getAttribute('aria-pressed') === 'true') !== dark) await toggle.click();
   await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, dark ? 'dark' : 'light');
   if (focus) await focus.scrollIntoViewIfNeeded();
@@ -355,7 +356,7 @@ try {
     await p.getByRole('button',{name:'Dame una pista',exact:true}).focus();await p.keyboard.press('Tab');
     const cardFocus=await p.evaluate(()=>({outline:getComputedStyle(document.activeElement).outlineStyle,width:parseFloat(getComputedStyle(document.activeElement).outlineWidth),keys:Object.keys(localStorage),session:Object.keys(sessionStorage)}));
     assert.notEqual(cardFocus.outline,'none');assert.ok(cardFocus.width>=2);assert.deepEqual(cardFocus.session,[]);assert.ok(cardFocus.keys.every(k=>k==='aulatutor.theme.v1'));
-    for(const width of [320,390,1440])for(const dark of [false,true])await capture(p,`cards-${width}-${dark?'dark':'light'}`,width,dark,p.getByRole('heading',{name:'Introducción y práctica',exact:true}));
+    for(const width of [320,390,768,1024,1440])for(const dark of [false,true])await capture(p,`cards-${width}-${dark?'dark':'light'}`,width,dark,p.getByRole('heading',{name:'Introducción y práctica',exact:true}));
     await mutation(p,'Dame una pista',/\/cards$/);
     await p.route('**/api/tutoring-sessions/*/cards',async route=>{const response=await route.fetch();assert.ok(response.ok());await route.abort('failed');},{times:1});
     await p.getByRole('button',{name:'Dame una pista',exact:true}).click();await p.getByRole('button',{name:'Recuperar misma solicitud',exact:true}).waitFor();await mutation(p,'Recuperar misma solicitud',/\/cards$/);
@@ -379,9 +380,10 @@ try {
     await teacher.page.getByLabel('Comentario para el estudiante').fill('Revisión humana IA-2 independiente de la evaluación preliminar.');await mutation(teacher.page,'Guardar decisión docente',/\/reviews$/);
     const reviewed=await api(student.context,'GET','/api/tutoring-sessions/'+preloadedSession);assert.deepEqual(reviewed.learning.attempts,after.learning.attempts);
   });
+  await ux2Qa({teacher,student,admin,assignment:preloadedAssignment,api,capture,check,origin});
   const pilot=await academicPilot({api,login,mutation,capture,check,qa,origin,root,browser,admin,student});
   assert.equal(pageErrors.length, 0);
-  await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, preloadedSessionId:preloadedSession, pilot,elapsedMs:performance.now()-suiteStarted,requestMetrics:measuredRequests(),requestMetricScope:'api helper requests exclude CSRF setup; mutation timings include click/render until response. Raw negative-security calls and staged-error clicks outside helpers excluded. Per-route percentiles only for n>=20, nearest rank. Not provider latency.',scope: 'Prior 45 checks retained plus authored SQL pilot. Mock proves workflow, not pedagogy; 429/503 and lost responses explicitly staged.' }, null, 2));
+  await fs.writeFile(path.join(root, 'artifacts/iteration-9-e2e.json'), JSON.stringify({ status: 'passed', checks: results, javascriptErrors: pageErrors.length, preloadedSessionId:preloadedSession, pilot,elapsedMs:performance.now()-suiteStarted,requestMetrics:measuredRequests(),requestMetricScope:'api helper requests exclude CSRF setup; mutation timings include click/render until response. Raw negative-security calls and staged-error clicks outside helpers excluded. Per-route percentiles only for n>=20, nearest rank. Not provider latency.',scope: 'Prior journeys retained plus authored SQL pilot and UX-2 responsive charts, drawers, role navigation and unsaved draft protection. Mock proves workflow, not pedagogy; 429/503 and lost responses explicitly staged.' }, null, 2));
   console.log(`E2E passed: ${results.length} checks; Mock only.`);
 } catch (error) {
   const safe = String(error.message).split(qa.password).join('[redacted]');
