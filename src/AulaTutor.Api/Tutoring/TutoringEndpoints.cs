@@ -8,6 +8,8 @@ public static class TutoringEndpoints
     public static void MapTutoringEndpoints(this WebApplication app)
     {
         var sessions = app.MapGroup("/api/tutoring-sessions").RequireAuthorization().AddEndpointFilter<IdentityValidationFilter>();
+        sessions.MapGet("/prepared-options", async (ITutoringService service, CancellationToken ct) => TypedResults.Ok(await service.PreparedOptionsAsync(ct)));
+        sessions.MapPost("/{id:guid}/prepared-plan/start", async (Guid id, StartPreparedPlanRequest request, ITutoringService service, CancellationToken ct) => TypedResults.Ok(await service.StartPreparedPlanAsync(id, request, ct)));
         sessions.MapPost("/{id:guid}/cards", async (Guid id, TutoringTurnRequest request, ITutoringService service, CancellationToken ct) => TypedResults.Ok(await service.SendCardAsync(id, request, ct)))
             .WithSummary("Acciones locales exclusivamente para clases precargadas autorizadas; sin IA ni evaluación final en esta ruta.");
         sessions.MapPost("/", async (CreateTutoringRequest request, ITutoringService service, CancellationToken ct) =>

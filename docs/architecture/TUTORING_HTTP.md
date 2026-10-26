@@ -93,4 +93,8 @@ opcional posterior al cierre. [Contrato y límites](PRELOADED_CLASSES.md).
 
 ## Ampliación BYOK-1
 
+LEARN-1 añade ejes experience/modality y extensión opcionales, PrepareSession,
+tarjetas privadas y plan diagnóstico agrupado, sin convertir sesiones anteriores.
+[Contrato preparado](PREPARED_LEARNING.md).
+
 [Conexiones personales](PERSONAL_AI.md) fijan conexión/revisión/modelo al crear la sesión. Cambiar selección afecta creaciones posteriores; revocar la conexión impide nueva inferencia y descarta resultados tardíos. Replays y evidencias persistidas se conservan. Las sesiones anteriores mantienen proveedor institucional. Errores seguros adicionales: CreditsRequired y PaymentAuthorizationRequired; nunca cambian de proveedor automáticamente.

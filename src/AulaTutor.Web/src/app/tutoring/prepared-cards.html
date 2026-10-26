@@ -1,0 +1,57 @@
+@let s=session();@let p=s.prepared!;
+<header><p class="eyebrow">{{diagnostic()?'DIAGNÓSTICO PREPARADO':'TUTORÍA PREPARADA'}} · PRIVADO</p><h1>{{s.topic}}</h1><p>{{s.goal}}</p>
+<p class="note">{{s.providerId}} · {{s.modelId}}</p>
+<progress class="class-progress" [value]="p.delivered" [max]="p.total" [attr.aria-label]="'Actividades respondidas: '+p.delivered+' de '+p.total"></progress><p>Actividades respondidas: {{p.delivered}} / {{p.total}} · {{s.state==='Completed'?'Finalizada':s.state==='Paused'?'Pausada':p.generationState==='Ready'?'Contenido listo':'Preparación pendiente'}}</p></header>
+@if(error()){<p class="notice danger" role="alert">{{error()}}</p>}
+<p role="status">{{busy()?(p.generationState!=='Ready'?'Preparando tu '+(diagnostic()?'diagnóstico':'tutoría')+'…':'Guardando…'):''}}</p>
+<div class="cards-layout"><section class="exercise-card" aria-labelledby="prepared-activity-title">
+@if(p.generationState!=='Ready'){
+  <h2 id="prepared-activity-title">Prepara tu recorrido</h2><p>Se enviarán tu tema, nivel y objetivo al proveedor seleccionado. Después podrás avanzar sin nuevas solicitudes durante las actividades.</p>
+  <button type="button" (click)="act('PrepareSession')" [disabled]="blocked()">{{diagnostic()?'Preparar diagnóstico':'Preparar tutoría'}}</button><a routerLink="/ai-provider">Revisar proveedor</a>
+} @else if(s.state==='Created'){
+  <h2 id="prepared-activity-title">Todo listo para comenzar</h2><p>{{p.total}} {{diagnostic()?'preguntas sin ayudas. Los resultados se muestran al finalizar.':'actividades con explicaciones, ejemplos y pistas.'}}</p>
+  <button type="button" (click)="act('Start')" [disabled]="blocked()">Comenzar {{diagnostic()?'diagnóstico':'tutoría preparada'}}</button>
+} @else if(s.state==='Completed'){
+  <h2 id="prepared-activity-title">Tus resultados</h2><p>{{s.summary}}</p>
+  @if(s.learning.reports[0];as r){
+    <dl class="prepared-overview"><div><dt>Actividades respondidas</dt><dd>{{p.delivered}} / {{p.total}}</dd></div><div><dt>Coinciden con reglas</dt><dd>{{r.statistics.correctWithoutHelp+r.statistics.correctWithHelp}}</dd></div><div><dt>Requieren revisión</dt><dd>{{r.statistics.needsReview}}</dd></div></dl>
+    @if(r.providerId!=='Application'){<h3>Análisis preliminar con IA</h3><app-safe-response [text]="r.content.summary"/><h3>Próximos pasos</h3><ul>@for(item of r.content.recommendations;track $index){<li>{{item.goal}}</li>}</ul>}
+  }
+  @if(!evaluated()){
+    <p class="notice info">Tu resultado local está guardado. Puedes solicitar {{diagnostic()?'el análisis y tu plan juntos':'un análisis cualitativo'}} con IA.</p>
+    <button type="button" (click)="act('FinalReport')" [disabled]="blocked()">{{diagnostic()?'Analizar resultados y preparar mi plan':'Solicitar evaluación final con IA'}}</button>
+  }
+  @if(s.learning.plan;as plan){<section class="plan-next"><h3>Comenzar mi plan</h3><p>Elige un objetivo y cómo quieres trabajarlo. Crear la tutoría conserva tu aceptación; preparar su contenido requiere otra acción.</p>
+    <label for="prepared-plan-objective">Objetivo de tu plan</label><select id="prepared-plan-objective" [(ngModel)]="objectiveOrder">@for(o of plan.content.objectives;track $index){<option [value]="$index">{{o.title}} · {{o.progress==='Worked'?'Trabajado':'Por trabajar'}}</option>}</select>
+    <label for="prepared-plan-mode">Modalidad de tutoría</label><select id="prepared-plan-mode" [(ngModel)]="planModality"><option value="Prepared">Tutoría preparada</option><option value="Conversational">Tutoría conversacional</option></select>
+    <p class="note">La nueva tutoría usará tu proveedor activo. La opción preparada comienza con una sesión corta.</p>
+    <button type="button" (click)="startPlan()" [disabled]="blocked()">Comenzar mi plan</button>
+  </section>}
+  <button type="button" class="secondary" (click)="showResults()">Ver evidencias y compartir reporte</button>
+  <app-detail-drawer [open]="resultsOpen()" label="Evidencias y reporte privado" (dismissed)="resultsOpen.set(false)"><app-learning-panel [session]="s" [disabled]="blocked()" (changed)="refresh.emit()"/></app-detail-drawer>
+} @else {
+  <h2 id="prepared-activity-title">{{p.objective??'Recorrido trabajado'}}</h2>
+  @if(!diagnostic()&&p.explanation){<app-safe-response [text]="p.explanation"/>@if(p.example){<section class="notice info"><strong>Ejemplo</strong><app-safe-response [text]="p.example"/></section>}}
+  @if(exercise();as e){<p>{{diagnostic()?'Pregunta':'Actividad'}} {{e.order+1}} de {{p.total}}</p><div class="activity-prompt"><app-safe-response [text]="e.prompt"/></div>
+    @if(s.state==='Active'){
+      @if(!diagnostic()||!attempts().length){<form (ngSubmit)="act('SubmitAttempt')"><fieldset [disabled]="blocked()"><legend>Tu respuesta</legend>
+      @if(e.options.length){@for(o of e.options;track $index){<label class="option"><input type="radio" name="prepared-answer" [value]="o" [(ngModel)]="answer"/>{{o}}</label>}}
+      @else{<label for="prepared-answer">{{e.kind==='Code'?'Código o SQL':'Respuesta'}}</label><textarea id="prepared-answer" name="prepared-answer" [(ngModel)]="answer" maxlength="2000" rows="5"></textarea>}
+      <button type="submit" [disabled]="!answer.trim()">Registrar respuesta</button></fieldset></form>}
+      @if(attempts().length){<button type="button" class="secondary" (click)="act('NextActivity')" [disabled]="blocked()">Siguiente actividad</button>}
+    }
+  }
+  @for(m of feedback();track m.id){<section class="notice info"><app-safe-response [text]="m.text"/></section>}
+  @if(s.state==='Active'){<div class="actions"><button type="button" class="secondary" (click)="transition('pause')" [disabled]="blocked()">Pausar recorrido</button><button type="button" (click)="transition('complete')" [disabled]="blocked()||!p.canComplete">Finalizar {{diagnostic()?'diagnóstico':'tutoría preparada'}}</button></div>}
+  @if(s.state==='Paused'){<button type="button" (click)="transition('resume')" [disabled]="blocked()">Reanudar recorrido</button>}
+}
+</section><aside aria-label="Ayudas y recuperación">
+@if(!diagnostic()&&s.state==='Active'&&exercise()){
+  <h2>Ayudas de esta actividad</h2><p class="note">Se guardan con tus respuestas y no requieren IA adicional.</p>
+  <button type="button" class="secondary" (click)="act('Hint')" [disabled]="blocked()||p.remainingHints===0">Dame una pista</button><button type="button" class="secondary" (click)="act('Simplify')" [disabled]="blocked()||p.remainingAlternatives===0">Otra explicación</button>
+} @else {<h2>Tu recorrido</h2><p>{{diagnostic()?'Las preguntas están fijadas desde el inicio. No se ofrecen pistas ni resultados durante la evaluación.':'Tus respuestas, ayudas y progreso se conservan al pausar o recargar.'}}</p>}
+<button type="button" class="secondary" (click)="refresh.emit()">Consultar estado</button>
+@if(p.introduction&&!diagnostic()){<details><summary>Introducción</summary><app-safe-response [text]="p.introduction"/></details>}
+@if(uncertain()&&!s.pendingRequestId){<p role="status">No se confirmó el envío; conservamos la misma solicitud.</p><button type="button" (click)="recover()" [disabled]="busy()">Recuperar misma solicitud</button>}
+@if(s.pendingRequestId;as key){@for(t of s.turns;track t.requestId){@if(t.requestId===key){<p role="status">{{t.error||'Preparación en curso. Puedes consultar el estado.'}}</p><p class="note">Reintentar puede consumir otra solicitud del proveedor.</p>@if(t.canRetry){<button type="button" (click)="act(t.action,true)" [disabled]="busy()">Reintentar misma solicitud</button>}<button type="button" class="secondary" (click)="cancel()">Cancelar operación pendiente</button>}}}
+</aside></div>

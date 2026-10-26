@@ -389,11 +389,17 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Compatible")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("ContextWindow")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("Free")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("MaxOutputTokens")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1514,6 +1520,54 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.PreparedLearning", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ContentJson")
+                        .HasMaxLength(64000)
+                        .HasColumnType("character varying(64000)");
+
+                    b.Property<int>("ContextWindow")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ContractVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("CurrentActivity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EvaluationEvidenceHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("EvaluationJson")
+                        .HasMaxLength(48000)
+                        .HasColumnType("character varying(48000)");
+
+                    b.Property<string>("Length")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("MaxOutputTokens")
+                        .HasColumnType("integer");
+
+                    b.HasKey("SessionId");
+
+                    b.ToTable("PreparedLearning", t =>
+                        {
+                            t.HasCheckConstraint("CK_Prepared_Limits", "\"Length\" IN ('Short','Medium','Long') AND \"CurrentActivity\" >= 0 AND \"ContextWindow\" >= 0 AND \"MaxOutputTokens\" >= 0 AND ((\"ContentJson\" IS NULL AND \"ContentHash\" IS NULL) OR (\"ContentJson\" IS NOT NULL AND length(\"ContentHash\") = 64))");
+                        });
+                });
+
             modelBuilder.Entity("AulaTutor.Domain.Tutoring.ReportShare", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1661,6 +1715,20 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("LastActivityAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("LearningExperience")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Tutoring");
+
+                    b.Property<string>("LearningModality")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Conversational");
+
                     b.Property<Guid?>("LessonVersionId")
                         .HasColumnType("uuid");
 
@@ -1700,6 +1768,12 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("SourcePlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("SourcePlanObjectiveOrder")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("SourceRecommendationId")
                         .HasColumnType("uuid");
 
@@ -1731,6 +1805,10 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("\"AssignmentId\" IS NOT NULL");
 
+                    b.HasIndex("SourcePlanId", "SourcePlanObjectiveOrder")
+                        .IsUnique()
+                        .HasFilter("\"SourcePlanId\" IS NOT NULL");
+
                     b.HasIndex("StudentId", "CreationKey")
                         .IsUnique();
 
@@ -1744,11 +1822,13 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
                     b.ToTable("TutoringSessions", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Session_Learning", "\"LearningExperience\" IN ('Tutoring','Diagnostic') AND \"LearningModality\" IN ('Conversational','Prepared') AND (\"LearningModality\" <> 'Prepared' OR \"Mode\" = 0)");
+
                             t.HasCheckConstraint("CK_Session_ModeSource", "\"Mode\" BETWEEN 0 AND 2 AND \"AssignedActivity\" >= 0 AND ((\"Mode\" = 2 AND \"AssignmentId\" IS NOT NULL AND \"LessonVersionId\" IS NOT NULL) OR (\"Mode\" <> 2 AND \"AssignmentId\" IS NULL AND \"LessonVersionId\" IS NULL))");
 
                             t.HasCheckConstraint("CK_TutoringSession_Revision", "\"Revision\" >= 0");
 
-                            t.HasCheckConstraint("CK_TutoringSession_Sequence", "\"NextSequence\" BETWEEN 0 AND 100");
+                            t.HasCheckConstraint("CK_TutoringSession_Sequence", "\"NextSequence\" BETWEEN 0 AND 500 AND (\"LearningModality\" = 'Prepared' OR \"NextSequence\" <= 100)");
 
                             t.HasCheckConstraint("CK_TutoringSession_State", "\"State\" BETWEEN 0 AND 3");
                         });
@@ -1816,7 +1896,7 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
                     b.ToTable("TutoringTurns", null, t =>
                         {
-                            t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 11");
+                            t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 12");
 
                             t.HasCheckConstraint("CK_TutoringTurn_Attempts", "\"Attempts\" BETWEEN 1 AND 3");
 
@@ -2449,6 +2529,15 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("AulaTutor.Domain.Tutoring.PreparedLearning", b =>
+                {
+                    b.HasOne("AulaTutor.Domain.Tutoring.TutoringSession", null)
+                        .WithOne()
+                        .HasForeignKey("AulaTutor.Domain.Tutoring.PreparedLearning", "SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AulaTutor.Domain.Tutoring.ReportShare", b =>
                 {
                     b.HasOne("AulaTutor.Infrastructure.Identity.AppUser", null)
@@ -2476,6 +2565,11 @@ namespace AulaTutor.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("AulaTutor.Domain.Tutoring.TutoringSession", b =>
                 {
+                    b.HasOne("AulaTutor.Domain.Tutoring.PersonalizedLearningPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SourcePlanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AulaTutor.Domain.Tutoring.LearningRecommendation", null)
                         .WithMany()
                         .HasForeignKey("SourceRecommendationId")

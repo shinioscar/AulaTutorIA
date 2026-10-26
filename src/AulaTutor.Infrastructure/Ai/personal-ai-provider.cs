@@ -66,6 +66,9 @@ public sealed class PersonalAiProvider(InstitutionalAiProvider institutional, Au
             PersonalAiModel model;
             try { if (binding.Provider == "OpenRouter") await catalog.GetAsync("OpenRouter", false, ct); model = await catalog.RequireStoredAsync(binding.Provider, binding.Model, binding.PaidAccepted, ct); }
             catch (AppException e) { throw new AiProviderException(e.Status == 503 ? AiErrorCode.Unavailable : e.Status == 400 ? AiErrorCode.PaymentAuthorizationRequired : AiErrorCode.Unsupported); }
+            if (request.UseCase.StartsWith("prepared_", StringComparison.Ordinal) &&
+                (request.MaxOutputTokens > model.MaxOutputTokens || request.Messages.Sum(m => System.Text.Encoding.UTF8.GetByteCount(m.Text)) + request.MaxOutputTokens + 512 > model.ContextWindow))
+                throw new AiProviderException(AiErrorCode.Unsupported);
             string key;
             try { key = vault.Unprotect(PersonalAiVault.CredentialPurpose(c.OwnerId, c.Id, c.CredentialRevision), c.ProtectedCredential); }
             catch (AppException) { throw new AiProviderException(AiErrorCode.Authentication); }

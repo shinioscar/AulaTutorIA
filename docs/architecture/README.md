@@ -92,3 +92,8 @@ V1 y clases anteriores conservan su modalidad. La ejecución local reutiliza tur
 ejercicios, intentos y políticas de clases asignadas. La evaluación final explícita
 reutiliza LearningReport/orquestación/cuotas y la supervisión referenciada. Sin otro
 motor académico ni nuevas tablas. [Contrato](PRELOADED_CLASSES.md).
+
+LEARN-1/ADR-031 amplía las sesiones autónomas con experiencia/modalidad explícitas
+y PreparedLearning 1:1 privado. Reutiliza turnos, comparadores, ayudas, reportes,
+diagnósticos, planes y BYOK. La novena migración es aditiva; no reescribe sesiones
+ni las convierte en clases docentes. [Contrato y guía](PREPARED_LEARNING.md).

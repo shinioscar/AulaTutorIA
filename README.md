@@ -1,5 +1,10 @@
 # AulaTutor IA
 
+LEARN-1 implementado y verificado: elección entre tutoría/diagnóstico preparados y
+conversacionales. [Guía estudiantil y contratos](docs/architecture/PREPARED_LEARNING.md),
+[decisión](docs/decisions/ADR-031-aprendizaje-preparado.md) y
+[auditoría/verificación](docs/iterations/LEARN_1.md).
+
 UX-2 completada: navegación por rol, biblioteca visual y supervisión con
 gráficos de datos autorizados. [Cierre y comparación visual](docs/iterations/UX_2.md).
 [Afinado de textos e Inicio y sección Proveedor de IA](docs/iterations/UX_2_POLISH.md).

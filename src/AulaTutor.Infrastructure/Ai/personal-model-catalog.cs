@@ -81,6 +81,7 @@ public sealed class PersonalModelCatalog(AulaTutorDbContext db, IHttpClientFacto
             var compatible = text && textInput && !retired && context >= 32768 && output >= 4096 && parameters.Contains("response_format") && parameters.Contains("structured_outputs") &&
                 !id!.StartsWith("openrouter/", StringComparison.Ordinal) && !id.EndsWith(":nitro", StringComparison.Ordinal) && !id.EndsWith(":floor", StringComparison.Ordinal);
             result.Add(new() { Provider = "OpenRouter", Id = id!, Name = name, Compatible = compatible, Free = free, PriceKnown = known,
+                ContextWindow = context, MaxOutputTokens = output,
                 StrictSchema = compatible, Availability = retired ? "Retired" : "Metadata", CheckedAt = now, ExpiresAt = now.AddMinutes(15) });
         }
         return result.DistinctBy(m => m.Id).ToArray();
@@ -93,6 +94,7 @@ public sealed class PersonalModelCatalog(AulaTutorDbContext db, IHttpClientFacto
             "Gemini" => new[] { "gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro" },
             "Anthropic" => new[] { "claude-opus-5-5" }, _ => [] };
         return models.Select(id => new PersonalAiModel { Provider = provider, Id = id, Name = id, Compatible = true, Free = false, PriceKnown = false,
+            ContextWindow = 32768, MaxOutputTokens = 4096,
             StrictSchema = provider != "Gemini", Availability = "ReviewedCatalog", CheckedAt = reviewed, ExpiresAt = reviewed.AddDays(30) }).ToArray();
     }
     internal static async Task<JsonDocument> ReadBoundedAsync(HttpContent content, int limit, CancellationToken ct)

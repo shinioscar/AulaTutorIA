@@ -2,20 +2,31 @@
 <p>Un espacio privado para preguntar, practicar y volver al punto donde te quedaste.</p>
 <p class="message" role="status">{{message()}}</p>
 <section aria-labelledby="create-tutoring-title"><h2 id="create-tutoring-title">¿Qué quieres aprender?</h2>
+  <div class="experience-choice" aria-label="Experiencia de aprendizaje"><button type="button" class="secondary" [attr.aria-pressed]="experience==='Tutoring'" (click)="experience='Tutoring'">Tutorías</button><button type="button" class="secondary" [attr.aria-pressed]="experience==='Diagnostic'" (click)="experience='Diagnostic'">Diagnósticos</button></div>
+  <div class="modality-grid" aria-label="Modalidad de aprendizaje">
+    <button type="button" class="modality-card secondary featured" [attr.aria-pressed]="modality==='Prepared'" (click)="modality='Prepared'"><app-icon name="book"/><span class="state-badge">Menos solicitudes</span><strong>{{experience==='Tutoring'?'Tutoría preparada':'Diagnóstico preparado'}}</strong><span>{{experience==='Tutoring'?'La IA prepara tus actividades antes de comenzar. Avanza y pide pistas sin esperar nuevas respuestas de IA.':'Responde una evaluación preparada previamente y recibe un análisis al terminar.'}}</span></button>
+    <button type="button" class="modality-card secondary" [attr.aria-pressed]="modality==='Conversational'" (click)="modality='Conversational'"><app-icon name="chat"/><strong>{{experience==='Tutoring'?'Tutoría conversacional':'Diagnóstico conversacional'}}</strong><span>{{experience==='Tutoring'?'Aprende dialogando con la IA, con explicaciones y actividades adaptadas durante la sesión.':'Realiza una evaluación interactiva guiada por IA.'}}</span></button>
+  </div>
   <form #form="ngForm" (ngSubmit)="create()">
     <label for="topic">Tema</label><input id="topic" name="topic" [(ngModel)]="topic" required minlength="2" maxlength="160" placeholder="Por ejemplo: IF EXISTS en SQL">
-    <label for="goal">Objetivo de aprendizaje</label><input id="goal" name="goal" [(ngModel)]="goal" required minlength="2" maxlength="500" placeholder="Qué te gustaría comprender o practicar">
+    <label for="goal">Objetivo de aprendizaje (opcional)</label><input id="goal" name="goal" [(ngModel)]="goal" minlength="2" maxlength="500" placeholder="Qué te gustaría comprender o practicar">
     <label for="level">Nivel percibido</label><select id="level" name="level" [(ngModel)]="level"><option value="Beginner">Estoy empezando</option><option value="Intermediate">Tengo conocimientos previos</option><option value="Advanced">Busco profundizar</option></select>
-    <label class="check-label"><input type="checkbox" name="directReview" [(ngModel)]="directReview"> Prefiero un repaso directo en vez de diagnóstico inicial</label>
+    @if(modality==='Conversational'&&experience==='Tutoring'){<label class="check-label"><input type="checkbox" name="directReview" [(ngModel)]="directReview"> Prefiero un repaso directo en vez de diagnóstico inicial</label>}
+    @if(modality==='Prepared'){
+      <label for="session-length">Extensión</label><select id="session-length" name="length" [(ngModel)]="length">@for(o of lengths();track o.id){<option [value]="o.id" [disabled]="!o.available">{{o.id==='Short'?'Corta':o.id==='Medium'?'Media':'Larga'}} · {{o.activities}} {{experience==='Diagnostic'?'preguntas':'actividades'}}{{o.available?'':' · requiere otro modelo'}}</option>}</select>
+      <p class="note">Preparar el contenido usa IA una vez; la evaluación final es opcional y usa otra solicitud. Los reintentos del proveedor pueden añadir intentos.</p>
+      @if(options();as o){<p class="note">{{o.providerId}} · {{o.modelId}}</p>@if(o.reason){<p class="notice warning">{{o.reason}}</p>}}
+      @if(optionsError()){<p class="notice warning">{{optionsError()}}</p>}<a routerLink="/ai-provider">Elegir proveedor o modelo</a><button type="button" class="secondary" (click)="loadOptions()">Consultar compatibilidad</button>
+    }
     <p class="note">El tutor utilizará tu tema y tus mensajes para acompañarte con IA.</p>
-    <button [disabled]="busy() || form.invalid">Crear tutoría privada</button>
+    <button [disabled]="busy() || form.invalid || (modality==='Prepared'&&!canPrepare)">{{modality==='Prepared'?(experience==='Diagnostic'?'Crear diagnóstico preparado':'Crear tutoría preparada'):(experience==='Diagnostic'?'Crear diagnóstico conversacional':'Crear tutoría privada')}}</button>
     <button type="button" class="secondary" (click)="newRequest()" [disabled]="busy()">Preparar otra solicitud</button>
   </form>
 </section>
-<div class="actions"><h2>Tus conversaciones</h2><button type="button" class="secondary" (click)="load(page)" [disabled]="busy()">Actualizar listado</button></div>
+<div class="actions"><h2>Tus sesiones</h2><button type="button" class="secondary" (click)="load(page)" [disabled]="busy()">Actualizar listado</button></div>
 @if(busy()){<p role="status">Cargando…</p>}
 <div class="group-grid">
-  @for(session of sessions();track session.id){<a class="session-card" [routerLink]="['/tutoring',session.id]"><strong>{{session.topic}}</strong><p>{{session.goal}}</p><span class="state-badge">{{label(session.state)}}</span><p class="note">{{session.providerId}} · Historial privado</p><span>Abrir conversación →</span></a>}
+  @for(session of sessions();track session.id){<a class="session-card" [routerLink]="['/tutoring',session.id]"><strong>{{session.topic}}</strong><p>{{session.goal}}</p><span class="state-badge">{{label(session.state)}}</span><p class="note">{{session.experience==='Diagnostic'?'Diagnóstico':'Tutoría'}} · {{session.modality==='Prepared'?'Preparada':'Conversacional'}} · {{session.providerId}} · Privada</p><span>Abrir sesión →</span></a>}
   @empty { @if(!busy()){<p class="notice">Todavía no tienes tutorías en esta página. Crea una para empezar.</p>} }
 </div>
 <div class="actions"><button type="button" class="secondary" (click)="load(page-1)" [disabled]="busy()||page<=1">Anteriores</button><span>Página {{page}}</span><button type="button" class="secondary" (click)="load(page+1)" [disabled]="busy()||sessions().length<50">Más tutorías</button></div>

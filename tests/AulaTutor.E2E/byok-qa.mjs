@@ -29,7 +29,8 @@ export async function byokQa({teacher,student,admin,assignment,api,capture,check
     await p.getByRole('button',{name:'Elegir modelo',exact:true}).click();await p.getByLabel('Modelo',{exact:true}).waitFor();
     assert.equal(await p.getByRole('option',{name:/Modelo de pago/}).count(),0);
     assert.equal(await p.getByText('Mostrar modelos de pago o precio sin confirmar',{exact:true}).count(),0);
-    assert.equal(await p.getByRole('option',{name:/Modelo gratuito simulado · Gratis/}).count(),1);
+    assert.equal(await p.locator('option[value="qa/structured:free"]').count(),1);
+    assert.match(await p.locator('option[value="qa/structured:free"]').textContent(),/Gratis/);
     assert.equal(await p.getByRole('option',{name:/Modelo incompatible/}).isDisabled(),true);
     await matrix(p,'teacher-models',p.locator('.connection-editor'));
     await p.getByLabel(/Acepto enviar mis consultas/).check();await p.getByRole('button',{name:'Activar modelo',exact:true}).click();

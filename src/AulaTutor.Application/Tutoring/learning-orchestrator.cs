@@ -75,7 +75,7 @@ public sealed class LearningOrchestrator(IAiProvider provider)
         antiguos pueden usar 0/1/2/3/4 para esos estados, respectivamente.
         """;
 
-    public static bool IsLearning(TutoringAction action) => action >= TutoringAction.DiagnosticQuestion;
+    public static bool IsLearning(TutoringAction action) => action is >= TutoringAction.DiagnosticQuestion and <= TutoringAction.FinalReport;
     private static Type ResponseType(TutoringAction action) => action switch
     {
         TutoringAction.DiagnosticQuestion or TutoringAction.GenerateExercise => typeof(ExerciseProposal),

@@ -1,5 +1,9 @@
 # Contratos de aprendizaje — Iteración 4
 
+Ampliación LEARN-1: [tutorías y diagnósticos preparados](PREPARED_LEARNING.md),
+con evidencias locales, evaluación + plan agrupados y aceptación explícita en una
+tutoría separada. Contratos conversacionales y AssignedClass conservados.
+
 Todas las rutas exigen sesión Identity activa. POST/DELETE requieren HTTPS y CSRF.
 Propiedad Student se verifica en servicios; recursos ajenos 404, anónimos 401,
 sin capacidad general 403, datos 400, conflicto/revisión 409 y límite 429.

@@ -219,6 +219,7 @@ try {
     . "$PSScriptRoot/Http-Assignments.ps1"
     . "$PSScriptRoot/Http-Supervision.ps1"
     . "$PSScriptRoot/Http-Operations.ps1"
+    . "$PSScriptRoot/Http-PreparedLearning.ps1"
     Assert-Status (Invoke-Api $student.Session POST '/api/auth/logout' @{}) 204 'Logout'
     Assert-Status (Invoke-Api $student.Session GET '/api/me') 401 'Logged-out access denied'
     }

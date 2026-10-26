@@ -15,6 +15,43 @@ public sealed class MockAiProvider : IAiProvider
     public Task<AiChatResult> GenerateAsync(AiChatRequest request, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+        if (request.UseCase.StartsWith("prepared_", StringComparison.Ordinal))
+        {
+            using var context = JsonDocument.Parse(request.Messages.Last().Text); var root = context.RootElement;
+            var exercise = new ExerciseProposal("[Mock] ¿Un acierto aislado demuestra dominio completo?", "TrueFalse", ["Verdadero", "Falso"], ["Falso"], "Distinguir evidencia puntual y dominio.");
+            if (request.UseCase == "prepared_generate")
+            {
+                var diagnostic = root.GetProperty("experience").GetString() == "Diagnostic";
+                var objectives = Enumerable.Range(1, 3).Select(i => new PreparedObjective("o" + i, "[Mock] Objetivo de práctica " + i)).ToArray();
+                var activities = Enumerable.Range(0, root.GetProperty("count").GetInt32()).Select(i =>
+                {
+                    var id = "a" + (i + 1); var open = i % 3 == 2;
+                    var question = open ? new ExerciseProposal("[Mock] Explica qué evidencia adicional pedirías.", "OpenResponse", [], [], "Pertinencia de la evidencia.") : exercise;
+                    var aids = diagnostic ? new PreloadedExercise(id, [], [], "", "", "", [], []) : new PreloadedExercise(id,
+                        ["[Mock] Compara un caso con varios ejemplos.", "[Mock] Piensa en qué falta observar."], ["[Mock] Una observación es solo parte de la evidencia."],
+                        "[Mock] Coincide con la regla.", "[Mock] Revisa el alcance de la afirmación.", "[Mock] Respuesta pendiente de revisión humana.", ["[Mock] Compara distintas situaciones."], ["[Mock] Prueba otro ejemplo."]);
+                    return new PreparedActivity(id, objectives[i % 3].Id, diagnostic ? "" : "[Mock] Practicar y contrastar varios casos aporta evidencia. Este guion simula el flujo; no comprende materias.",
+                        diagnostic ? "" : "[Mock] Compara observar un caso con observar varios casos distintos.", question, "REFERENCIA_PRIVADA_MOCK_NO_PROYECTAR", ["Distinguir un caso y una conclusión general."], aids);
+                }).ToArray();
+                return Task.FromResult(new AiChatResult(LearningJson.Write(new PreparedContent(PreparedRules.Version, "[Mock] Recorrido ficticio para comprobar la aplicación; sin comprensión semántica.", objectives, activities)), ProviderId, ModelId, null, null, "stop"));
+            }
+            var evidence = root.GetProperty("evidence").EnumerateArray().ToArray();
+            var ids = evidence.Select(e => e.GetProperty("id").GetGuid()).Take(3).ToArray();
+            var report = new ReportContent("[Mock] Interpretación simulada. Consulta los resultados deterministas registrados.",
+                ids.Length == 0 ? [] : [new("[Mock] Hay respuestas guardadas; no se certifica comprensión.", ids)], ["Dominio y transferencia no verificados."], [new("Practicar con otro ejemplo.", ids)]);
+            var findings = root.GetProperty("objectives").EnumerateArray().Select(o => new PreparedFinding(o.GetProperty("id").GetString()!, "[Mock] Objetivo con evidencia registrada.",
+                evidence.Where(e => e.GetProperty("objectiveId").GetString() == o.GetProperty("id").GetString()).Select(e => e.GetProperty("id").GetGuid()).Take(8).ToArray())).Where(f => f.EvidenceIds.Length > 0).ToArray();
+            object payload = new PreparedEvaluation(report, findings);
+            if (request.UseCase == "prepared_diagnostic_evaluate")
+            {
+                var objectives = root.GetProperty("objectives").EnumerateArray().Select(o => new LearningPlanObjectivePayload(o.GetProperty("title").GetString()!,
+                    evidence.Where(e => e.GetProperty("objectiveId").GetString() == o.GetProperty("id").GetString()).Select(e => e.GetProperty("id").GetGuid()).Take(8).ToArray(),
+                    "[Mock] Repaso orientativo mediante práctica.", "Beginner", 5, exercise)).ToArray();
+                payload = new PreparedDiagnosticEvaluation(report, findings, new("[Mock] Análisis preliminar simulado; no se infiere aprendizaje.", [], [], ["Transferencia no evaluada."], ["Contrastar resultados y practicar."]),
+                    new(root.GetProperty("goal").GetString()!, "[Mock] Ruta demostrativa progresiva.", objectives));
+            }
+            return Task.FromResult(new AiChatResult(LearningJson.Write(payload), ProviderId, ModelId, null, null, "stop"));
+        }
         ArgumentNullException.ThrowIfNull(request);
         if (request.UseCase.StartsWith("lesson_", StringComparison.Ordinal) && request.ResponseContract.Format == "text")
         {

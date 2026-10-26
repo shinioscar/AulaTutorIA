@@ -13,7 +13,7 @@ internal static class TutoringModel
             e.ToTable("TutoringSessions", t =>
             {
                 t.HasCheckConstraint("CK_TutoringSession_State", "\"State\" BETWEEN 0 AND 3");
-                t.HasCheckConstraint("CK_TutoringSession_Sequence", "\"NextSequence\" BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_TutoringSession_Sequence", "\"NextSequence\" BETWEEN 0 AND 500 AND (\"LearningModality\" = 'Prepared' OR \"NextSequence\" <= 100)");
                 t.HasCheckConstraint("CK_TutoringSession_Revision", "\"Revision\" >= 0");
             });
             e.HasOne<AppUser>().WithMany().HasForeignKey(x => new { x.StudentId, x.OrganizationId })
@@ -32,7 +32,7 @@ internal static class TutoringModel
             e.ToTable("TutoringTurns", t =>
             {
                 t.HasCheckConstraint("CK_TutoringTurn_State", "\"State\" BETWEEN 0 AND 3");
-                t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 11");
+                t.HasCheckConstraint("CK_TutoringTurn_Action", "\"Action\" BETWEEN 0 AND 12");
                 t.HasCheckConstraint("CK_TutoringTurn_Attempts", "\"Attempts\" BETWEEN 1 AND 3");
             });
             e.HasKey(x => new { x.SessionId, x.RequestId });

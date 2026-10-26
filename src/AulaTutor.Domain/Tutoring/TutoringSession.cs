@@ -3,7 +3,7 @@ using AulaTutor.Domain.Identity;
 namespace AulaTutor.Domain.Tutoring;
 
 public enum TutoringState { Created, Active, Paused, Completed }
-public enum TutoringAction { Start, Message, Hint, Simplify, DiagnosticQuestion, AnalyzeDiagnosis, GeneratePlan, ActivatePlan, SubmitAttempt, NextActivity, GenerateExercise, FinalReport }
+public enum TutoringAction { Start, Message, Hint, Simplify, DiagnosticQuestion, AnalyzeDiagnosis, GeneratePlan, ActivatePlan, SubmitAttempt, NextActivity, GenerateExercise, FinalReport, PrepareSession }
 public enum TutoringTurnState { Pending, Succeeded, Failed, Cancelled }
 public enum TutoringMessageRole { Student, Tutor }
 public enum TutoringMode { Private, Personalized, AssignedClass }
@@ -39,6 +39,10 @@ public sealed class TutoringSession
     public Guid? AssignmentId { get; set; }
     public Guid? LessonVersionId { get; set; }
     public int AssignedActivity { get; set; }
+    public string LearningExperience { get; set; } = "Tutoring";
+    public string LearningModality { get; set; } = "Conversational";
+    public Guid? SourcePlanId { get; set; }
+    public int? SourcePlanObjectiveOrder { get; set; }
 }
 
 public sealed class TutoringTurn

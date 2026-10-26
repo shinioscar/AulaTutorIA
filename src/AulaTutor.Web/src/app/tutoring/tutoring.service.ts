@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { AssignedSession } from '../lessons/assignment.service';
 
-export interface SessionItem { id:string; topic:string; goal:string; state:string; providerId:string; modelId:string; lastActivityAt:string; }
+export interface SessionItem { id:string; topic:string; goal:string; state:string; providerId:string; modelId:string; lastActivityAt:string;experience:string;modality:string; }
 export interface Message { id:string; requestId:string; sequence:number; role:'Student'|'Tutor'; text:string; createdAt:string; providerId:string|null; modelId:string|null; }
 export interface Turn { requestId:string; action:string; state:string; attempts:number; isGenerating:boolean; canRetry:boolean; error:string|null; retryNotBefore:string|null; exerciseId:string|null; retryText:string|null; }
 export interface Observation {text:string; evidenceIds:string[];}
@@ -13,12 +13,17 @@ export interface Plan {id:string;version:number;state:string;currentActivity:num
 export interface Report {id:string;version:number;outdated:boolean;providerId:string;modelId:string;promptVersion:string;topic:string;goal:string;statistics:{exercises:number;attempts:number;correctWithoutHelp:number;correctWithHelp:number;incorrect:number;needsReview:number;notEvaluable:number;hints:number;workedObjectives:string[]};content:{summary:string;observations:Observation[];notAssessed:string[];recommendations:{goal:string;evidenceIds:string[]}[]};}
 export interface Share {id:string;reportId:string;recipientId:string;recipientName:string;revokedAt:string|null;}
 export interface Learning {evidenceRevision:number;diagnosticQuestionLimit:number;minimumEvidence:number;exercises:Exercise[];attempts:Attempt[];diagnostic:Diagnostic|null;plan:Plan|null;reports:Report[];recommendations:{id:string;reportId:string;goal:string;isGeneral:boolean}[];shares:Share[];}
-export interface Session extends SessionItem { level:string; directReview:boolean; revision:number; messages:Message[]; turns:Turn[]; pendingRequestId:string|null; summary:string|null; activity:string; currentFocus:string; learning:Learning;mode:string;assignedClass:AssignedSession|null;policyVersion:string; }
+export interface PreparedLearning {generationState:string;length:string;contractVersion:string;contentHash:string|null;position:number;total:number;delivered:number;currentExerciseId:string|null;objective:string|null;explanation:string|null;example:string|null;introduction:string|null;canComplete:boolean;remainingHints:number;remainingAlternatives:number;}
+export interface PreparedLength {id:string;activities:number;generationOutputTokens:number;available:boolean;}
+export interface PreparedOptions {providerId:string;modelId:string;tutoring:PreparedLength[];diagnostic:PreparedLength[];reason:string|null;}
+export interface Session extends SessionItem { level:string; directReview:boolean; revision:number; messages:Message[]; turns:Turn[]; pendingRequestId:string|null; summary:string|null; activity:string; currentFocus:string; learning:Learning;mode:string;assignedClass:AssignedSession|null;policyVersion:string;prepared:PreparedLearning|null;experience:string;modality:string; }
 export interface TurnRequest { requestId:string; revision:number; action:string; text:string|null; retry:boolean; exerciseId?:string|null; }
 export interface LearningAction {action:string;text?:string;exerciseId?:string;}
 @Injectable({providedIn:'root'})
 export class TutoringService {
   private readonly http = inject(HttpClient);
+  preparedOptions(){return this.http.get<PreparedOptions>('/api/tutoring-sessions/prepared-options');}
+  startPreparedPlan(id:string,request:object){return this.http.post<Session>(`/api/tutoring-sessions/${id}/prepared-plan/start`,request);}
   list(page:number) { return this.http.get<SessionItem[]>('/api/students/me/tutoring-sessions',{params:{page}}); }
   create(request:object) { return this.http.post<Session>('/api/tutoring-sessions/',request); }
   get(id:string) { return this.http.get<Session>(`/api/tutoring-sessions/${id}`); }

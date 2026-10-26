@@ -237,6 +237,12 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
             var content = LearningJson.Read<AulaTutor.Application.Lessons.LessonContent>((await db.LessonVersions.AsNoTracking().SingleAsync(v => v.Id == session.LessonVersionId, ct)).ContentJson);
             worked = content.Objectives.Where(o => exercises.Any(e => e.ApprovedObjectiveId == o.Id && attempts.Any(a => a.ExerciseId == e.Id))).Select(o => o.Text).ToArray();
         }
+        if (PreparedRules.IsPrepared(session))
+        {
+            var prepared = await db.PreparedLearning.AsNoTracking().SingleAsync(p => p.SessionId == id, ct);
+            if (prepared.ContentJson is not null) worked = LearningJson.Read<PreparedContent>(prepared.ContentJson).Objectives
+                .Where((_, i) => exercises.Any(e => e.PlanId == null && e.ObjectiveOrder == i && attempts.Any(a => a.ExerciseId == e.Id))).Select(o => o.Title).ToArray();
+        }
         // Counts of successful exercises, not counts of chat messages or repeated correct attempts.
         return new(exercises.Length, attempts.Length,
             attempts.Where(a => a.Outcome == AttemptOutcome.CorrectWithoutHelp).Select(a => a.ExerciseId).Distinct().Count(),
@@ -268,10 +274,11 @@ public sealed class LearningWorkflow(AulaTutorDbContext db, LearningOrchestrator
         var recommendations = await db.LearningRecommendations.AsNoTracking().Where(r => r.SessionId == s.Id && r.ReportId == reportId).ToArrayAsync(ct);
         var shares = await db.ReportShares.AsNoTracking().Where(r => r.SessionId == s.Id).Join(db.Users, sh => sh.RecipientId, u => u.Id,
             (sh, u) => new ShareView(sh.Id, sh.ReportId, sh.RecipientId, u.DisplayName, sh.GrantedAt, sh.RevokedAt)).ToArrayAsync(ct);
+        var concealDiagnosis = PreparedRules.IsPrepared(s) && s.LearningExperience == "Diagnostic" && s.State != TutoringState.Completed;
         return new(s.EvidenceRevision, policy.Value.MaxDiagnosticQuestions, policy.Value.MinimumEvidence,
-            exercises.Where(e => e.IsPresented).Select(PublicExercise).ToArray(),
+            exercises.Where(e => e.IsPresented).Select(e => PreparedRules.IsPrepared(s) ? PublicExercise(e) with { Rubric = "" } : PublicExercise(e)).ToArray(),
             attempts.Select(a => new AttemptView(a.Id, a.RequestId, a.ExerciseId, a.ExerciseVersion, a.Answer, a.Number, a.HintsUsed,
-                a.Outcome.ToString(), a.ValidationType, a.Feedback, a.SubmittedAt, a.ProviderId, a.ModelId, a.SimplificationsUsed)).ToArray(),
+                concealDiagnosis ? "Recorded" : a.Outcome.ToString(), concealDiagnosis ? "Deferred" : a.ValidationType, concealDiagnosis ? "Respuesta registrada. Resultados al finalizar." : a.Feedback, a.SubmittedAt, a.ProviderId, a.ModelId, a.SimplificationsUsed)).ToArray(),
             diagnosis is null ? null : new(diagnosis.Id, diagnosis.Version, diagnosis.Preliminary, diagnosis.EvidenceRevision != s.EvidenceRevision,
                 LearningJson.Read<AssessmentContent>(diagnosis.ContentJson), diagnosis.ProviderId, diagnosis.ModelId, diagnosis.PromptVersion),
             plan is null ? null : PublicPlan(plan, exercises), reports.Select(r => PublicReport(r, s)).ToArray(),

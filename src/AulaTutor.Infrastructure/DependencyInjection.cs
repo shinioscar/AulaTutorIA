@@ -64,6 +64,8 @@ public static class DependencyInjection
             .Validate(p => p.IsValid(), "Límites de diagnóstico inválidos.").ValidateOnStart();
         services.AddScoped<LearningOrchestrator>();
         services.AddScoped<LearningWorkflow>();
+        services.AddScoped<PreparedOrchestrator>();
+        services.AddScoped<PreparedLearningWorkflow>();
         services.AddScoped<ILearningService, LearningService>();
         services.AddScoped<ITutoringService, TutoringService>();
         services.AddScoped<LessonOrchestrator>();

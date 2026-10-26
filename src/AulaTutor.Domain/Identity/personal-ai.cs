@@ -62,6 +62,8 @@ public sealed class PersonalAiOAuth
 
 public sealed class PersonalAiModel
 {
+    public int ContextWindow { get; set; }
+    public int MaxOutputTokens { get; set; }
     public string Provider { get; set; } = "";
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";

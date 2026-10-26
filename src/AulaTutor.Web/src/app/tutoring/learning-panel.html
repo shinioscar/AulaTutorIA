@@ -37,7 +37,7 @@
         <button type="button" class="secondary" (click)="free.set(true)">Continuar en tutoría libre</button>
       }
     </details>
-    @if(p.state==='Active'){<p class="route-state">Actividad {{p.currentActivity+1}} de {{p.content.objectives.length}} · Puedes preguntar libremente sin perder tu lugar.</p>}
+    @if(p.state==='Active'&&!s.prepared){<p class="route-state">Actividad {{p.currentActivity+1}} de {{p.content.objectives.length}} · Puedes preguntar libremente sin perder tu lugar.</p>}
     @if(p.state==='Completed'){<p class="notice">Ruta completada.</p>}
   }
   @if(exercise();as e){

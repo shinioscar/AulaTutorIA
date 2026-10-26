@@ -1,0 +1,6 @@
+.exercise-card>button,.exercise-card>a{margin-block:var(--space-3);margin-right:var(--space-3)}
+.plan-next{border:1px solid var(--border);border-radius:var(--radius-large);padding:var(--space-4);margin-block:var(--space-5);background:var(--surface-secondary)}
+.cards-layout>aside{margin-top:0}details{margin-block:var(--space-4)}
+.prepared-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--space-3);margin-block:var(--space-5)}
+.prepared-overview div{padding:var(--space-4);border-radius:var(--radius-medium);background:var(--surface-secondary)}
+.prepared-overview dt{font-size:var(--font-small);color:var(--text-secondary)}.prepared-overview dd{margin:var(--space-2) 0 0;font-size:var(--font-heading);font-weight:var(--weight-semibold)}

@@ -7,11 +7,13 @@ import { Session, Turn, TurnRequest, TutoringService, LearningAction } from './t
 import { LearningPanel } from './learning-panel';
 import { SafeResponse } from './safe-response';
 import { ClassCards } from '../lessons/class-cards';
+import { PreparedCards } from './prepared-cards';
 const loadErrorMessage='No se pudo cargar la tutoría. Comprueba tu sesión y vuelve a actualizar.';
 
-@Component({standalone:true,imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LearningPanel,ClassCards],templateUrl:'./chat-page.html',styleUrl:'./chat-page.css'})
+@Component({standalone:true,imports:[FormsModule,RouterLink,DatePipe,SafeResponse,LearningPanel,ClassCards,PreparedCards],templateUrl:'./chat-page.html',styleUrl:'./chat-page.css'})
 export class ChatPage implements OnDestroy {
   cardsUpdated(s:Session){this.adopt(s);this.schedulePoll();}
+  cardsWorking(value:boolean){this.busy.set(value);this.schedulePoll();}
   private readonly api=inject(TutoringService); private readonly route=inject(ActivatedRoute);
   readonly session=signal<Session|null>(null); readonly busy=signal(false); readonly message=signal('');
   draft=''; private id=''; private generation:Subscription|null=null; private poll:ReturnType<typeof setTimeout>|null=null;

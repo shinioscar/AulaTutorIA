@@ -1,5 +1,11 @@
 # Ambigüedades del documento maestro
 
+LEARN-1 resuelve la modalidad autónoma preparada y su evaluación diagnóstica con
+plan en una operación final (ADR-031). No se habilita conversación híbrida dentro
+de tarjetas, generación por partes ni adaptación de preguntas fijadas. Límites y
+modelos de capacidad desconocida en PREPARED_LEARNING.md; calidad semántica real
+y requisitos institucionales siguen pendientes.
+
 Registro sin cambiar requisitos. Resolver mediante decisiones explícitas cuando
 corresponda la iteración; no inferir políticas académicas o institucionales.
 

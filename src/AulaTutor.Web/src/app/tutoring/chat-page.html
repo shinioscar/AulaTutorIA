@@ -1,7 +1,7 @@
 <a [routerLink]="session()?.assignedClass?'/classes':'/tutoring'">← {{session()?.assignedClass?'Mis clases asignadas':'Mis tutorías'}}</a>
 <p class="message" role="status">{{message()}}</p>
 @if(session();as session){
-@if(session.policyVersion==='preloaded-class-v1'){<app-class-cards [session]="session" (updated)="cardsUpdated($event)" (refresh)="refresh()"/>}@else{
+@if(session.prepared){<app-prepared-cards [session]="session" (updated)="cardsUpdated($event)" (working)="cardsWorking($event)" (refresh)="refresh()"/>}@else if(session.policyVersion==='preloaded-class-v1'){<app-class-cards [session]="session" (updated)="cardsUpdated($event)" (refresh)="refresh()"/>}@else{
   <div class="conversation-heading"><div><p class="eyebrow">{{session.assignedClass?'CLASE ASIGNADA':session.mode==='Personalized'?'TUTORÍA PERSONALIZADA PRIVADA':'TUTORÍA PRIVADA'}}</p><h1>{{session.topic}}</h1><p class="goal">{{session.goal}}</p>@if(session.assignedClass;as a){<p>Versión {{a.class.versionNumber}} · {{a.class.teacherName}} · {{a.class.groupName}}</p>}</div><span class="state-badge">{{label(session.state)}}</span></div>
   <div class="tutoring-layout">
     <aside class="session-details"><h2>Tu espacio de aprendizaje</h2>@if(session.assignedClass;as a){<p><strong>Clase y evidencias vinculadas:</strong> {{a.class.teacherName}} · {{a.class.groupName}}. Tu docente puede revisar las actividades y sus resultados.</p><p>Entregadas {{a.class.deliveredRequired}} / {{a.class.totalRequired}} obligatorias. Coinciden con reglas cerradas: {{a.class.verifiedRequired}}.</p>@if(a.unavailableReason){<p class="notice warning">{{a.unavailableReason}}</p>}}@else{<p><strong>Historial privado:</strong> tus preguntas y avances.</p>}<p class="note">{{session.providerId}} · {{session.modelId}}</p>
@@ -18,7 +18,7 @@
           <article class="bubble" [class.student]="item.role==='Student'"><div class="bubble-meta"><strong>{{item.role==='Student'?'Tú':'Tutor IA'}}</strong><time>{{item.createdAt|date:'shortTime'}}</time></div><app-safe-response [text]="item.text" />
           @if(item.role==='Student'){ @for(turn of session.turns;track turn.requestId){ @if(turn.requestId===item.requestId&&turn.state==='Cancelled'){<p class="note">Turno cancelado; intento conservado.</p>} } }
           </article>
-        } @empty {<div class="chat-empty"><span aria-hidden="true">✦</span><h2>Comencemos con tu objetivo</h2><p>El tutor te propondrá una pregunta breve o un repaso directo, según tu elección.</p></div>}
+        } @empty {<div class="chat-empty"><span aria-hidden="true">✦</span><h2>{{session.experience==='Diagnostic'?'Comencemos el diagnóstico':'Comencemos con tu objetivo'}}</h2><p>{{session.experience==='Diagnostic'?'Pulsa Comenzar diagnóstico estructurado para recibir la primera pregunta.':'El tutor te propondrá una pregunta breve o un repaso directo, según tu elección.'}}</p></div>}
         @if(busy()||pending?.isGenerating){<p class="generating" role="status">El tutor está preparando la respuesta…</p>}
       </div>
       @if(pending;as turn){
@@ -30,7 +30,7 @@
         </div>
       }
       @if(uncertain()&&!pending&&!busy()){<div class="turn-status"><p>El envío no está confirmado. Actualiza el estado o recupera la misma solicitud.</p><button type="button" (click)="recover()">Recuperar envío</button></div>}
-      @if(session.state==='Created'){<div class="composer"><p>Comenzar enviará tu tema y objetivo a {{session.providerId}}.</p><button type="button" (click)="send('Start')" [disabled]="busy()||!!session.pendingRequestId||(session.assignedClass&&!session.assignedClass.class.available)">Comenzar conversación</button></div>}
+      @if(session.state==='Created'&&session.experience!=='Diagnostic'){<div class="composer"><p>Comenzar enviará tu tema y objetivo a {{session.providerId}}.</p><button type="button" (click)="send('Start')" [disabled]="busy()||!!session.pendingRequestId||(session.assignedClass&&!session.assignedClass.class.available)">Comenzar conversación</button></div>}
       @if(session.state==='Active'){
         <form class="composer" #form="ngForm" (ngSubmit)="send('Message')">
           <div class="quick-actions"><button type="button" class="secondary" (click)="send('Hint')" [disabled]="!canSend">Necesito una pista</button><button type="button" class="secondary" (click)="send('Simplify')" [disabled]="!canSend">Explícalo más sencillo</button></div>

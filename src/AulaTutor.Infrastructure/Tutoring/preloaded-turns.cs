@@ -11,8 +11,8 @@ public sealed partial class TutoringService
     public async Task<TutoringSessionView> SendCardAsync(Guid id, TutoringTurnRequest request, CancellationToken ct)
     {
         var actor = await StudentAsync(true); var s = await OwnedAsync(id, actor, false, ct);
-        if (await assigned.PreloadedAsync(s, ct) is null) throw Hidden();
-        if (request.Action == "FinalReport") throw new AppException(400, "Solicita la evaluación final mediante la acción IA explícita.");
+        if (!PreparedRules.IsPrepared(s) && await assigned.PreloadedAsync(s, ct) is null) throw Hidden();
+        if (request.Action is "FinalReport" or "PrepareSession") throw new AppException(400, "Solicita la generación mediante la acción IA explícita.");
         return await SendAsync(id, request, ct);
     }
     private async Task CompleteLocalAsync(TutoringSession s, TutoringTurn turn, LessonContent content, CancellationToken ct)

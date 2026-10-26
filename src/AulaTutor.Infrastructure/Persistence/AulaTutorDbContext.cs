@@ -38,6 +38,7 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
     public DbSet<AcademicGroup> Groups => Set<AcademicGroup>();
     public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
     public DbSet<TutoringSession> TutoringSessions => Set<TutoringSession>();
+    public DbSet<PreparedLearning> PreparedLearning => Set<PreparedLearning>();
     public DbSet<TutoringTurn> TutoringTurns => Set<TutoringTurn>();
     public DbSet<TutoringMessage> TutoringMessages => Set<TutoringMessage>();
     public DbSet<LearningExercise> LearningExercises => Set<LearningExercise>();
@@ -68,6 +69,7 @@ public sealed class AulaTutorDbContext(DbContextOptions<AulaTutorDbContext> opti
         builder.ConfigureOperations();
         builder.ConfigurePersonalAi();
         builder.ConfigureTutoring();
+        builder.ConfigurePrepared();
         builder.ConfigureLearning();
         builder.ConfigureLessons();
         builder.ConfigureAssignments();

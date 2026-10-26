@@ -26,6 +26,9 @@ $taskByokReport = Get-Content "$taskRoot/artifacts/byok-e2e.json" -Raw | Convert
 if($taskByokReport.status -ne 'passed' -or $taskByokReport.studentSessionId -notmatch '^[a-f0-9-]{36}$'){throw 'Passed isolated BYOK E2E is required for custody recovery.'}
 $taskByokBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskByokReport.studentSessionId)"
 $taskConnectionsBefore = Invoke-Recovery GET '/api/ai-connections/'
+$taskLearnReport=Get-Content "$taskRoot/artifacts/learn-1-e2e.json" -Raw | ConvertFrom-Json
+if($taskLearnReport.status -ne 'passed' -or $taskLearnReport.pausedGoalId -notmatch '^[a-f0-9-]{36}$'){throw 'Passed LEARN-1 isolated E2E required for prepared recovery.'}
+$taskLearnBefore=Invoke-Recovery GET "/api/tutoring-sessions/$($taskLearnReport.pausedGoalId)"
 $taskCardsReport = Get-Content "$taskRoot/artifacts/iteration-9-e2e.json" -Raw | ConvertFrom-Json
 if($taskCardsReport.status -ne 'passed' -or $taskCardsReport.preloadedSessionId -notmatch '^[a-f0-9-]{36}$'){throw 'The passed preloaded E2E session is required for restart verification.'}
 $taskCardsBefore = Invoke-Recovery GET "/api/tutoring-sessions/$($taskCardsReport.preloadedSessionId)"
@@ -60,6 +63,13 @@ for($taskAttempt=0;$taskAttempt -lt 60;$taskAttempt++) {
 if(-not $taskReady -or $taskHealth.aiProvider -ne 'Mock'){throw 'Restarted Mock API was not ready.'}
 $taskAfter = Invoke-Recovery GET "/api/tutoring-sessions/$($taskState.completedTutoringId)"
 $taskConnectionsAfter = Invoke-Recovery GET '/api/ai-connections/'
+$taskLearnAfter=Invoke-Recovery GET "/api/tutoring-sessions/$($taskLearnReport.pausedGoalId)"
+if(($taskLearnBefore | ConvertTo-Json -Depth 32 -Compress) -ne ($taskLearnAfter | ConvertTo-Json -Depth 32 -Compress)){throw 'Prepared script/progress/evidence changed after restart.'}
+$taskLearnReplay=Invoke-Recovery POST "/api/tutoring-sessions/$($taskLearnAfter.id)/cards" @{requestId=$taskLearnReport.pausedGoalHelpKey;revision=$taskLearnAfter.revision;action='Hint'}
+if($taskLearnReplay.turns.Count -ne $taskLearnAfter.turns.Count){throw 'Prepared help replay duplicated evidence after restart.'}
+$taskLearnResumed=Invoke-Recovery POST "/api/tutoring-sessions/$($taskLearnAfter.id)/resume" @{revision=$taskLearnAfter.revision}
+if($taskLearnResumed.state -ne 'Active' -or $taskLearnResumed.prepared.contentHash -ne $taskLearnBefore.prepared.contentHash){throw 'Prepared resume did not preserve its immutable script.'}
+@{status='passed';scriptPreserved=$true;evidencePreserved=$true;helpReplayDuplicates=0;resumedWithoutInference=$true} | ConvertTo-Json | Set-Content "$taskRoot/artifacts/learn-1-restart.json" -Encoding utf8
 if(($taskConnectionsBefore | ConvertTo-Json -Depth 16 -Compress) -ne ($taskConnectionsAfter | ConvertTo-Json -Depth 16 -Compress)){throw 'Own connection metadata changed across restart.'}
 $taskByokAfter = Invoke-Recovery GET "/api/tutoring-sessions/$($taskByokReport.studentSessionId)"
 if(($taskByokBefore | ConvertTo-Json -Depth 32 -Compress) -ne ($taskByokAfter | ConvertTo-Json -Depth 32 -Compress)){throw 'Personal session history changed across restart.'}
