@@ -1,7 +1,7 @@
 # LEARN-1 — Tutorías y diagnósticos preparados
 
-Estado: implementación y QA simulada verificadas, 26/10/2026. Activación de la
-base principal pendiente de autorización expresa. Encargo explícito.
+Estado: implementación y QA simulada verificadas, 26/10/2026. Activación local
+aplicada tras autorización expresa del usuario. Encargo explícito.
 Solo datos ficticios, Mock y HTTP simulado. Sin push ni inferencias externas.
 
 ## Auditoría y decisiones antes de programar
@@ -167,13 +167,28 @@ interrumpidos no se cuentan como pases.
 
 ## Entrega y entorno
 
-Maestro y .env intactos; proveedores, credenciales, cuentas y filas de la base
-principal sin cambios. Se tomaron únicamente conteos privados de preservación.
-La migración principal y el arranque de API/Angular con la nueva versión requieren
-autorización, porque el encargo prohíbe modificar bases principales sin ella.
-No se arrancó contra un esquema incompatible ni se migró automáticamente al iniciar.
+Maestro y .env intactos; proveedores, credenciales, cuentas y filas anteriores
+conservados. El usuario autorizó expresamente aplicar la migración aditiva a la
+base principal y levantar API/Angular con los proveedores actuales.
+
+Antes de activar se ejecutó satisfactoriamente Test-BackupRestore.ps1: copia y
+restauración aislada con las ocho migraciones existentes, sin escrituras en
+principal y con retiro del destino temporal. Después se aplicó únicamente
+20261026083117_PreparedLearning mediante --migrate, sin bootstrap. Se confirmó el
+historial de nueve migraciones y PreparedLearning vacía: la activación no generó
+sesiones ni inferencias. Las huellas y conteos de las 41 tablas anteriores
+coinciden; en TutoringSessions/PersonalAiModels se compararon las columnas
+preexistentes, excluyendo únicamente las columnas nuevas previstas en el DDL.
+Las huellas y logs quedan privados en .cache, sin contenido expuesto ni versionado.
+
+API HTTPS 7080 y Angular HTTPS 4200 quedaron levantadas. Página y proxy de salud
+devuelven HTTP 200; la nueva ruta preparada exige sesión (401 anónimo). Se conserva
+Groq / openai/gpt-oss-20b. Estas consultas comprueban servicio/configuración y
+autorización anónima; no acreditan disponibilidad del modelo ni cuota. No se hizo
+ninguna inferencia real. La migración fue una acción explícita anterior al arranque;
+no se habilitaron migraciones automáticas ni se alteraron conexiones personales.
 
 Los cambios previos del catálogo BYOK se preservan separados del trabajo LEARN-1.
 Sin push, nueva iteración, usuarios reales ni inferencias externas. El entorno de
 QA ha sido retirado. El inicio local anterior estaba detenido en 4200/5080/7080;
-la activación queda pendiente de la respuesta del usuario.
+los servicios se levantaron por la autorización posterior del usuario.

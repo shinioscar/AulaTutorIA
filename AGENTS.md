@@ -25,7 +25,7 @@
 - LEARN-1 autorizado por encargo explícito: tutoría/diagnóstico preparados privados,
   generación íntegra, actividades locales y evaluación diagnóstica + plan agrupados
   (ADR-031, LEARN_1.md). QA ficticia: 466 .NET/224 HTTPS/321 Edge, reinicio verificado,
-  cero inferencias reales. Activación principal pendiente de autorización; no avanzar.
+  cero inferencias reales. Activación principal autorizada y aplicada; no avanzar.
 - Nunca modificar `AulaTutor_IA_Documento_Maestro_v1.0.md`. SHA256:
   `FC76FD6C7A1882FFD2F34D472CF1B55B469405A403D67D04E21BF4636C72AF05`.
 - Leer siempre este archivo y las instrucciones aplicables al directorio afectado.
