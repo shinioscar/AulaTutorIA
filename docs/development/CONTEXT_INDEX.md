@@ -60,3 +60,5 @@ Diagnóstico posterior de límites/errores: [QA de importación](../iterations/Q
   tareas y sección Proveedor de IA con los permisos existentes.
 - Conexiones personales implementadas y verificadas con simulación: [BYOK-1](../iterations/BYOK_1.md).
   OAuth con cuenta real y requisitos de datos reales permanecen pendientes.
+  Corrección posterior de límites nulos y filtrado de catálogos personales a
+  modelos gratuitos confirmados: [QA del catálogo OpenRouter](../iterations/QA_OPENROUTER_CATALOG.md).

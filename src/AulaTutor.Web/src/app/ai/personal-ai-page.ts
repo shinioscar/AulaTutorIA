@@ -21,11 +21,12 @@ export class PersonalAiPage implements OnDestroy {
   readonly view=signal<PersonalAiView|null>(null);
   readonly busy=signal(false); readonly connecting=signal(false); readonly message=signal(''); readonly error=signal('');
   readonly manual=signal(''); readonly choosing=signal<PersonalConnection|null>(null); readonly models=signal<Model[]>([]);
+  readonly catalogLoaded=signal(false);
   readonly redirectUrl=signal('');
   readonly providers=[{id:'Gemini',name:'Gemini',letter:'G',description:'Modelos de Google',console:'https://aistudio.google.com/api-keys'},
     {id:'Anthropic',name:'Claude',letter:'C',description:'Modelos de Anthropic',console:'https://platform.claude.com/settings/keys'},
     {id:'Groq',name:'Groq',letter:'G',description:'Inferencia con Groq',console:'https://console.groq.com/keys'}];
-  apiKey=''; workspace=''; modelId=''; privacyAccepted=false; paidAccepted=false; includePaid=false;
+  apiKey=''; workspace=''; modelId=''; privacyAccepted=false;
   private popup:Window|null=null; private poll:ReturnType<typeof setInterval>|undefined; private pollBusy=false;
   private expiresAt=0; private beforeConnection=''; private destroyed=false;
   private readonly onMessage=(event:MessageEvent<unknown>):void=>{
@@ -46,18 +47,17 @@ export class PersonalAiPage implements OnDestroy {
     catch(e){this.error.set(this.safeError(e));}finally{this.busy.set(false);}
   }
   async choose(connection:PersonalConnection,refresh=false):Promise<void>{
-    if(this.busy())return;this.busy.set(true);this.error.set('');this.message.set('');this.closeManual();this.choosing.set(connection);this.models.set([]);this.privacyAccepted=false;this.paidAccepted=false;this.includePaid=false;this.modelId='';
-    try{const models=await firstValueFrom(refresh?this.http.post<Model[]>(`${base}/models/${connection.provider}/refresh`,{}):this.http.get<Model[]>(`${base}/models/${connection.provider}`));this.models.set(models);
-      this.modelId=models.find(m=>m.compatible&&m.free)?.id??(connection.provider==='OpenRouter'?'':models.find(m=>m.compatible)?.id??'');
+    if(this.busy())return;this.busy.set(true);this.error.set('');this.message.set('');this.closeManual();this.choosing.set(connection);this.models.set([]);this.catalogLoaded.set(false);this.privacyAccepted=false;this.modelId='';
+    try{const models=await firstValueFrom(refresh?this.http.post<Model[]>(`${base}/models/${connection.provider}/refresh`,{}):this.http.get<Model[]>(`${base}/models/${connection.provider}`));this.models.set(models.filter(m=>m.free&&m.priceKnown));this.catalogLoaded.set(true);
+      this.modelId=this.models().find(m=>m.compatible)?.id??'';
       setTimeout(()=>{if(this.destroyed)return;this.modelEditor?.nativeElement.scrollIntoView({block:'start',behavior:'instant'});this.modelInput?.nativeElement.focus({preventScroll:true});});}
     catch(e){this.error.set(this.safeError(e));}finally{this.busy.set(false);}
   }
-  visibleModels():Model[]{return this.models().filter(m=>this.choosing()?.provider!=='OpenRouter'||m.free||this.includePaid);}
-  hasCompatibleModels():boolean{return this.visibleModels().some(m=>m.compatible);}
+  hasCompatibleModels():boolean{return this.models().some(m=>m.compatible);}
   selectedModel():Model|undefined{return this.models().find(m=>m.id===this.modelId);}
   async activate():Promise<void>{
-    const c=this.choosing(),m=this.selectedModel();if(!c||!m?.compatible||!this.privacyAccepted||(!m.free&&!this.paidAccepted)||this.busy())return;
-    this.busy.set(true);this.error.set('');try{await firstValueFrom(this.http.put(base+'/selection',{connectionId:c.id,model:m.id,privacyAccepted:true,paidAccepted:!m.free&&this.paidAccepted}));this.view.set(await firstValueFrom(this.http.get<PersonalAiView>(base+'/')));this.choosing.set(null);this.message.set(`${this.label(c.provider)} activado para nuevas consultas.`);}catch(e){this.error.set(this.safeError(e));}finally{this.busy.set(false);}
+    const c=this.choosing(),m=this.selectedModel();if(!c||!m?.compatible||!m.free||!m.priceKnown||!this.privacyAccepted||this.busy())return;
+    this.busy.set(true);this.error.set('');try{await firstValueFrom(this.http.put(base+'/selection',{connectionId:c.id,model:m.id,privacyAccepted:true,paidAccepted:false}));this.view.set(await firstValueFrom(this.http.get<PersonalAiView>(base+'/')));this.choosing.set(null);this.message.set(`${this.label(c.provider)} activado para nuevas consultas.`);}catch(e){this.error.set(this.safeError(e));}finally{this.busy.set(false);}
   }
   async institutional():Promise<void>{if(this.busy())return;this.busy.set(true);this.error.set('');try{await firstValueFrom(this.http.put(base+'/selection',{connectionId:null,model:null,privacyAccepted:false,paidAccepted:false}));this.view.set(await firstValueFrom(this.http.get<PersonalAiView>(base+'/')));this.choosing.set(null);this.message.set('Proveedor institucional seleccionado para nuevas consultas.');}catch(e){this.error.set(this.safeError(e));}finally{this.busy.set(false);}}
   async disconnect(c:PersonalConnection):Promise<void>{if(this.busy())return;this.busy.set(true);this.error.set('');try{await firstValueFrom(this.http.delete(base+'/'+c.id));this.view.set(await firstValueFrom(this.http.get<PersonalAiView>(base+'/')));if(this.choosing()?.id===c.id)this.choosing.set(null);this.message.set(`${this.label(c.provider)} desconectado de AulaTutor.`);}catch(e){this.error.set(this.safeError(e));}finally{this.busy.set(false);}}

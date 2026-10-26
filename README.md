@@ -7,6 +7,8 @@ gráficos de datos autorizados. [Cierre y comparación visual](docs/iterations/U
 implementada y verificada con PostgreSQL aislado y transporte simulado;
 [auditoría, evidencia y límites](docs/iterations/BYOK_1.md). La autorización con
 cuenta externa real permanece pendiente.
+Los catálogos personales muestran únicamente modelos gratuitos con precio
+confirmado; [corrección de OpenRouter y verificación](docs/iterations/QA_OPENROUTER_CATALOG.md).
 
 Iteración 9 completada como [piloto SQL interno con datos ficticios](docs/pilot/README.md):
 338 pruebas .NET, 191 HTTP y 60 comprobaciones E2E aprobadas, sin cuota IA real.

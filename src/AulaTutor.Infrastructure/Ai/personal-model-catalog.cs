@@ -65,8 +65,9 @@ public sealed class PersonalModelCatalog(AulaTutorDbContext db, IHttpClientFacto
             var name = m.TryGetProperty("name", out var n) ? n.GetString() : id;
             if (name is null || name.Length > 200 || name.Any(char.IsControl)) continue;
             var parameters = m.TryGetProperty("supported_parameters", out var p) && p.ValueKind == JsonValueKind.Array ? p.EnumerateArray().Select(x => x.GetString()).ToArray() : [];
-            var context = m.TryGetProperty("context_length", out var c) && c.TryGetInt32(out var length) ? length : 0;
-            var output = m.TryGetProperty("top_provider", out var top) && top.ValueKind == JsonValueKind.Object && top.TryGetProperty("max_completion_tokens", out var o) && o.TryGetInt32(out var max) ? max : 0;
+            // Unknown limits must disable only this model, not fail the entire catalog.
+            var context = m.TryGetProperty("context_length", out var c) && c.ValueKind == JsonValueKind.Number && c.TryGetInt32(out var length) ? length : 0;
+            var output = m.TryGetProperty("top_provider", out var top) && top.ValueKind == JsonValueKind.Object && top.TryGetProperty("max_completion_tokens", out var o) && o.ValueKind == JsonValueKind.Number && o.TryGetInt32(out var max) ? max : 0;
             var text = m.TryGetProperty("architecture", out var arch) && arch.TryGetProperty("output_modalities", out var modes) && modes.ValueKind == JsonValueKind.Array &&
                 modes.GetArrayLength() > 0 && modes.EnumerateArray().All(x => x.GetString() == "text");
             var textInput = arch.ValueKind == JsonValueKind.Object && arch.TryGetProperty("input_modalities", out var input) && input.ValueKind == JsonValueKind.Array && input.EnumerateArray().Any(x => x.GetString() == "text");

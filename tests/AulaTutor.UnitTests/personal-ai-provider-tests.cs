@@ -76,4 +76,30 @@ public sealed class PersonalAiProviderTests
         var json=JsonSerializer.Serialize(new{data=new[]{new{id="vendor/example:free",name="Fixture",context_length=65536,architecture=new{input_modalities=new[]{"text"},output_modalities=new[]{"text"}},top_provider=new{max_completion_tokens=8192},supported_parameters=new[]{"response_format","structured_outputs"},pricing=new{prompt="0",completion}}}});
         using var doc=JsonDocument.Parse(json);var model=Assert.Single(PersonalModelCatalog.ParseOpenRouter(doc.RootElement,DateTimeOffset.UtcNow));Assert.Equal(free,model.Free);Assert.True(model.Compatible);
     }
+    [Theory]
+    [InlineData("top_provider", "{\"max_completion_tokens\":null}")]
+    [InlineData("top_provider", "{}")]
+    [InlineData("top_provider", "null")]
+    [InlineData("top_provider", "{\"max_completion_tokens\":\"8192\"}")]
+    [InlineData("top_provider", "{\"max_completion_tokens\":2147483648}")]
+    [InlineData("context_length", "null")]
+    [InlineData("context_length", "\"65536\"")]
+    public void UnknownTokenLimitsDoNotRejectOtherCatalogModels(string field, string value)
+    {
+        var valid = new Dictionary<string, object?> {
+            ["id"] = "vendor/compatible", ["name"] = "Modelo ficticio", ["context_length"] = 65536,
+            ["architecture"] = new { input_modalities = new[] { "text" }, output_modalities = new[] { "text" } },
+            ["top_provider"] = new { max_completion_tokens = 8192 },
+            ["supported_parameters"] = new[] { "response_format", "structured_outputs" },
+            ["pricing"] = new { prompt = "0", completion = "0" }
+        };
+        using var unknown = JsonDocument.Parse(value);
+        var incomplete = new Dictionary<string, object?>(valid) { ["id"] = "vendor/unknown-limit", [field] = unknown.RootElement };
+        using var doc = JsonDocument.Parse(JsonSerializer.Serialize(new { data = new[] { incomplete, valid } }));
+        var models = PersonalModelCatalog.ParseOpenRouter(doc.RootElement, DateTimeOffset.UtcNow);
+        Assert.Equal(2, models.Length);
+        var model = models.Single(m => m.Id == "vendor/unknown-limit");
+        Assert.False(model.Compatible); Assert.False(model.StrictSchema);
+        Assert.True(models.Single(m => m.Id == "vendor/compatible").Compatible);
+    }
 }

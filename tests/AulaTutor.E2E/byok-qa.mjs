@@ -28,6 +28,8 @@ export async function byokQa({teacher,student,admin,assignment,api,capture,check
     assert.equal(teacherConnection.status,'Connected');assert.equal(teacherConnection.method,'OAuth');assert.equal('apiKey' in teacherConnection,false);
     await p.getByRole('button',{name:'Elegir modelo',exact:true}).click();await p.getByLabel('Modelo',{exact:true}).waitFor();
     assert.equal(await p.getByRole('option',{name:/Modelo de pago/}).count(),0);
+    assert.equal(await p.getByText('Mostrar modelos de pago o precio sin confirmar',{exact:true}).count(),0);
+    assert.equal(await p.getByRole('option',{name:/Modelo gratuito simulado · Gratis/}).count(),1);
     assert.equal(await p.getByRole('option',{name:/Modelo incompatible/}).isDisabled(),true);
     await matrix(p,'teacher-models',p.locator('.connection-editor'));
     await p.getByLabel(/Acepto enviar mis consultas/).check();await p.getByRole('button',{name:'Activar modelo',exact:true}).click();
@@ -63,6 +65,10 @@ export async function byokQa({teacher,student,admin,assignment,api,capture,check
         assert.equal(await p.getByLabel('Clave de API',{exact:true}).getAttribute('type'),'password');
         await p.getByLabel('Clave de API',{exact:true}).fill('qa_manual_fictitious_credential_only');await p.getByRole('button',{name:'Guardar clave',exact:true}).click();await p.getByText('Clave guardada. Elige un modelo para activarla.',{exact:true}).waitFor();
         assert.equal(await p.getByLabel('Clave de API',{exact:true}).count(),0);const view=await api(actor.context,'GET','/api/ai-connections/');assert.equal(view.connections.find(c=>c.provider===id).status,'Connected');assert.equal(JSON.stringify(view).includes('qa_manual_fictitious'),false);
+        await p.getByRole('button',{name:'Elegir modelo de '+name,exact:true}).click();
+        await p.getByText('No hay modelos gratuitos compatibles con precio confirmado en este catálogo. Puedes actualizarlo para comprobar cambios.',{exact:true}).waitFor();
+        assert.equal(await p.getByLabel('Modelo',{exact:true}).count(),0);
+        assert.equal(await p.getByText('No se pudo cargar el catálogo. Intenta actualizarlo.',{exact:true}).count(),0);
         const storage=await p.evaluate(()=>({local:Object.keys(localStorage),session:Object.keys(sessionStorage)}));assert.ok(storage.local.every(k=>k==='aulatutor.theme.v1'));assert.deepEqual(storage.session,[]);assert.equal(new URL(p.url()).search,'');
         await p.getByRole('button',{name:'Desconectar '+name,exact:true}).click();await p.getByText(name+' desconectado de AulaTutor.',{exact:true}).waitFor();
       }

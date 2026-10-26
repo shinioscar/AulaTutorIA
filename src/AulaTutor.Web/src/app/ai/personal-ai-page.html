@@ -23,14 +23,15 @@
       <div class="actions"><button type="submit" [disabled]="busy()||apiKey.length<8">{{busy()?'Guardando…':'Guardar clave'}}</button><button type="button" class="secondary" (click)="closeManual()" [disabled]="busy()">Cancelar</button></div>
     </form></section>}
   @if(choosing(); as c){<section #modelEditor class="connection-editor" aria-labelledby="model-title"><div class="page-heading"><h2 id="model-title">Modelo de {{label(c.provider)}}</h2><button class="secondary" type="button" (click)="choose(c,true)" [disabled]="busy()">Actualizar catálogo</button></div>
-    @if(c.provider==='OpenRouter'){<label class="checkbox-row"><input type="checkbox" [(ngModel)]="includePaid" (ngModelChange)="modelId='';paidAccepted=false">Mostrar modelos de pago o precio sin confirmar</label>}
-    @if(models().length){<label for="model">Modelo</label><select #modelInput id="model" [(ngModel)]="modelId" (ngModelChange)="paidAccepted=false"><option value="">Selecciona un modelo</option>@for(m of visibleModels();track m.id){<option [value]="m.id" [disabled]="!m.compatible">{{m.name}} · {{!m.compatible?'Incompatible':m.free?'Gratis':m.priceKnown?'De pago':'Costo según cuenta'}}</option>}</select>
+    <p class="note">Solo se muestran modelos gratuitos con precio confirmado.</p>
+    @if(catalogLoaded()){@if(models().length){<label for="model">Modelo</label><select #modelInput id="model" [(ngModel)]="modelId"><option value="">Selecciona un modelo</option>@for(m of models();track m.id){<option [value]="m.id" [disabled]="!m.compatible">{{m.name}} · Gratis{{!m.compatible?' · Incompatible':''}}</option>}</select>
       @if(selectedModel(); as model){<p class="model-id">{{model.id}}</p><p class="note">Formato estructurado compatible · Revisión: {{model.checkedAt|date:'dd/MM/yyyy HH:mm':'UTC'}} UTC</p>
         <div class="consent"><p class="note">Usa contenido académico ficticio.</p><label class="checkbox-row"><input type="checkbox" [(ngModel)]="privacyAccepted">Acepto enviar mis consultas y contenido académico a {{label(c.provider)}}{{c.provider==='OpenRouter'?' y al proveedor del modelo':''}}. Puedo desconectar esta integración.</label>
-          @if(!model.free){<label class="checkbox-row"><input type="checkbox" [(ngModel)]="paidAccepted">Autorizo los posibles cargos de este modelo en mi cuenta de {{label(c.provider)}}.</label>}@else{<p class="note">Gratis según el catálogo vigente, sujeto a disponibilidad y límites.</p>}
+          <p class="note">Gratis según el catálogo vigente, sujeto a disponibilidad y límites.</p>
         </div>}
-      @if(!hasCompatibleModels()){<p class="notice info">No hay modelos gratuitos compatibles en el catálogo actual. Actualiza el catálogo o consulta los modelos de pago.</p>}
-      <div class="actions"><button type="button" (click)="activate()" [disabled]="busy()||!selectedModel()?.compatible||!privacyAccepted||(!selectedModel()?.free&&!paidAccepted)">Activar modelo</button><button class="secondary" type="button" (click)="choosing.set(null)" [disabled]="busy()">Cancelar</button></div>
+      <div class="actions"><button type="button" (click)="activate()" [disabled]="busy()||!selectedModel()?.compatible||!selectedModel()?.free||!selectedModel()?.priceKnown||!privacyAccepted">Activar modelo</button><button class="secondary" type="button" (click)="choosing.set(null)" [disabled]="busy()">Cancelar</button></div>
+      }
+      @if(!hasCompatibleModels()){<p class="notice info">No hay modelos gratuitos compatibles con precio confirmado en este catálogo. Puedes actualizarlo para comprobar cambios.</p>}
     }@else{<p role="status">{{busy()?'Consultando modelos…':'No se pudo cargar el catálogo. Intenta actualizarlo.'}}</p>}
   </section>}
   <section class="institutional-card" aria-labelledby="institutional-title"><div><h2 id="institutional-title">Proveedor institucional</h2><p>{{v.institutionalProvider}} · <span class="model-id">{{v.institutionalModel}}</span></p></div><button type="button" class="secondary" (click)="institutional()" [disabled]="busy()||connecting()||v.selection==='Institutional'">{{v.selection==='Institutional'?'Seleccionado':'Usar institucional'}}</button></section>

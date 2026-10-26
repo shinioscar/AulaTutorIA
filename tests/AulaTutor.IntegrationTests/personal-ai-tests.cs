@@ -206,10 +206,59 @@ public sealed partial class PersonalAiTests : IAsyncLifetime
         Assert.Equal("Authentication", view.Turns.Single().ErrorCode); Assert.DoesNotContain(view.Messages, m => m.Role == "Tutor");
     }
     [Fact]
+    public async Task OpenRouterCatalogWithUnknownOutputLimitLoadsAndRefreshesOnlyVerifiedFreeModelsWithoutInference()
+    {
+        var json = System.Text.Json.Nodes.JsonNode.Parse(Catalog)!;
+        var data = json["data"]!.AsArray();
+        var unknown = data[0]!.DeepClone();
+        unknown["id"] = "vendor/unknown-output:free";
+        unknown["top_provider"]!["max_completion_tokens"] = null;
+        data.Insert(0, unknown);
+        var unknownPrice = data[1]!.DeepClone();
+        unknownPrice["id"] = "vendor/unknown-price:free";
+        unknownPrice["pricing"]!["completion"] = null;
+        data.Add(unknownPrice);
+        gateway.ModelCatalog = json.ToJsonString();
+        using var client = await User();
+        var models = (await client.GetFromJsonAsync<PersonalModelView[]>("/api/ai-connections/models/OpenRouter"))!;
+        Assert.Equal(3, models.Length);
+        Assert.All(models, m => { Assert.True(m.Free); Assert.True(m.PriceKnown); });
+        Assert.False(models.Single(m => m.Id == "vendor/unknown-output:free").Compatible);
+        Assert.True(models.Single(m => m.Id == "qwen/qwen3.8-27b:free").Compatible);
+        Assert.True(models.Single(m => m.Id == "qwen/qwen3.8-27b:free").Free);
+        Assert.DoesNotContain(models, m => m.Id == "anthropic/claude-opus-5.5" || m.Id == "vendor/unknown-price:free");
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AulaTutorDbContext>();
+            Assert.Equal(5, await db.PersonalAiModels.CountAsync());
+            foreach (var model in await db.PersonalAiModels.ToArrayAsync()) model.CheckedAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+            await db.SaveChangesAsync();
+        }
+        using var refresh = await client.PostAsJsonAsync("/api/ai-connections/models/OpenRouter/refresh", new { });
+        Assert.Equal(HttpStatusCode.OK, refresh.StatusCode);
+        var refreshed = (await refresh.Content.ReadFromJsonAsync<PersonalModelView[]>())!;
+        Assert.Equal(3, refreshed.Length);
+        Assert.All(refreshed, m => { Assert.True(m.Free); Assert.True(m.PriceKnown); });
+        Assert.Equal(2, gateway.Catalogs); Assert.Equal(0, gateway.Exchanges); Assert.Equal(0, gateway.Generations);
+        await using var check = factory.Services.CreateAsyncScope();
+        Assert.Empty(await check.ServiceProvider.GetRequiredService<AulaTutorDbContext>().AiReservations.ToArrayAsync());
+    }
+    [Theory][InlineData("Groq")][InlineData("Gemini")][InlineData("Anthropic")]
+    public async Task PersonalCatalogDoesNotExposeModelsWithUnconfirmedPrices(string provider)
+    {
+        using var client = await User();
+        Assert.Empty((await client.GetFromJsonAsync<PersonalModelView[]>($"/api/ai-connections/models/{provider}"))!);
+        using var refresh = await client.PostAsJsonAsync($"/api/ai-connections/models/{provider}/refresh", new { });
+        Assert.Equal(HttpStatusCode.OK, refresh.StatusCode);
+        Assert.Empty((await refresh.Content.ReadFromJsonAsync<PersonalModelView[]>())!);
+        Assert.Equal(0, gateway.Catalogs); Assert.Equal(0, gateway.Generations);
+    }
+    [Fact]
     public async Task OpenRouterCatalogRequiresCompatibleModelAndExplicitPaidPermission()
     {
         using var client = await User(); var start = await Start(client); await Return(client, start); await client.PostAsJsonAsync("/api/ai-connections/openrouter/complete", new { }); var connection = (await View(client)).Connections.Single();
         var models = (await client.GetFromJsonAsync<PersonalModelView[]>("/api/ai-connections/models/OpenRouter"))!;
+        Assert.DoesNotContain(models, m => !m.Free || !m.PriceKnown);
         Assert.True(models.Single(m => m.Id.EndsWith(":free", StringComparison.Ordinal)).Free);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PutAsJsonAsync("/api/ai-connections/selection", new SelectAiRequest(connection.Id, "unsupported/test", true, false))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/ai-connections/selection", new SelectAiRequest(connection.Id, "anthropic/claude-opus-5.5", true, false))).StatusCode);

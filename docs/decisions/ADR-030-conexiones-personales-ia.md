@@ -41,3 +41,13 @@ Cuenta externa desconocida permanece desconocida; no se promete cuota disponible
 QA con proveedores/OAuth simulados y PostgreSQL real aislado. Comprobación con
 cuenta externa real y requisitos institucionales para datos reales pendientes.
 Auditoría, evolución y resultados en [BYOK-1](../iterations/BYOK_1.md).
+
+## Catálogo gratuito y corrección posterior — 24/10/2026
+
+Por encargo explícito, los catálogos personales expuestos al navegador solo ofrecen
+modelos Free + PriceKnown; la UI elimina la opción de pago y su consentimiento.
+Los catálogos locales sin precio cero verificado no ofrecen modelos. Se conserva
+el protocolo previo y los vínculos históricos; no se convierten ni retargetean.
+Límites de tokens desconocidos deshabilitan ese modelo sin abortar todo el catálogo
+OpenRouter. Detalles en [PERSONAL_AI](../architecture/PERSONAL_AI.md) y
+[QA del catálogo](../iterations/QA_OPENROUTER_CATALOG.md).

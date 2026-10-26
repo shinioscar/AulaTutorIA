@@ -10,9 +10,10 @@ Implementación REST, sin paquetes/SDK nuevos ni segundo motor académico.
 1. Abre **Proveedor de IA** en el menú lateral.
 2. Para OpenRouter, pulsa **Conectar OpenRouter**, inicia sesión y autoriza en
    su página. Google, cuando se ofrezca, se completa allí por el propio usuario.
-3. Regresa a AulaTutor y pulsa **Elegir modelo**. Se muestran primero gratuitos.
+3. Regresa a AulaTutor y pulsa **Elegir modelo**. Solo se muestran modelos gratuitos
+   con precio confirmado, identificados con **Gratis**.
 4. Revisa proveedor/modelo, acepta el envío de contenido y activa la selección.
-   Los modelos con costo o precio desconocido requieren aceptación adicional.
+   Los modelos con costo o precio desconocido no se ofrecen en los catálogos personales.
 5. **Usar institucional** cambia la selección de nuevas operaciones. Las sesiones
    existentes mantienen su conexión y modelo originales.
 
@@ -159,10 +160,20 @@ recuperación conserva clave/acción/texto/modelo y los límites existentes.
 Los catálogos locales caducan treinta días tras la revisión fechada; ampliar esa
 fecha requiere revisión técnica de las fuentes, no un refresco que invente vigencia.
 OpenRouter actualiza metadatos desde backend sin enviar una clave al navegador.
+Los límites de contexto/salida nulos, ausentes o no numéricos dejan ese modelo
+incompatible, sin impedir cargar el resto del catálogo ni inferir capacidades.
 Un catálogo vencido/fallido no autoriza usar información antigua para generar.
-No se asume gratuidad por sufijo `:free`. Por defecto se ocultan modelos de pago;
-mostrarlos y aceptar posibles cargos son acciones distintas. La aceptación se
-congela por modelo en el vínculo. Un modelo gratuito cuyo precio cambia se rechaza
+No se asume gratuidad por sufijo `:free`. Por encargo del 24/10/2026, GET y refresco
+de todos los catálogos personales devuelven únicamente Free + PriceKnown. La UI
+filtra también ambos campos, etiqueta Gratis y no ofrece mostrar modelos de pago
+ni aceptar cargos. Un catálogo vacío válido se informa como falta de modelos
+gratuitos confirmados, separado de un fallo de actualización. Groq/Gemini/Claude
+no tienen gratuidad confirmada en el catálogo local actual, por lo que su selector
+queda sin opciones; disponer de una clave o de un cupo gratuito por cuenta no
+acredita precio cero del modelo. Se conservan los metadatos completos en servidor
+y los contratos/vínculos previos, sin reescribir sesiones ni retargeting.
+La interfaz envía paidAccepted=false para sus selecciones. La aceptación histórica
+se congela por modelo en el vínculo. Un modelo gratuito cuyo precio cambia se rechaza
 si no hay consentimiento; el envío gratuito además fija max_price cero para
 prompt/completion/request/image, require_parameters=true y allow_fallbacks=false.
 No se compran créditos ni se proponen modelos alternativos automáticamente.

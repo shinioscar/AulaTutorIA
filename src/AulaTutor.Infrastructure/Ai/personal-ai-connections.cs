@@ -79,6 +79,7 @@ public sealed class PersonalAiConnections(AulaTutorDbContext db, ICurrentActor c
     public async Task<PersonalModelView[]> ModelsAsync(string provider, bool refresh, CancellationToken ct)
     {
         await PersonalAiSession.RequireAsync(current, db, ct);
-        return (await catalog.GetAsync(provider, refresh, ct)).Select(m => new PersonalModelView(m.Id, m.Name, m.Compatible, m.Free, m.PriceKnown, m.Availability, m.CheckedAt, m.ExpiresAt)).ToArray();
+        return (await catalog.GetAsync(provider, refresh, ct)).Where(m => m.Free && m.PriceKnown)
+            .Select(m => new PersonalModelView(m.Id, m.Name, m.Compatible, m.Free, m.PriceKnown, m.Availability, m.CheckedAt, m.ExpiresAt)).ToArray();
     }
 }
