@@ -142,6 +142,9 @@ API HTTPS https://localhost:7080; salud heredada http://127.0.0.1:5080/api/healt
 OpenAPI solo Development en /openapi/v1.json. Salud conserva iteration=1 por
 compatibilidad y muestra el proveedor configurado, sin llamadas IA ni readiness DB.
 
+Acceso privado desde otros dispositivos: [modo local con Tailscale](docs/development/local-tailscale.md),
+con HTTPS del equipo, proxy al mismo origen y retorno OAuth configurado en el proceso.
+
 Alternativa API en Docker (no ejecutar a la vez la API local):
 
 ```powershell

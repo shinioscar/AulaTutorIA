@@ -1,5 +1,8 @@
 # Operación técnica — Iteración 8
 
+Acceso de desarrollo desde la tailnet: [hosting local privado Tailscale](../development/local-tailscale.md).
+Mantiene HTTPS/loopback, proxy relativo y origen OAuth fijo; no habilita Funnel.
+
 ## Salud y correlación
 
 GET /api/health sigue siendo liveness/configuración, anónimo y sin red IA o DB.

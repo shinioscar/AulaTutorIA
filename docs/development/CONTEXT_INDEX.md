@@ -24,6 +24,7 @@ sobre los límites históricos de un ADR; no autorizan encargos nuevos.
 | Conexiones personales/OAuth/custodia | [ADR-030](../decisions/ADR-030-conexiones-personales-ia.md), [contrato y guía BYOK](../architecture/PERSONAL_AI.md), [auditoría/QA](../iterations/BYOK_1.md); también Identity, PostgreSQL, cuotas y contratos académicos de las filas anteriores |
 | Seguridad/resiliencia/auditoría | [ADR-012](../decisions/ADR-012-identidad-y-autorizacion.md), [ADR-013](../decisions/ADR-013-persistencia-y-bootstrap.md), [ADR-017](../decisions/ADR-017-integridad-de-turnos.md), [ADR-025](../decisions/ADR-025-cuotas-auditoria-y-resiliencia.md), [operación](../architecture/OPERATIONS.md); además permisos del módulo afectado |
 | Pruebas/despliegue/recuperación | [README: preparación y verificación](../../README.md), [OPERATIONS](../architecture/OPERATIONS.md), scripts existentes en scripts/; QA del recorrido afectado abajo |
+| Hosting local privado Tailscale | [Guía de arranque y verificación](local-tailscale.md), [operación](../architecture/OPERATIONS.md), [Identity ADR-012](../decisions/ADR-012-identidad-y-autorizacion.md), [origen OAuth BYOK](../architecture/PERSONAL_AI.md) |
 
 ## Alcance, pendientes e históricos — solo cuando aporten al encargo
 
